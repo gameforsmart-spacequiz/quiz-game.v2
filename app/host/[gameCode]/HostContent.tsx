@@ -45,6 +45,7 @@ interface HostContentProps {
 }
 
 // ✅ Memoised PodiumLeaderboard
+// ✅ Full improved PodiumLeaderboard
 const PodiumLeaderboard = React.memo(
   ({
     players,
@@ -53,72 +54,129 @@ const PodiumLeaderboard = React.memo(
     players: PlayerProgress[]
     onAnimationComplete: () => void
   }) => {
-    const router = useRouter()
-    const [hasAnimated, setHasAnimated] = useState(false)
+    const router = useRouter();
+    const [hasAnimated, setHasAnimated] = useState(false);
 
-    const sorted = [...players].sort((a, b) => b.score - a.score)
-    const [second, first, third] = [
-      sorted[1] || { name: "No Player", score: 0, avatar: "/placeholder.svg" },
-      sorted[0] || { name: "No Player", score: 0, avatar: "/placeholder.svg" },
-      sorted[2] || { name: "No Player", score: 0, avatar: "/placeholder.svg" },
-    ]
-    const rest = sorted.slice(3)
+    const sorted = [...players].sort((a, b) => b.score - a.score);
+    const top3 = sorted.slice(0, 3);
+
+    // Order: 1st in center, 2nd left, 3rd right
+    const podiumOrder = [1, 0, 2].map((i) => top3[i]).filter(Boolean);
 
     useEffect(() => {
       if (!hasAnimated) {
-        setHasAnimated(true)
-        onAnimationComplete()
+        setHasAnimated(true);
+        onAnimationComplete();
       }
-    }, [hasAnimated, onAnimationComplete])
+    }, [hasAnimated, onAnimationComplete]);
+
+    const rankStyles = {
+      1: { size: 144, height: 120, color: "from-yellow-300 to-yellow-600", label: "1st" },
+      2: { size: 120, height: 100, color: "from-gray-300 to-gray-500", label: "2nd" },
+      3: { size: 104, height: 80, color: "from-orange-400 to-orange-600", label: "3rd" },
+    };
+
+    const formatScore = (s: number) => s.toLocaleString("en-US");
 
     return (
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
-        className="min-h-screen flex items-center justify-center p-4"
+        className="min-h-screen flex items-center justify-center p-4 font-mono"
       >
         <div className="text-center">
           <motion.h1 className="text-5xl font-bold mb-12 text-yellow-300 drop-shadow-[4px_4px_0px_#000]">
             🏆 CHAMPIONS 🏆
           </motion.h1>
-          <div className="flex items-end justify-center gap-8">
-            {[second, first, third].map((p, i) => (
-              <div key={i} className="flex flex-col items-center">
-                <Image
-                  src={p.avatar || "/placeholder.svg"}
-                  alt={p.name}
-                  width={i === 1 ? 160 : 128}
-                  height={i === 1 ? 160 : 128}
-                  className="rounded-full border-4 border-white object-cover"
-                />
-                <p className="font-bold mt-2">{p.name}</p>
-                <p className="text-lg font-bold">{p.score} pts</p>
-              </div>
-            ))}
+
+          {/* Podium */}
+          <div className="flex items-end justify-center gap-8 mb-10">
+            {podiumOrder.map((player, index) => {
+              const rank = player === top3[0] ? 1 : player === top3[1] ? 2 : 3;
+              const style = rankStyles[rank as keyof typeof rankStyles];
+
+              return (
+                <motion.div
+                  key={player.id}
+                  initial={{ scale: 0.7, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: index * 0.2, type: "spring", stiffness: 200 }}
+                  className="flex flex-col items-center group"
+                >
+                  {/* Avatar */}
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    className="relative mb-2"
+                  >
+                    <Image
+                      src={player.avatar || "/placeholder.svg"}
+                      alt={player.name}
+                      width={style.size}
+                      height={style.size}
+                      className="rounded-full border-4 border-white object-cover shadow-xl"
+                    />
+                    <div className="absolute -top-2 -right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                      {style.label}
+                    </div>
+                  </motion.div>
+
+                  {/* Name & Score */}
+                  <p className="font-bold text-white text-lg">{player.name}</p>
+                  <p className="text-yellow-200 text-2xl font-bold drop-shadow-[0_0_4px_#facc15]">
+                    {formatScore(player.score)} pts
+                  </p>
+
+                  {/* Podium Platform */}
+                  <motion.div
+                    initial={{ y: 20 }}
+                    animate={{ y: 0 }}
+                    transition={{ delay: 0.6 + index * 0.1 }}
+                    className={`w-36 rounded-t-lg shadow-lg bg-gradient-to-b ${style.color} mt-2`}
+                    style={{ height: `${style.height}px` }}
+                  />
+                </motion.div>
+              );
+            })}
           </div>
-          {rest.length > 0 && (
-            <div className="mt-8">
-              <h2 className="text-xl mb-4">Others</h2>
-              {rest.map((p, idx) => (
-                <div key={p.id} className="flex items-center justify-center gap-4">
+
+          {/* Others */}
+          {sorted.length > 3 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.8 }}
+              className="max-w-sm mx-auto"
+            >
+              <h2 className="text-lg mb-3 text-white/80">Others</h2>
+              {sorted.slice(3).map((player, idx) => (
+                <motion.div
+                  key={player.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.9 + idx * 0.1 }}
+                  className="flex justify-between items-center bg-white/5 backdrop-blur-sm border border-white/10 rounded px-4 py-2 mb-1 text-white/90"
+                >
                   <span>
-                    {idx + 4}. {p.name}
+                    {idx + 4}. {player.name}
                   </span>
-                  <span>{p.score}</span>
-                </div>
+                  <span className="text-yellow-300 font-bold">
+                    {formatScore(player.score)}
+                  </span>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           )}
-          <PixelButton color="blue" className="mt-8" onClick={() => router.push("/")}>
+
+          <PixelButton color="blue" className="mt-10" onClick={() => router.push("/")}>
             Back to Dashboard
           </PixelButton>
         </div>
       </motion.div>
-    )
+    );
   },
-)
-PodiumLeaderboard.displayName = "PodiumLeaderboard"
+);
+PodiumLeaderboard.displayName = "PodiumLeaderboard";
 
 export default function HostContent({ gameCode }: HostContentProps) {
   const router = useRouter()
@@ -377,25 +435,25 @@ export default function HostContent({ gameCode }: HostContentProps) {
   useEffect(() => {
     if (!quizStarted || !gameSettings?.timeLimit) return
 
-    let unsub = () => {}
-    ;(async () => {
-      const { data } = await supabase.from("games").select("quiz_start_time, time_limit").eq("id", gameId).single()
+    let unsub = () => { }
+      ; (async () => {
+        const { data } = await supabase.from("games").select("quiz_start_time, time_limit").eq("id", gameId).single()
 
-      if (!data?.quiz_start_time) return
+        if (!data?.quiz_start_time) return
 
-      const start = new Date(data.quiz_start_time).getTime()
-      const limitMs = data.time_limit * 1000
+        const start = new Date(data.quiz_start_time).getTime()
+        const limitMs = data.time_limit * 1000
 
-      const tick = () => {
-        const remain = Math.max(0, start + limitMs - Date.now())
-        setQuizTimeLeft(Math.floor(remain / 1000))
-        if (remain <= 0) setIsTimerActive(false)
-      }
+        const tick = () => {
+          const remain = Math.max(0, start + limitMs - Date.now())
+          setQuizTimeLeft(Math.floor(remain / 1000))
+          if (remain <= 0) setIsTimerActive(false)
+        }
 
-      tick()
-      const iv = setInterval(tick, 1000)
-      unsub = () => clearInterval(iv)
-    })()
+        tick()
+        const iv = setInterval(tick, 1000)
+        unsub = () => clearInterval(iv)
+      })()
 
     return unsub
   }, [quizStarted, gameSettings?.timeLimit, gameId])
@@ -613,9 +671,9 @@ export default function HostContent({ gameCode }: HostContentProps) {
       />
       <RulesDialog
         open={false}
-        onOpenChange={() => {}}
+        onOpenChange={() => { }}
         quiz={quiz}
-        onStartGame={() => {}}
+        onStartGame={() => { }}
         aria-describedby="rules-description"
       />
 
@@ -709,7 +767,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
       <div className="relative z-10 container mx-auto px-4 py-8 min-h-screen font-mono text-white">
         {showLeaderboard ? (
-          <PodiumLeaderboard players={playerProgress} onAnimationComplete={() => {}} />
+          <PodiumLeaderboard players={playerProgress} onAnimationComplete={() => { }} />
         ) : !quizStarted ? (
           <div className="grid lg:grid-cols-2 gap-8">
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
@@ -882,15 +940,14 @@ export default function HostContent({ gameCode }: HostContentProps) {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.4, delay: index * 0.05 }}
-                      className={`flex flex-col p-3 rounded-lg border-2 transition-all duration-300 ${
-                        player.rank === 1
-                          ? "border-yellow-400 bg-yellow-400/10"
-                          : player.rank === 2
-                            ? "border-gray-300 bg-gray-300/10"
-                            : player.rank === 3
-                              ? "border-amber-600 bg-amber-600/10"
-                              : "border-white/20 bg-white/5"
-                      }`}
+                      className={`flex flex-col p-3 rounded-lg border-2 transition-all duration-300 ${player.rank === 1
+                        ? "border-yellow-400 bg-yellow-400/10"
+                        : player.rank === 2
+                          ? "border-gray-300 bg-gray-300/10"
+                          : player.rank === 3
+                            ? "border-amber-600 bg-amber-600/10"
+                            : "border-white/20 bg-white/5"
+                        }`}
                     >
                       <div className="flex items-center gap-4">
                         <div className="text-xl font-bold text-white w-8 text-center">{player.rank}</div>
