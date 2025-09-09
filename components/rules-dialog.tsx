@@ -41,8 +41,8 @@ interface RulesDialogProps {
 }
 
 export function RulesDialog({ open, onOpenChange, quiz, onStartGame }: RulesDialogProps) {
-  const [timeLimit, setTimeLimit] = useState(900)
-  const [questionCount, setQuestionCount] = useState(15)
+  const [timeLimit, setTimeLimit] = useState(600)
+  const [questionCount, setQuestionCount] = useState(9)
 
   const handleStartGame = () => {
     onStartGame({ timeLimit, questionCount })
@@ -64,8 +64,8 @@ export function RulesDialog({ open, onOpenChange, quiz, onStartGame }: RulesDial
   const getQuestionOptions = () => {
     const maxQuestions = quiz?.questions?.length || 0
     const options: number[] = []
-    for (let i = 5; i <= maxQuestions; i += 5) options.push(i)
-    if (maxQuestions > 0 && maxQuestions % 5 !== 0) options.push(maxQuestions)
+    for (let i = 3; i <= maxQuestions; i += 3) options.push(i)
+    if (maxQuestions > 0 && maxQuestions % 3 !== 0) options.push(maxQuestions)
     return options
   }
 

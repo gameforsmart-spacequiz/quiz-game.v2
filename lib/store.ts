@@ -55,6 +55,9 @@ export interface GameState {
     questionCount: number
   }
 
+  // Mode tracking
+  gameMode: "host" | "tryout" | null
+
   // Actions
   setGameCode: (code: string) => void
   setGameId: (id: string) => void
@@ -75,6 +78,7 @@ export interface GameState {
   setMiniGameScore: (score: number) => void
   addMiniGameScore: (points: number) => void
   setGameSettings: (settings: { timeLimit: number; questionCount: number }) => void
+  setGameMode: (mode: "host" | "tryout" | null) => void
   resetGame: () => void
 }
 
@@ -100,6 +104,7 @@ export const useGameStore = create<GameState>()(
         timeLimit: 300,
         questionCount: 15,
       },
+      gameMode: null,
 
       // Actions
       setGameCode: (code) => set({ gameCode: code }),
@@ -141,6 +146,7 @@ export const useGameStore = create<GameState>()(
           miniGameScore: state.miniGameScore + points,
         })),
       setGameSettings: (settings) => set({ gameSettings: settings }),
+      setGameMode: (mode) => set({ gameMode: mode }),
       resetGame: () =>
         set({
           gameCode: "",
@@ -161,6 +167,7 @@ export const useGameStore = create<GameState>()(
             timeLimit: 300,
             questionCount: 15,
           },
+          gameMode: null,
         }),
 
       clearGame: () => get().resetGame(),
