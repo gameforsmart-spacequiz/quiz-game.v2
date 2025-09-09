@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 
 type TranslationKey = 
-  | 'title' | 'subtitle' | 'host' | 'join' | 'language' | 'english' | 'indonesian' | 'chinese'
+  | 'title' | 'subtitle' | 'host' | 'tryout' | 'join' | 'language' | 'english' | 'indonesian' | 'chinese'
   | 'welcome' | 'startGame' | 'joinGame' | 'createGame' | 'gameCode' | 'enterCode' | 'waiting'
   | 'players' | 'ready' | 'notReady' | 'gameStarting' | 'loading' | 'error' | 'success'
   | 'cancel' | 'confirm' | 'close' | 'next' | 'previous' | 'submit' | 'reset'
@@ -22,6 +22,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     "title": "SPACE QUIZ",
     "subtitle": "Play a quiz game and with your friends!",
     "host": "HOST",
+    "tryout": "TRYOUT",
     "join": "JOIN",
     "language": "Language",
     "english": "English",
@@ -109,6 +110,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     "title": "KUIS RUANG ANGKASA",
     "subtitle": "Mainkan permainan kuis bersama teman-temanmu!",
     "host": "HOST",
+    "tryout": "COBA",
     "join": "GABUNG",
     "language": "Bahasa",
     "english": "Bahasa Inggris",
@@ -196,6 +198,7 @@ const translations: Record<string, Record<TranslationKey, string>> = {
     "title": "太空问答",
     "subtitle": "和你的朋友一起玩问答游戏！",
     "host": "主持",
+    "tryout": "试玩",
     "join": "加入",
     "language": "语言",
     "english": "英语",
@@ -328,7 +331,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   )
 }
 
-export function useLanguage() {
+export function 
+
+useLanguage() {
   const context = useContext(LanguageContext)
   if (context === undefined) {
     throw new Error('useLanguage must be used within a LanguageProvider')
