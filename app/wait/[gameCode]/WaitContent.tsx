@@ -10,6 +10,7 @@ import { cleanupPresence } from "@/lib/presence"
 import { syncServerTime } from "@/lib/server-time"
 import { toast } from "sonner"
 import { getFirstName, formatDisplayName } from "@/lib/utils"
+import { LogOut } from "lucide-react"
 import React from "react"
 
 interface WaitContentProps {
@@ -57,6 +58,147 @@ const SmartNameDisplay = React.memo(({
 })
 SmartNameDisplay.displayName = "SmartNameDisplay"
 
+// === PLAYER CARD COMPONENT ===
+const PlayerCard = React.memo(({ 
+  player, 
+  index, 
+  isCurrentPlayer, 
+  onExitGame 
+}: { 
+  player: {
+    id: string
+    name: string
+    avatar: string
+    created_at: string
+  }
+  index: number
+  isCurrentPlayer: boolean
+  onExitGame: () => void
+}) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay: index * 0.1 }}
+      className={`relative rounded-lg p-3 sm:p-4 w-full max-w-[180px] sm:max-w-[200px] md:max-w-[220px] lg:max-w-[250px] transition-all duration-300 ${
+        isCurrentPlayer 
+          ? 'bg-gradient-to-br from-blue-900/90 to-purple-900/90 border-2 border-green-400 shadow-[0_0_25px_rgba(34,197,94,0.6)] hover:shadow-[0_0_30px_rgba(34,197,94,0.8)]' 
+          : 'bg-black/90 border-2 border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.4)] hover:shadow-[0_0_25px_rgba(59,130,246,0.6)]'
+      }`}
+    >
+      {/* Player Name */}
+      <div className="text-center mb-2 sm:mb-3">
+        <h4 className="text-white font-bold text-sm sm:text-base md:text-lg drop-shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1">
+          <SmartNameDisplay 
+            name={player.name} 
+            maxLength={12}
+            className="text-white"
+            multilineClassName="text-white"
+          />
+          {isCurrentPlayer && (
+            <span className="text-green-400 text-xs font-bold bg-green-400/20 px-1.5 py-0.5 rounded-full border border-green-400/30">
+              YOU
+            </span>
+          )}
+        </h4>
+      </div>
+
+
+      {/* Avatar */}
+      <div className="flex justify-center mb-2 sm:mb-3">
+        <motion.img
+          src={player.avatar}
+          alt={getFirstName(player.name)}
+          className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full object-cover border-2 shadow-[0_0_10px_rgba(59,130,246,0.4)] ${
+            isCurrentPlayer 
+              ? 'border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.6)]' 
+              : 'border-blue-400'
+          }`}
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: index * 0.1 + 0.2, type: "spring" }}
+        />
+      </div>
+
+      {/* Action Button */}
+      {isCurrentPlayer ? (
+        <div className="flex justify-center">
+          <button
+            onClick={onExitGame}
+            className="bg-blue-600 hover:bg-blue-700 text-white p-1.5 sm:p-2 rounded-lg font-bold transition-all duration-200 flex items-center justify-center shadow-[0_0_10px_rgba(59,130,246,0.4)] hover:shadow-[0_0_15px_rgba(59,130,246,0.6)]"
+            title="Exit Game"
+          >
+            <LogOut className="w-3 h-3 sm:w-4 sm:h-4" />
+          </button>
+        </div>
+      ) : (
+        <div className="flex justify-center">
+          <span className="text-gray-400 text-xs sm:text-sm">Waiting...</span>
+        </div>
+      )}
+    </motion.div>
+  )
+})
+PlayerCard.displayName = "PlayerCard"
+
+// === PLAYER LIST COMPONENT ===
+const PlayerList = React.memo(({ 
+  players, 
+  currentPlayerName,
+  onExitGame,
+  isUpdating
+}: { 
+  players: Array<{
+    id: string
+    name: string
+    avatar: string
+    created_at: string
+  }>
+  currentPlayerName: string
+  onExitGame: () => void
+  isUpdating: boolean
+}) => {
+  return (
+    <div className="w-full max-w-6xl mx-auto">
+      {/* Player Count */}
+      <div className="text-center mb-3 sm:mb-4 md:mb-6">
+        <h3 className="text-white text-sm sm:text-base md:text-lg font-bold drop-shadow-[2px_2px_0px_#000] flex items-center justify-center gap-2">
+          Players ({players.length})
+          {isUpdating && (
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full"
+            />
+          )}
+        </h3>
+      </div>
+
+      {/* Players Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4 max-h-80 sm:max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-blue-500/30 scrollbar-track-transparent pr-1 sm:pr-2">
+        {players
+          .sort((a, b) => {
+            // Put current player first
+            if (a.name === currentPlayerName) return -1
+            if (b.name === currentPlayerName) return 1
+            // Then sort by creation time for others
+            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          })
+          .map((player, index) => (
+            <PlayerCard
+              key={player.id}
+              player={player}
+              index={index}
+              isCurrentPlayer={player.name === currentPlayerName}
+              onExitGame={onExitGame}
+            />
+          ))}
+      </div>
+    </div>
+  )
+})
+PlayerList.displayName = "PlayerList"
+
 // Tambahkan ini untuk disable SSR pada halaman ini
 export const dynamic = "force-dynamic"
 
@@ -73,11 +215,20 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
   const [shouldRedirect, setShouldRedirect] = useState(false)
   const [isRedirecting, setIsRedirecting] = useState(false)
   const [showExitConfirm, setShowExitConfirm] = useState(false)
+  const [allPlayers, setAllPlayers] = useState<Array<{
+    id: string
+    name: string
+    avatar: string
+    created_at: string
+  }>>([])
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting')
+  const [isExiting, setIsExiting] = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem("player")
     if (!stored) {
-      toast.error("Player data not found")
+      console.log("[WAIT] No player data found, redirecting to home")
       router.replace("/")
       return
     }
@@ -87,6 +238,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
     setPlayerAvatar(avatar)
 
     const fetchGame = async () => {
+      console.log("[WAIT] Fetching game data for code:", gameCode)
       const { data, error } = await supabase
         .from("games")
         .select("id, is_started, quiz_id, countdown_start_at")
@@ -94,32 +246,119 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
         .single()
 
       if (error || !data) {
+        console.log("[WAIT] Game not found, redirecting to home")
         toast.error("Game not found")
         router.replace("/")
         return
       }
 
+      console.log("[WAIT] Game found:", data)
       setGameId(data.id)
 
+      // Check if player still exists in the game
+      const { data: playerData, error: playerError } = await supabase
+        .from("players")
+        .select("id, name")
+        .eq("game_id", data.id)
+        .eq("name", name)
+        .single()
+
+      if (playerError || !playerData) {
+        console.log("[WAIT] Player not found in game, redirecting to home")
+        toast.error("You are not in this game")
+        router.replace("/")
+        return
+      }
+
       if (data.is_started && !data.countdown_start_at) {
+        console.log("[WAIT] Game already started, redirecting to play")
         router.replace(`/play/${gameCode}`)
         return
       }
 
+      // Fetch all players in the game
+      const fetchPlayers = async () => {
+        const { data: playersData, error: playersError } = await supabase
+          .from("players")
+          .select("id, name, avatar, created_at")
+          .eq("game_id", data.id)
+          .order("created_at", { ascending: true })
+
+        if (playersError) {
+          console.error("Error fetching players:", playersError)
+        } else {
+          setAllPlayers(playersData || [])
+        }
+      }
+
+      await fetchPlayers()
       setLoading(false)
     }
 
     fetchGame()
-  }, [gameCode, router])
+
+    // Fallback refresh every 5 seconds to ensure sync
+    const fallbackInterval = setInterval(async () => {
+      if (!gameId || !playerName) return
+      
+      try {
+        const { data: playersData, error: playersError } = await supabase
+          .from("players")
+          .select("id, name, avatar, created_at")
+          .eq("game_id", gameId)
+          .order("created_at", { ascending: true })
+
+        if (!playersError && playersData) {
+          setAllPlayers(playersData)
+        }
+      } catch (error) {
+        console.error("[WAIT] Fallback refresh error:", error)
+      }
+    }, 5000)
+
+    return () => {
+      clearInterval(fallbackInterval)
+    }
+  }, [gameCode, router, gameId, playerName])
 
   useEffect(() => {
     if (loading || !gameId || !playerName || isRedirecting) return
 
     console.log("[PLAYER] 🎧 Setting up kick listener for player:", playerName, "in game:", gameId)
 
-    // Listen for real-time player deletion (kick events)
+    // Listen for real-time player changes (add/delete)
     const playersSubscription = supabase
       .channel(`players-${gameId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "players", filter: `game_id=eq.${gameId}` },
+        async (payload) => {
+          console.log("[PLAYER] 🟢 New player joined:", payload.new)
+          const newPlayer = payload.new
+          
+          // Show updating indicator
+          setIsUpdating(true)
+          
+          // Add new player to the list
+          setAllPlayers(prev => [...prev, {
+            id: newPlayer.id,
+            name: newPlayer.name,
+            avatar: newPlayer.avatar,
+            created_at: newPlayer.created_at
+          }])
+          
+          // Show notification for new player (only if it's not the current player)
+          if (newPlayer.name !== playerName) {
+            toast.success(`${newPlayer.name} joined the game!`, {
+              duration: 3000,
+              position: "top-center"
+            })
+          }
+          
+          // Hide updating indicator after a short delay
+          setTimeout(() => setIsUpdating(false), 1000)
+        }
+      )
       .on(
         "postgres_changes",
         { event: "DELETE", schema: "public", table: "players", filter: `game_id=eq.${gameId}` },
@@ -127,7 +366,24 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
           console.log("[PLAYER] 🔴 Player deleted:", payload.old)
           console.log("[PLAYER] 🔍 Current player name:", playerName)
           console.log("[PLAYER] 🔍 Deleted player name:", payload.old.name)
+          console.log("[PLAYER] 🔍 Is exiting:", isExiting)
           const deletedPlayer = payload.old
+          
+          // If current player is exiting voluntarily, don't process their own deletion
+          if (isExiting && deletedPlayer.name === playerName) {
+            console.log("[PLAYER] ℹ️ Current player is exiting voluntarily, ignoring their own deletion")
+            return
+          }
+          
+          // Show updating indicator
+          setIsUpdating(true)
+          
+          // Update players list immediately
+          setAllPlayers(prev => {
+            const filtered = prev.filter(p => p.id !== deletedPlayer.id)
+            console.log(`[PLAYER] 🗑️ Removed player "${deletedPlayer.name}" from list. Remaining:`, filtered.length)
+            return filtered
+          })
           
           // Check if the deleted player is the current player
           if (deletedPlayer.name === playerName) {
@@ -142,11 +398,40 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
             return
           } else {
             console.log("[PLAYER] ℹ️ Another player was deleted, not current player")
+            // Show notification for player leaving (only if it's not the current player)
+            toast.info(`${deletedPlayer.name} left the game`, {
+              duration: 3000,
+              position: "top-center"
+            })
           }
+          
+          // Force refresh to ensure consistency
+          setTimeout(async () => {
+            try {
+              const { data: playersData, error: playersError } = await supabase
+                .from("players")
+                .select("id, name, avatar, created_at")
+                .eq("game_id", gameId)
+                .order("created_at", { ascending: true })
+
+              if (!playersError && playersData) {
+                setAllPlayers(playersData)
+                console.log("[PLAYER] 🔄 Refreshed player list after deletion")
+              }
+            } catch (error) {
+              console.error("[PLAYER] ❌ Error refreshing player list:", error)
+            }
+            setIsUpdating(false)
+          }, 1000)
         },
       )
       .subscribe((status) => {
         console.log("[PLAYER] 📡 Subscription status:", status)
+        if (status === 'SUBSCRIBED') {
+          setConnectionStatus('connected')
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          setConnectionStatus('disconnected')
+        }
       })
 
     // Fallback: Check if player still exists in database every 2 seconds
@@ -280,6 +565,13 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
 
   const handleExitConfirm = async () => {
     setShowExitConfirm(false)
+    setIsExiting(true) // Set exiting state to prevent real-time updates
+    
+    // Reset exiting state after 5 seconds as a safety measure
+    const exitTimeout = setTimeout(() => {
+      setIsExiting(false)
+    }, 5000)
+    
     try {
       console.log("[v0] Starting exit process for player:", playerName, "in game:", gameId)
 
@@ -365,16 +657,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
           console.log("[v0] Player successfully removed from database")
         }
 
-        // Force trigger a notification for any listening hosts
-        try {
-          await supabase
-            .from("games")
-            .update({ updated_at: new Date().toISOString() })
-            .eq("id", gameId)
-          console.log("[PLAYER] 🔔 Triggered host notification")
-        } catch (notifyError) {
-          console.warn("[PLAYER] ⚠️ Failed to notify host:", notifyError)
-        }
+        // No need to trigger host notification - real-time subscriptions handle this automatically
 
         toast.success("Left the game successfully")
       }
@@ -383,10 +666,13 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
       localStorage.removeItem("player")
 
       console.log("[v0] Redirecting to home page...")
+      clearTimeout(exitTimeout) // Clear the timeout since exit was successful
       router.replace("/")
     } catch (error) {
       console.error("[v0] Error exiting game:", error)
       toast.error("Failed to exit game")
+      clearTimeout(exitTimeout) // Clear the timeout
+      setIsExiting(false) // Reset exiting state on error
     }
   }
 
@@ -432,46 +718,43 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
   return (
     <>
       <Background />
-      <div className="relative z-10 flex items-center justify-center min-h-screen font-mono text-white">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-black/70 border-4 border-white p-8 rounded-lg shadow-[8px_8px_0px_#000] text-center max-w-sm"
-        >
-          <h1 className="text-2xl mb-4 drop-shadow-[2px_2px_0px_#000]">Get Ready!</h1>
-          <motion.img
-            src={playerAvatar}
-            alt={getFirstName(playerName)}
-            className="w-32 h-32 rounded-full object-cover mx-auto mb-4 border-2 border-white"
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: "spring" }}
-          />
-          <p className="text-lg mb-2 drop-shadow-[1px_1px_0px_#000]">
-            <SmartNameDisplay 
-              name={playerName} 
-              maxLength={10}
-              className="text-lg text-white"
-              multilineClassName="text-base leading-tight"
-            />
-          </p>
-          <p className="text-sm text-white/70 mb-6">
-            Waiting to start
-            <motion.span
-              animate={{ opacity: [0, 1, 0] }}
-              transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY }}
-            >
-              ...
-            </motion.span>
-          </p>
-
-          <button
-            onClick={showExitDialog}
-            className="bg-red-500 hover:bg-red-600 border-2 border-red-700 px-4 py-2 rounded-lg text-white font-bold shadow-[4px_4px_0px_#000] text-sm"
+      <div className="relative z-10 min-h-screen font-mono text-white p-2 sm:p-3 md:p-4">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-4 sm:mb-6 md:mb-8 lg:mb-10"
           >
-            Exit Room
-          </button>
-        </motion.div>
+            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold drop-shadow-[2px_2px_0px_#000] mb-1 sm:mb-2">
+              Get Ready!
+            </h1>
+            <div className="text-sm sm:text-base md:text-lg text-white/80 flex items-center justify-center gap-2">
+              Waiting host to start
+              <motion.span
+                animate={{ opacity: [0, 1, 0] }}
+                transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY }}
+              >
+                ...
+              </motion.span>
+            </div>
+          </motion.div>
+
+          {/* Players List */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="flex justify-center"
+          >
+            <PlayerList 
+              players={allPlayers} 
+              currentPlayerName={playerName}
+              onExitGame={showExitDialog}
+              isUpdating={isUpdating}
+            />
+          </motion.div>
+        </div>
       </div>
 
       {/* Exit Confirmation Modal */}

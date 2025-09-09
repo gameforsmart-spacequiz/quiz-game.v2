@@ -1148,14 +1148,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
           }
           if (payload.new.is_started) setQuizStarted(true)
           
-          // If there's an updated_at change, refresh players (signal from player exit)
-          if (payload.new.updated_at !== payload.old.updated_at) {
-            console.log("[HOST] 🔔 Received update notification, refreshing players...")
-            setTimeout(() => {
-              fetchPlayers()
-              updatePlayerProgress()
-            }, 100)
-          }
+          // No need to refresh players on updated_at change - real-time subscriptions handle this
         },
       )
       .subscribe()
@@ -1202,11 +1195,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
             return ranked
           })
           
-          // Backup refresh after delay
-          setTimeout(() => {
-            fetchPlayers()
-            updatePlayerProgress()
-          }, 500)
+          // No backup refresh needed for INSERT - real-time update is sufficient
         },
       )
       .on(
@@ -1253,19 +1242,12 @@ export default function HostContent({ gameCode }: HostContentProps) {
             setTimeout(() => setForceUpdateKey(prev => prev + 1), 100)
           }
           
-          // Multiple backup refreshes for last player scenario
+          // Single backup refresh to ensure consistency
           setTimeout(() => {
-            console.log("[HOST] 🔄 First backup refresh after player deletion")
+            console.log("[HOST] 🔄 Backup refresh after player deletion")
             fetchPlayers()
             updatePlayerProgress()
-          }, 300)
-          
-          // Additional refresh for last player
-          setTimeout(() => {
-            console.log("[HOST] 🔄 Second backup refresh (last player safety)")
-            fetchPlayers()
-            updatePlayerProgress()
-          }, 1000)
+          }, 500)
         },
       )
       .on(
@@ -1291,11 +1273,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
             return sorted.map((p, idx) => ({ ...p, rank: idx + 1 }))
           })
           
-          // Backup refresh
-          setTimeout(async () => {
-            await fetchPlayers()
-            await updatePlayerProgress()
-          }, 500)
+          // No backup refresh needed for UPDATE - real-time update is sufficient
         },
       )
       .subscribe((status) => {
