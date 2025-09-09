@@ -18,6 +18,7 @@ import { supabase } from "@/lib/supabase"
 import { v4 as uuidv4 } from "uuid"
 import { useLanguage } from "@/contexts/language-context"
 // penanda
+// penanda
 const ANIMAL_AVATARS = [
   "https://api.dicebear.com/9.x/micah/svg?seed=cat",
   "https://api.dicebear.com/9.x/micah/svg?seed=dog",
@@ -98,6 +99,20 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
 
       if (gameError || !game) {
         form.setError("gameCode", { message: t('error', 'Game not found or already started') })
+        return
+      }
+
+      // Check if player name already exists in this game
+      const { data: existingPlayer, error: checkError } = await supabase
+        .from("players")
+        .select("name")
+        .eq("game_id", game.id)
+        .eq("name", data.name)
+        .single()
+
+      if (existingPlayer) {
+        form.setError("name", { message: "Nama sudah digunakan oleh player lain. Silakan gunakan nama yang berbeda." })
+        setIsLoading(false)
         return
       }
 
