@@ -590,18 +590,13 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
 
         if (findError) {
           console.error("[v0] Error finding player to delete:", findError)
-          // Try alternative deletion method if player not found by name
-          const { error: deleteError } = await supabase
-            .from("players")
-            .delete()
-            .eq("game_id", gameId)
-            .eq("name", playerName)
-
-          if (deleteError) {
-            console.error("[v0] Failed to delete player by name:", deleteError)
-            toast.error("Failed to remove player from game")
-            return
-          }
+          // If player not found, they might have already been deleted
+          console.log("[v0] Player not found, might already be deleted")
+          toast.success("Left the game successfully")
+          clearGame?.()
+          localStorage.removeItem("player")
+          router.replace("/")
+          return
         } else {
           console.log("[v0] Found player to delete:", playerToDelete)
           
@@ -615,18 +610,8 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
 
           if (deleteError) {
             console.error("[PLAYER] ❌ Error removing player by ID:", deleteError)
-            // Fallback to deletion by name
-            const { error: fallbackError } = await supabase
-              .from("players")
-              .delete()
-              .eq("game_id", gameId)
-              .eq("name", playerName)
-
-            if (fallbackError) {
-              console.error("[v0] Fallback deletion also failed:", fallbackError)
-              toast.error("Failed to remove player from game")
-              return
-            }
+            toast.error("Failed to remove player from game")
+            return
           } else {
             console.log("[PLAYER] ✅ Player successfully deleted from database:", deletedData)
             console.log("[PLAYER] 📡 Broadcasting deletion event for player ID:", playerToDelete.id)

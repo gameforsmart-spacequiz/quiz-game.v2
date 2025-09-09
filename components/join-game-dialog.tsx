@@ -101,6 +101,20 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
         return
       }
 
+      // Check if player name already exists in this game
+      const { data: existingPlayer, error: checkError } = await supabase
+        .from("players")
+        .select("name")
+        .eq("game_id", game.id)
+        .eq("name", data.name)
+        .single()
+
+      if (existingPlayer) {
+        form.setError("name", { message: "Nama sudah digunakan oleh player lain. Silakan gunakan nama yang berbeda." })
+        setIsLoading(false)
+        return
+      }
+
       const playerId = uuidv4()
 
       // Insert fresh player record
