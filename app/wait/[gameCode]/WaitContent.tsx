@@ -660,7 +660,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
       setIsExiting(false) // Reset exiting state on error
     }
   }
-
+// ikan
   if (loading)
     return (
       <>
