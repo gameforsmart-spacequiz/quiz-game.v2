@@ -44,7 +44,7 @@ interface TryoutPlayContentProps {
 
 export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) {
   const router = useRouter()
-  const { currentQuestion, score, correctAnswers, setCurrentQuestion, addScore, incrementCorrectAnswers, setGameId, gameId, playerId, setCorrectAnswers, setScore, resetGame } =
+  const { currentQuestion, score, correctAnswers, setCurrentQuestion, addScore, incrementCorrectAnswers, setGameId, gameId, playerId, setCorrectAnswers, setScore, resetGame, resetGameKeepMode, setGameMode } =
     useGameStore()
 
   // Load current question from localStorage on mount
@@ -162,20 +162,24 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
   }, [answers]);
 
   // Function to check if all questions are answered and handle finish logic
-  const checkAndFinishQuiz = useCallback(() => {
+  const checkAndFinishQuiz = useCallback((updatedAnswers?: {[key: number]: string}) => {
+    // Use updated answers if provided, otherwise use current state
+    const currentAnswers = updatedAnswers || answers;
     const unanswered = [];
+    
     for (let i = 0; i < allQuestions.length; i++) {
-      if (!answers[i] || answers[i] === '') {
+      if (!currentAnswers[i] || currentAnswers[i] === '') {
         unanswered.push(i);
       }
     }
 
     console.log("Checking finish quiz:", {
       totalQuestions: allQuestions.length,
-      answeredQuestions: Object.keys(answers).length,
+      answeredQuestions: Object.keys(currentAnswers).length,
       unansweredQuestions: unanswered.length,
       unanswered: unanswered,
-      answers: answers
+      answers: currentAnswers,
+      updatedAnswers: updatedAnswers
     });
 
     if (unanswered.length > 0) {
@@ -480,11 +484,13 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
     const selectedChoice = currentQ?.choices?.find(c => c.id === choiceId);
 
     // Save answer without showing result
+    let updatedAnswers = answers;
     if (selectedChoice) {
-      setAnswers(prev => ({
-        ...prev,
+      updatedAnswers = {
+        ...answers,
         [currentQuestion]: selectedChoice.choice_text || ''
-      }));
+      };
+      setAnswers(updatedAnswers);
     }
 
     console.log("Answer saved:", selectedChoice?.choice_text);
@@ -497,8 +503,15 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
         willAdvance: currentQuestion < allQuestions.length - 1
       });
       
-      // Find next unanswered question
-      const nextUnansweredIndex = findNextUnansweredQuestion(currentQuestion);
+      // Find next unanswered question using the updated answers
+      const nextUnansweredIndex = (() => {
+        for (let i = currentQuestion + 1; i < allQuestions.length; i++) {
+          if (!updatedAnswers[i] || updatedAnswers[i] === '') {
+            return i;
+          }
+        }
+        return -1; // No unanswered questions found
+      })();
       
       if (nextUnansweredIndex !== -1) {
         // Found next unanswered question - go to it
@@ -512,10 +525,10 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
       } else {
         // No more unanswered questions - check if all questions are completed
         console.log("No more unanswered questions, checking if all questions are completed");
-        checkAndFinishQuiz();
+        checkAndFinishQuiz(updatedAnswers);
       }
     }, 500);
-  }, [allQuestions, currentQuestion, setCurrentQuestion, timeLeft, checkAndFinishQuiz, findNextUnansweredQuestion]);
+  }, [allQuestions, currentQuestion, setCurrentQuestion, timeLeft, checkAndFinishQuiz, answers]);
 
   // Function to automatically finish quiz when time runs out
   const autoFinishQuiz = useCallback(() => {
@@ -609,7 +622,10 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
             <p className="text-white text-sm sm:text-base md:text-lg mb-4">Loading quiz questions...</p>
             <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-purple-400 mx-auto mb-4"></div>
             <Button
-              onClick={() => router.push("/select-quiz")}
+              onClick={() => {
+                setGameMode("tryout");
+                router.push("/select-quiz");
+              }}
               className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3"
             >
               Back to Quiz Selection
@@ -830,7 +846,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                     } else {
                       // No more unanswered questions - check if all questions are completed
                       console.log("Next button clicked, no more unanswered questions, checking completion");
-                      checkAndFinishQuiz();
+                      checkAndFinishQuiz(answers);
                     }
                   }}
                   disabled={false}
@@ -1171,8 +1187,8 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                       localStorage.removeItem(`tryout-unanswered-questions-${gameCode}`);
                     }
                     
-                    // Reset game state
-                    resetGame();
+                    // Reset game state but keep tryout mode
+                    resetGameKeepMode();
                     
                     // Navigate back
                     router.push("/select-quiz");

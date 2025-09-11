@@ -38,7 +38,7 @@ export default function TryoutSettingsPage() {
 
   const router = useRouter()
   const params = useParams()
-  const { setQuizId, setGameCode, setGameId, setIsHost } = useGameStore()
+  const { setQuizId, setGameCode, setGameId, setIsHost, setGameMode } = useGameStore()
 
   const quizId = params.quizId as string
 
@@ -168,6 +168,7 @@ export default function TryoutSettingsPage() {
       setGameCode(gameCode)
       setGameId(data.id)
       setIsHost(false) // Set to false for tryout mode
+      setGameMode("tryout") // Set game mode to tryout
 
       router.push(`/tryout-play/${gameCode}`)
     } catch (error) {

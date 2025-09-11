@@ -15,7 +15,7 @@ interface TryoutResultContentProps {
 
 export default function TryoutResultContent({ gameCode }: TryoutResultContentProps) {
   const router = useRouter()
-  const { score, correctAnswers, resetGame } = useGameStore()
+  const { score, correctAnswers, resetGame, resetGameKeepMode, setGameMode } = useGameStore()
   const [loading, setLoading] = useState(true)
   const [quiz, setQuiz] = useState<any>(null)
   const [totalQuestions, setTotalQuestions] = useState(0)
@@ -274,7 +274,8 @@ export default function TryoutResultContent({ gameCode }: TryoutResultContentPro
                 </Button>
                 <Button
                   onClick={() => {
-                    resetGame()
+                    resetGameKeepMode() // Reset game but keep tryout mode
+                    setGameMode("tryout") // Explicitly ensure tryout mode is set
                     router.push("/select-quiz")
                   }}
                   className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold flex items-center justify-center gap-2 text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3"
