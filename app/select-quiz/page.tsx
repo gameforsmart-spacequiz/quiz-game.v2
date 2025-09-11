@@ -95,6 +95,9 @@ export default function SelectQuizPage() {
   const router = useRouter()
   const { setQuizId, setGameCode, setGameId, setIsHost, gameMode } = useGameStore()
 
+  // Debug log for gameMode
+  console.log("SelectQuizPage - Current gameMode:", gameMode)
+
   const difficultyLevels = [
     { value: "all", label: "All Category" },
     { value: "TK", label: "TK Level" },
@@ -463,6 +466,7 @@ export default function SelectQuizPage() {
                               <Button
                                 onClick={(e) => {
                                   e.stopPropagation()
+                                  console.log("Tryout button clicked, gameMode:", gameMode)
                                   handleTryoutGame(quiz)
                                 }}
                                 disabled={isLoading === quiz.id}

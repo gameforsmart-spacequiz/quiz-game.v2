@@ -80,6 +80,7 @@ export interface GameState {
   setGameSettings: (settings: { timeLimit: number; questionCount: number }) => void
   setGameMode: (mode: "host" | "tryout" | null) => void
   resetGame: () => void
+  resetGameKeepMode: () => void
 }
 
 export const useGameStore = create<GameState>()(
@@ -169,6 +170,31 @@ export const useGameStore = create<GameState>()(
           },
           gameMode: null,
         }),
+
+      resetGameKeepMode: () => {
+        const currentMode = get().gameMode;
+        set({
+          gameCode: "",
+          gameId: "",
+          quizId: 0,
+          gameStatus: "waiting",
+          playerId: "",
+          playerName: "",
+          playerAvatar: "",
+          isHost: false,
+          currentQuestion: 0,
+          score: 0,
+          correctAnswers: 0,
+          players: [],
+          showMiniGame: false,
+          miniGameScore: 0,
+          gameSettings: {
+            timeLimit: 300,
+            questionCount: 15,
+          },
+          gameMode: currentMode, // Keep the current mode
+        });
+      },
 
       clearGame: () => get().resetGame(),
     }),
