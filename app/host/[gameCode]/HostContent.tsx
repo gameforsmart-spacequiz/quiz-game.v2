@@ -72,12 +72,13 @@ const StableProgressBar = React.memo(({
   const percentage = totalQuestions > 0 ? (displayProgress / totalQuestions) * 100 : 0
   
   return (
-    <div className="flex-1 h-3 bg-white/30 rounded-full overflow-hidden border border-white/40">
+    <div className="flex-1 h-3 bg-white/30 rounded-full overflow-hidden border border-white/40 select-none pointer-events-none cursor-default">
       <motion.div
-        className="h-full bg-gradient-to-r from-green-400 to-green-500 shadow-sm"
+        className="h-full bg-gradient-to-r from-green-400 to-green-500 shadow-sm select-none pointer-events-none"
         initial={{ width: `${percentage}%` }}
         animate={{ width: `${Math.min(percentage, 100)}%` }}
         transition={{ duration: 0.4, ease: "easeOut", type: "tween" }}
+        style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
       />
     </div>
   )
@@ -732,12 +733,13 @@ export default function HostContent({ gameCode }: HostContentProps) {
   
   // Debounced updatePlayerProgress to prevent flickering
   const debouncedUpdateProgress = useRef<NodeJS.Timeout>()
-
+  const updateQueue = useRef<Set<string>>(new Set())
+  const isUpdating = useRef(false)
   // Pagination states
   const [currentPlayerPage, setCurrentPlayerPage] = useState(0)
   const [currentProgressPage, setCurrentProgressPage] = useState(0)
   const [slideDirection, setSlideDirection] = useState(0) // -1 for left, 1 for right
-  const PLAYERS_PER_PAGE = 12 // 3 rows x 4 columns
+  const PLAYERS_PER_PAGE = 20 // 4 rows x 5 columns (2xl), 5 rows x 4 columns (xl), etc.
   
   // Store previous progress values to prevent unnecessary resets
   const prevProgressRef = useRef<Map<string, number>>(new Map())
@@ -921,54 +923,68 @@ export default function HostContent({ gameCode }: HostContentProps) {
   }, [gameCode, router, setGameCode, setGameId, setQuizId, setGameSettings, setIsHost])
 
   const updatePlayerProgress = useCallback(async () => {
-    if (!gameId || !quiz) return
+    if (!gameId || !quiz || isUpdating.current) return
 
-    const [answersResult, playersResult] = await Promise.all([
-      supabase.from("player_answers").select("*").eq("game_id", gameId).not("question_index", "eq", -1),
-      supabase.from("players").select("*").eq("game_id", gameId),
-    ])
+    isUpdating.current = true
 
-    const answers = answersResult.data || []
-    const playersData = playersResult.data || []
+    try {
+      const [answersResult, playersResult] = await Promise.all([
+        supabase.from("player_answers").select("*").eq("game_id", gameId).not("question_index", "eq", -1),
+        supabase.from("players").select("*").eq("game_id", gameId),
+      ])
 
-    const progressMap = new Map<string, PlayerProgress>()
+      const answers = answersResult.data || []
+      const playersData = playersResult.data || []
 
-    playersData.forEach((player: Player) => {
-      const playerAnswers = answers.filter((a) => a.player_id === player.id && a.question_index >= 0)
+      const progressMap = new Map<string, PlayerProgress>()
 
-      const uniqueQuestionIndices = new Set(playerAnswers.map((a) => a.question_index))
-      const answeredQuestions = uniqueQuestionIndices.size
-      const totalQuestions = gameSettings.questionCount || quiz.questionCount || 10
+      playersData.forEach((player: Player) => {
+        const playerAnswers = answers.filter((a) => a.player_id === player.id && a.question_index >= 0)
 
-      const calculatedScore = playerAnswers.reduce((sum, a) => sum + (a.points_earned || 0), 0)
-      // Prevent score from flickering to 0 by using the higher value
-      const score = Math.max(player.score || 0, calculatedScore)
+        const uniqueQuestionIndices = new Set(playerAnswers.map((a) => a.question_index))
+        const answeredQuestions = uniqueQuestionIndices.size
+        const totalQuestions = gameSettings.questionCount || quiz.questionCount || 10
 
-      progressMap.set(player.id, {
-        id: player.id,
-        name: player.name,
-        avatar: player.avatar || "/placeholder.svg?height=40&width=40&text=Player",
-        score,
-        currentQuestion: answeredQuestions,
-        totalQuestions,
-        isActive: answeredQuestions < totalQuestions,
-        rank: 0,
+        const calculatedScore = playerAnswers.reduce((sum, a) => sum + (a.points_earned || 0), 0)
+        // Prevent score from flickering to 0 by using the higher value
+        const score = Math.max(player.score || 0, calculatedScore)
+
+        progressMap.set(player.id, {
+          id: player.id,
+          name: player.name,
+          avatar: player.avatar || "/placeholder.svg?height=40&width=40&text=Player",
+          score,
+          currentQuestion: answeredQuestions,
+          totalQuestions,
+          isActive: answeredQuestions < totalQuestions,
+          rank: 0,
+        })
       })
-    })
 
-    const sorted = Array.from(progressMap.values()).sort((a, b) => b.score - a.score)
-    const ranked = sorted.map((p, idx) => ({ ...p, rank: idx + 1 }))
-    
-    // Prevent unnecessary updates that could cause flickering
-    setPlayerProgress(prev => {
-      // Only update if there are actual changes to prevent flickering
-      if (JSON.stringify(prev) === JSON.stringify(ranked)) {
-        return prev
-      }
-      return ranked
-    })
+      const sorted = Array.from(progressMap.values()).sort((a, b) => b.score - a.score)
+      const ranked = sorted.map((p, idx) => ({ ...p, rank: idx + 1 }))
+      
+      // Batch update with better change detection
+      setPlayerProgress(prev => {
+        // More efficient change detection - only check essential fields
+        const hasChanges = prev.length !== ranked.length || 
+          prev.some((oldPlayer, index) => {
+            const newPlayer = ranked[index]
+            return !newPlayer || 
+              oldPlayer.id !== newPlayer.id ||
+              oldPlayer.score !== newPlayer.score ||
+              oldPlayer.currentQuestion !== newPlayer.currentQuestion ||
+              oldPlayer.rank !== newPlayer.rank
+          })
+        
+        if (!hasChanges) {
+          return prev
+        }
+        
+        return ranked
+      })
 
-          // Only check for completion if quiz is actually started and active
+      // Only check for completion if quiz is actually started and active
       if (quizStarted && !showLeaderboard) {
         // Get only players who have actually joined and participated
         const activePlayers = ranked.filter((p) => p.currentQuestion > 0)
@@ -999,93 +1015,103 @@ export default function HostContent({ gameCode }: HostContentProps) {
             console.log(`[HOST] ⚠️ Players haven't answered enough questions. Required: ${minQuestionsRequired}, Current: ${activePlayers.map(p => `${p.name}:${p.currentQuestion}`).join(', ')}`)
             return
           }
-        // Additional safety check: ensure quiz has been running for at least 30 seconds
-        const quizStartTime = await supabase
-          .from("games")
-          .select("quiz_start_time")
-          .eq("id", gameId)
-          .single()
-        
-        if (quizStartTime.data?.quiz_start_time) {
-          const startTime = new Date(quizStartTime.data.quiz_start_time).getTime()
-          const currentTime = Date.now()
-          const quizDuration = currentTime - startTime
+          // Additional safety check: ensure quiz has been running for at least 30 seconds
+          const quizStartTime = await supabase
+            .from("games")
+            .select("quiz_start_time")
+            .eq("id", gameId)
+            .single()
           
-          // Only auto-finish if quiz has been running for at least 30 seconds
-          if (quizDuration > 30000) { // 30 seconds
-            console.log("[HOST] 🎉 All players completed quiz - finishing game")
-            await supabase.from("games").update({ finished: true, is_started: false }).eq("id", gameId)
-            setShowLeaderboard(true)
+          if (quizStartTime.data?.quiz_start_time) {
+            const startTime = new Date(quizStartTime.data.quiz_start_time).getTime()
+            const currentTime = Date.now()
+            const quizDuration = currentTime - startTime
+            
+            // Only auto-finish if quiz has been running for at least 30 seconds
+            if (quizDuration > 30000) { // 30 seconds
+              console.log("[HOST] 🎉 All players completed quiz - finishing game")
+              await supabase.from("games").update({ finished: true, is_started: false }).eq("id", gameId)
+              setShowLeaderboard(true)
 
+            } else {
+              console.log(`[HOST] ⏱️ Quiz too short (${Math.round(quizDuration/1000)}s) - waiting for minimum duration`)
+            }
           } else {
-            console.log(`[HOST] ⏱️ Quiz too short (${Math.round(quizDuration/1000)}s) - waiting for minimum duration`)
+            console.log("[HOST] ⚠️ No quiz start time found - skipping auto-finish")
           }
-        } else {
-          console.log("[HOST] ⚠️ No quiz start time found - skipping auto-finish")
+        } else if (quizManuallyEnded) {
+          console.log("[HOST] 🚫 Quiz manually ended - skipping auto-finish")
+        } else if (activePlayers.length === 0) {
+          console.log("[HOST] ⏳ No active players yet - waiting for players to join and answer")
+        } else if (hasPlayersStillActive) {
+          console.log("[HOST] ⏳ Some players still answering questions - continuing quiz")
+        } else if (!allActivePlayersCompleted) {
+          console.log("[HOST] ⏳ Not all active players completed - continuing quiz")
         }
-      } else if (quizManuallyEnded) {
-        console.log("[HOST] 🚫 Quiz manually ended - skipping auto-finish")
-      } else if (activePlayers.length === 0) {
-        console.log("[HOST] ⏳ No active players yet - waiting for players to join and answer")
-      } else if (hasPlayersStillActive) {
-        console.log("[HOST] ⏳ Some players still answering questions - continuing quiz")
-      } else if (!allActivePlayersCompleted) {
-        console.log("[HOST] ⏳ Not all active players completed - continuing quiz")
       }
+    } catch (error) {
+      console.error("[HOST] Error updating player progress:", error)
+    } finally {
+      isUpdating.current = false
     }
   }, [gameId, quiz, showLeaderboard, gameSettings.questionCount, quizStarted])
 
   const fetchPlayers = useCallback(async () => {
     if (!gameId) return
 
-    console.log("[v0] Fetching players for game:", gameId)
-    const [playersResult, answersResult] = await Promise.all([
-      supabase.from("players").select("*").eq("game_id", gameId),
-      supabase.from("player_answers").select("*").eq("game_id", gameId).not("question_index", "eq", -1)
-    ])
-    
-    if (playersResult.error) {
-      console.error("Error fetching players:", playersResult.error)
-      return
-    }
-
-    const playersData = playersResult.data || []
-    const answers = answersResult.data || []
-    
-    console.log("[v0] Fetched players:", playersData)
-    setPlayers(playersData || [])
-    if (playersData) {
-      const progressMap = new Map<string, PlayerProgress>()
-      playersData.forEach((player: Player) => {
-        // Calculate actual progress from answers
-        const playerAnswers = answers.filter((a) => a.player_id === player.id && a.question_index >= 0)
-        const uniqueQuestionIndices = new Set(playerAnswers.map((a) => a.question_index))
-        const answeredQuestions = uniqueQuestionIndices.size
-        
-        console.log(`[HOST] 📊 Player ${player.name}: score=${player.score}, answers=${playerAnswers.length}, uniqueQuestions=${uniqueQuestionIndices.size}, currentQuestion=${answeredQuestions}`)
-        
-        progressMap.set(player.id, {
-          id: player.id,
-          name: player.name,
-          avatar: player.avatar || "/placeholder.svg?height=40&width=40&text=Player",
-          score: player.score || 0,
-          currentQuestion: answeredQuestions,
-          totalQuestions: gameSettings.questionCount || quiz?.questionCount || 10,
-          isActive: answeredQuestions < (gameSettings.questionCount || quiz?.questionCount || 10),
-          rank: 0,
-        })
-      })
-      const sorted = Array.from(progressMap.values()).sort((a, b) => b.score - a.score)
-      const ranked = sorted.map((p, idx) => ({ ...p, rank: idx + 1 }))
+    try {
+      console.log("[v0] Fetching players for game:", gameId)
+      const [playersResult, answersResult] = await Promise.all([
+        supabase.from("players").select("*").eq("game_id", gameId),
+        supabase.from("player_answers").select("*").eq("game_id", gameId).not("question_index", "eq", -1)
+      ])
       
-      // Prevent unnecessary updates that could cause flickering
-      setPlayerProgress(prev => {
-        // Only update if there are actual changes to prevent flickering
-        if (JSON.stringify(prev) === JSON.stringify(ranked)) {
-          return prev
-        }
-        return ranked
-      })
+      if (playersResult.error) {
+        console.error("Error fetching players:", playersResult.error)
+        return
+      }
+
+      const playersData = playersResult.data || []
+      const answers = answersResult.data || []
+      
+      console.log("[v0] Fetched players:", playersData)
+      setPlayers(playersData || [])
+      if (playersData) {
+        const progressMap = new Map<string, PlayerProgress>()
+        playersData.forEach((player: Player) => {
+          // Calculate actual progress from answers
+          const playerAnswers = answers.filter((a) => a.player_id === player.id && a.question_index >= 0)
+          const uniqueQuestionIndices = new Set(playerAnswers.map((a) => a.question_index))
+          const answeredQuestions = uniqueQuestionIndices.size
+          
+          console.log(`[HOST] 📊 Player ${player.name}: score=${player.score}, answers=${playerAnswers.length}, uniqueQuestions=${uniqueQuestionIndices.size}, currentQuestion=${answeredQuestions}`)
+          
+          progressMap.set(player.id, {
+            id: player.id,
+            name: player.name,
+            avatar: player.avatar || "/placeholder.svg?height=40&width=40&text=Player",
+            score: player.score || 0,
+            currentQuestion: answeredQuestions,
+            totalQuestions: gameSettings.questionCount || quiz?.questionCount || 10,
+            isActive: answeredQuestions < (gameSettings.questionCount || quiz?.questionCount || 10),
+            rank: 0,
+          })
+        })
+        
+        const sorted = Array.from(progressMap.values()).sort((a, b) => b.score - a.score)
+        const ranked = sorted.map((p, idx) => ({ ...p, rank: idx + 1 }))
+        
+        // Prevent unnecessary updates that could cause flickering
+        setPlayerProgress(prev => {
+          // Only update if there are actual changes to prevent flickering
+          if (JSON.stringify(prev) === JSON.stringify(ranked)) {
+            return prev
+          }
+          return ranked
+        })
+      }
+    } catch (error) {
+      console.error("[HOST] Error fetching players:", error)
     }
   }, [gameId, gameSettings.questionCount, quiz?.questionCount])
 
@@ -1097,6 +1123,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
   useEffect(() => {
     setCurrentProgressPage(0)
   }, [playerProgress.length])
+
 
   // Smart useEffect for player changes with debouncing (friend's suggestion)
   const lastRefreshTime = useRef(0)
@@ -1290,7 +1317,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
       }
       debouncedUpdateProgress.current = setTimeout(() => {
         updatePlayerProgress()
-      }, 300) // 300ms debounce to prevent rapid updates
+      }, 500) // Increased to 500ms for better batching with many players
     }
 
     const answersSubscription = supabase
@@ -2147,36 +2174,49 @@ export default function HostContent({ gameCode }: HostContentProps) {
                 </div>
               ) : (
                 <>
-                                    <div className="space-y-3">
-                    {getPaginatedProgress(playerProgress, currentProgressPage).map((player, index) => (
-                      <motion.div
-                        key={player.id}
-                        layout
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.05 }}
-                        whileHover={{ scale: 1.01 }}
-                        className={`relative overflow-hidden rounded-lg p-4 border transition-all duration-200 ${
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
+                    {getPaginatedProgress(playerProgress, currentProgressPage).sort((a, b) => a.rank - b.rank)
+                      .map((player, index) => (
+                       <motion.div
+                         key={player.id}
+                         initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                         animate={{ 
+                           opacity: 1, 
+                           y: 0, 
+                           scale: 1
+                         }}
+                         exit={{ opacity: 0, y: -20, scale: 0.9 }}
+                         transition={{
+                           duration: 0.6,
+                           delay: Math.min(index * 0.05, 1.0),
+                           ease: [0.25, 0.46, 0.45, 0.94]
+                         }}
+                         whileHover={{ 
+                           scale: 1.02,
+                           transition: { duration: 0.2 }
+                         }}
+                         className={`relative overflow-hidden rounded-lg p-3 sm:p-4 border-2 transition-all duration-500 ${
                           player.rank === 1
-                            ? "border-yellow-400/50"
+                            ? "border-yellow-400/70 shadow-lg shadow-yellow-400/20"
                             : player.rank === 2
-                              ? "border-gray-300/50"
+                              ? "border-gray-300/70 shadow-lg shadow-gray-300/20"
                               : player.rank === 3
-                                ? "border-amber-600/50"
-                              : "border-white/20"
+                                ? "border-amber-600/70 shadow-lg shadow-amber-600/20"
+                              : "border-white/30 shadow-md shadow-white/10"
                         }`}
                       >
                         {/* Galaxy background with stars */}
                         <div className="absolute inset-0 bg-gradient-to-br from-purple-900/30 via-blue-900/20 to-indigo-900/25 rounded-lg" />
                         
-                        {/* Animated stars background */}
-                        <div className="absolute inset-0 overflow-hidden rounded-lg">
-                          <div className="absolute top-2 left-3 w-1 h-1 bg-white/60 rounded-full animate-pulse" />
-                          <div className="absolute top-6 right-4 w-0.5 h-0.5 bg-blue-300/70 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
-                          <div className="absolute bottom-3 left-6 w-0.5 h-0.5 bg-purple-300/60 rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
-                          <div className="absolute bottom-6 right-2 w-1 h-1 bg-cyan-300/50 rounded-full animate-pulse" style={{ animationDelay: '1.5s' }} />
-                          <div className="absolute top-1/2 left-2 w-0.5 h-0.5 bg-white/40 rounded-full animate-pulse" style={{ animationDelay: '2s' }} />
-                        </div>
+                        {/* Animated stars background - only for top 3 players to reduce performance impact */}
+                        {player.rank <= 3 && (
+                          <div className="absolute inset-0 overflow-hidden rounded-lg">
+                            <div className="absolute top-1 left-2 w-0.5 h-0.5 bg-white/60 rounded-full animate-pulse" />
+                            <div className="absolute top-3 right-2 w-0.5 h-0.5 bg-blue-300/70 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
+                            <div className="absolute bottom-2 left-3 w-0.5 h-0.5 bg-purple-300/60 rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
+                            <div className="absolute bottom-3 right-1 w-0.5 h-0.5 bg-cyan-300/50 rounded-full animate-pulse" style={{ animationDelay: '1.5s' }} />
+                          </div>
+                        )}
                         
                         {/* Nebula effect */}
                         <div className={`absolute inset-0 rounded-lg opacity-20 ${
@@ -2189,89 +2229,133 @@ export default function HostContent({ gameCode }: HostContentProps) {
                               : "bg-gradient-to-br from-blue-400/15 via-purple-500/10 to-indigo-600/10"
                         }`} />
                         
-                                                {/* Content wrapper with backdrop blur */}
-                        <div className="relative z-10 bg-black/20 backdrop-blur-sm rounded-lg p-3 -m-3">
-                          <div className="flex items-center gap-4">
-                          {/* Rank number */}
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold ${
-                            player.rank === 1
-                              ? "bg-yellow-400 text-black"
-                              : player.rank === 2
-                                ? "bg-gray-300 text-black"
-                                : player.rank === 3
-                                  ? "bg-amber-600 text-white"
-                                  : "bg-white/20 text-white"
-                          }`}>
-                            {player.rank}
-                          </div>
+                        {/* Ranking change indicator */}
+                        {player.rank <= 3 && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0 }}
+                            transition={{ duration: 0.5, delay: 0.2 }}
+                            className="absolute top-2 right-2 z-20"
+                          >
+                            <div className={`w-3 h-3 rounded-full ${
+                              player.rank === 1 ? 'bg-yellow-400' : 
+                              player.rank === 2 ? 'bg-gray-300' : 
+                              'bg-amber-600'
+                            } animate-pulse`} />
+                          </motion.div>
+                        )}
 
-                          {/* Avatar */}
-                          <Image
-                            src={player.avatar || "/placeholder.svg"}
-                            alt={getFirstName(player.name)}
-                            width={40}
-                            height={40}
-                            className="w-10 h-10 rounded-full object-cover border-2 border-white/30"
-                          />
+                        {/* Content wrapper with backdrop blur */}
+                        <div className="relative z-10 bg-black/20 backdrop-blur-sm rounded-lg p-2 -m-2">
+                          {/* Header with rank and avatar */}
+                          <div className="flex items-center gap-2 sm:gap-3 mb-3">
+                            {/* Rank number */}
+                            <motion.div 
+                              key={`${player.id}-rank-${player.rank}`}
+                              initial={{ scale: 0.8, rotate: -10 }}
+                              animate={{ 
+                                scale: 1, 
+                                rotate: 0,
+                                boxShadow: player.rank <= 3 ? "0 0 20px rgba(255, 215, 0, 0.5)" : "0 0 10px rgba(255, 255, 255, 0.2)"
+                              }}
+                              transition={{ 
+                                duration: 0.6, 
+                                ease: "easeOut",
+                                boxShadow: { duration: 0.3 }
+                              }}
+                              className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-sm sm:text-base font-bold ${
+                                player.rank === 1
+                                  ? "bg-yellow-400 text-black"
+                                  : player.rank === 2
+                                    ? "bg-gray-300 text-black"
+                                    : player.rank === 3
+                                      ? "bg-amber-600 text-white"
+                                      : "bg-white/20 text-white"
+                              }`}
+                            >
+                              {player.rank}
+                            </motion.div>
 
-                          {/* Player info */}
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-bold text-white text-base mb-1">
-                              <SmartNameDisplay 
-                                name={player.name} 
-                                maxLength={8}
-                                className="text-base font-bold text-white"
-                                multilineClassName="text-sm leading-tight"
-                              />
-                            </h3>
-                            <p className={`text-sm font-medium ${
-                              player.rank === 1
-                                ? "text-yellow-300"
-                                : player.rank === 2
-                                  ? "text-gray-200"
-                                  : player.rank === 3
-                                    ? "text-amber-400"
-                                    : "text-yellow-300"
-                            }`}>
-                              {player.score} points
-                            </p>
-                          </div>
-
-                          {/* Rank icon */}
-                          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white/10">
-                            {getRankIcon(player.rank)}
-                          </div>
-                        </div>
-
-                        {/* Progress section */}
-                        <div className="mt-4 flex items-center gap-3">
-                          <span className="text-sm text-white/70 min-w-fit">
-                            {player.currentQuestion}/{player.totalQuestions}
-                          </span>
-                          <div className="flex-1">
-                            <StableProgressBar
-                              playerId={player.id}
-                              currentQuestion={player.currentQuestion}
-                              totalQuestions={player.totalQuestions}
+                            {/* Avatar */}
+                            <Image
+                              src={player.avatar || "/placeholder.svg"}
+                              alt={getFirstName(player.name)}
+                              width={32}
+                              height={32}
+                              className="w-6 h-6 sm:w-8 sm:h-8 rounded-full object-cover border-2 border-white/30"
                             />
+
+                            {/* Player name and score */}
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-bold text-white text-xs sm:text-sm truncate">
+                                <SmartNameDisplay 
+                                  name={player.name} 
+                                  maxLength={6}
+                                  className="text-xs sm:text-sm font-bold text-white"
+                                  multilineClassName="text-xs leading-tight"
+                                />
+                              </h3>
+                              <motion.p 
+                                key={`${player.id}-${player.score}`}
+                                initial={{ scale: 1.3, opacity: 0.8 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ duration: 0.5, ease: "easeOut" }}
+                                className={`text-xs font-medium ${
+                                  player.rank === 1
+                                    ? "text-yellow-300"
+                                    : player.rank === 2
+                                      ? "text-gray-200"
+                                      : player.rank === 3
+                                        ? "text-amber-400"
+                                        : "text-yellow-300"
+                                }`}
+                              >
+                                {player.score} points
+                              </motion.p>
+                            </div>
+
+                            {/* Rank icon */}
+                            <div className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/10">
+                              {getRankIcon(player.rank)}
+                            </div>
                           </div>
-                          <span className={`text-sm font-bold font-mono min-w-[35px] ${
-                            player.totalQuestions > 0
-                              ? Math.round((player.currentQuestion / player.totalQuestions) * 100) >= 80
-                                ? "text-green-400"
-                                : Math.round((player.currentQuestion / player.totalQuestions) * 100) >= 50
-                                  ? "text-yellow-400"
-                                  : "text-orange-400"
-                              : "text-orange-400"
-                          }`}>
-                            {player.totalQuestions > 0
-                              ? Math.round((player.currentQuestion / player.totalQuestions) * 100)
-                              : 0}%
-                          </span>
-                        </div>
+
+                          {/* Progress section */}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs text-white/70">
+                              <span>{player.currentQuestion}/{player.totalQuestions}</span>
+                              <motion.span 
+                                key={`${player.id}-progress-${player.currentQuestion}`}
+                                initial={{ scale: 1.2, opacity: 0.7 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ duration: 0.4, ease: "easeOut" }}
+                                className={`font-bold font-mono ${
+                                  player.totalQuestions > 0
+                                    ? Math.round((player.currentQuestion / player.totalQuestions) * 100) >= 80
+                                      ? "text-green-400"
+                                      : Math.round((player.currentQuestion / player.totalQuestions) * 100) >= 50
+                                        ? "text-yellow-400"
+                                        : "text-orange-400"
+                                    : "text-orange-400"
+                                }`}
+                              >
+                                {player.totalQuestions > 0
+                                  ? Math.round((player.currentQuestion / player.totalQuestions) * 100)
+                                  : 0}%
+                              </motion.span>
+                            </div>
+                            <div className="w-full">
+                              <StableProgressBar
+                                playerId={player.id}
+                                currentQuestion={player.currentQuestion}
+                                totalQuestions={player.totalQuestions}
+                              />
+                            </div>
+                          </div>
                         </div>
                       </motion.div>
-                    ))}
+                      ))}
                   </div>
                   
                   <PaginationControls
