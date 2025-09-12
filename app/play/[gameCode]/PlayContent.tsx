@@ -89,7 +89,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
   }, [createRng])
 
   // Function to regenerate questions and choices with a seeded shuffle
-  const regenerateQuestionsWithSeed = useCallback((seed: number, quizData: any, questionCount: number) => {
+  const regenerateQuestionsWithSeed = useCallback((seed: number, quizData: any, questionCount: number, gameId: string, quizStartTime: string | null) => {
     try {
       // Validate input data
       if (!quizData || !quizData.questions || !Array.isArray(quizData.questions)) {
@@ -107,7 +107,14 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
         return [];
       }
       
-      const shuffledQuestions = seededShuffle(quizData.questions, seed).slice(0, questionCount)
+      // Create a shared seed for question selection (same for all players)
+      const sharedSeed = `${gameId}-${quizStartTime || Date.now()}`.split('').reduce((a: number, b: string) => a + b.charCodeAt(0), 0)
+      
+      // Use shared seed to select the SAME questions for all players
+      const selectedQuestions = seededShuffle(quizData.questions, sharedSeed).slice(0, questionCount)
+      
+      // Use player-specific seed to shuffle the ORDER of selected questions
+      const shuffledQuestions = seededShuffle(selectedQuestions, seed)
       
       return shuffledQuestions.map((q: any, idx: number) => {
         // Validate question structure
@@ -199,7 +206,8 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
 
       setQuiz(quizData as Quiz);
 
-      // Build a per-session seed key; include quiz_start_time so each new session reshuffles
+      // Build a per-session seed key for HOST-PLAYER mode
+      // Same questions for all players, but different order per player
       const sessionKey = `session-seed-${gameData.id}-${playerId}-${gameData.quiz_start_time || "nostart"}`
       const existingSeed = typeof window !== "undefined" ? localStorage.getItem(sessionKey) : null;
       let seed: number;
@@ -208,19 +216,20 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
         // Use existing seed for consistency across refreshes
         seed = parseInt(existingSeed);
         setSessionSeed(seed);
-        console.log(`Using existing session seed: ${seed}`);
+        console.log(`[HOST-PLAYER] Using existing player seed: ${seed} for player ${playerId}`);
       } else {
-        // Create unique seed for each session and player (tied to quiz_start_time when available)
+        // Create unique seed per player for different question order
+        // Include playerId so each player gets different order of the SAME questions
         const base = `${gameData.id}-${playerId || 'anonymous'}-${gameData.quiz_start_time || Date.now()}`
         seed = base.split('').reduce((a: number, b: string) => a + b.charCodeAt(0), 0)
         // Store the session seed for consistency within the same session
         setSessionSeed(seed);
         if (typeof window !== "undefined") localStorage.setItem(sessionKey, seed.toString());
-        console.log(`Created new session seed: ${seed}`);
+        console.log(`[HOST-PLAYER] Created player seed: ${seed} for player ${playerId} - Same questions, different order`);
       }
       
       // Generate questions using the seed
-      const shuffled = regenerateQuestionsWithSeed(seed, quizData, gameData.question_count);
+      const shuffled = regenerateQuestionsWithSeed(seed, quizData, gameData.question_count, gameData.id, gameData.quiz_start_time);
       
       // Validate generated questions
       if (!shuffled || shuffled.length === 0) {
