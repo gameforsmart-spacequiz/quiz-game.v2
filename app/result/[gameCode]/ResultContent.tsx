@@ -301,13 +301,6 @@ export default function ResultContent({ gameCode }: { gameCode: string }) {
                 alt={getFirstName(playerName)}
                 className="w-32 h-32 rounded-full mx-auto object-cover border-4 border-white"
               />
-              <motion.div
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-                className="absolute -top-2 -right-2 w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center border-2 border-white"
-              >
-                <span className="text-sm font-bold text-black">{userPosition}</span>
-              </motion.div>
             </motion.div>
 
             <div>
