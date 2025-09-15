@@ -94,11 +94,22 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
         .from("games")
         .select("*")
         .eq("code", data.gameCode.toUpperCase())
-        .eq("status", "waiting")
         .single()
 
       if (gameError || !game) {
-        form.setError("gameCode", { message: t('error', 'Game not found or already started') })
+        form.setError("gameCode", { message: t('error', 'Game not found') })
+        return
+      }
+
+      // Check if game is finished or ended (host has left)
+      if (game.finished === true || game.status === "finished") {
+        form.setError("gameCode", { message: "Game has ended. Host has left the session." })
+        return
+      }
+
+      // Check if game is in waiting status
+      if (game.status !== "waiting") {
+        form.setError("gameCode", { message: t('error', 'Game has already started or ended') })
         return
       }
 

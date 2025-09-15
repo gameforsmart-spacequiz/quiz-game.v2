@@ -241,13 +241,21 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
       console.log("[WAIT] Fetching game data for code:", gameCode)
       const { data, error } = await supabase
         .from("games")
-        .select("id, is_started, quiz_id, countdown_start_at")
+        .select("id, is_started, quiz_id, countdown_start_at, finished, status")
         .eq("code", gameCode.toUpperCase())
         .single()
 
       if (error || !data) {
         console.log("[WAIT] Game not found, redirecting to home")
         toast.error("Game not found")
+        router.replace("/")
+        return
+      }
+
+      // Check if game is finished or ended (host has left)
+      if (data.finished === true || data.status === "finished") {
+        console.log("[WAIT] Game has ended, host has left the session")
+        toast.error("Game has ended. Host has left the session.")
         router.replace("/")
         return
       }
@@ -325,6 +333,32 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
     if (loading || !gameId || !playerName || isRedirecting) return
 
     console.log("[PLAYER] 🎧 Setting up kick listener for player:", playerName, "in game:", gameId)
+
+    // Listen for real-time game status changes
+    const gameStatusSubscription = supabase
+      .channel(`game-status-${gameId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "games", filter: `id=eq.${gameId}` },
+        async (payload) => {
+          console.log("[GAME] Game status updated:", payload.new)
+          const updatedGame = payload.new
+          
+          // If game is finished (host left), redirect player
+          if (updatedGame.finished === true || updatedGame.status === "finished") {
+            console.log("[GAME] Host has left the session, redirecting player")
+            toast.error("Host has left the game session")
+            
+            // Clean up and redirect
+            await cleanupPresence()
+            clearGame?.()
+            localStorage.removeItem("player")
+            router.replace("/")
+            return
+          }
+        }
+      )
+      .subscribe()
 
     // Listen for real-time player changes (add/delete)
     const playersSubscription = supabase
@@ -556,6 +590,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
       clearInterval(iv)
       clearInterval(playerCheckInterval)
       playersSubscription.unsubscribe()
+      gameStatusSubscription.unsubscribe()
     }
   }, [loading, gameId, gameCode, router, isRedirecting, playerName, clearGame])
 

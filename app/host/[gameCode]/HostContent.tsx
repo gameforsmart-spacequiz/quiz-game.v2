@@ -1398,27 +1398,54 @@ export default function HostContent({ gameCode }: HostContentProps) {
     if (!quizStarted || !gameSettings?.timeLimit) return
 
     let unsub = () => {}
-    ;(async () => {
-      const { data } = await supabase
+    let pollInterval: NodeJS.Timeout
+
+    // Poll untuk menunggu quiz_start_time di-set setelah countdown selesai
+    const waitForQuizStart = async () => {
+      const { data, error } = await supabase
         .from("games")
         .select("quiz_start_time, time_limit")
         .eq("id", gameId)
         .single()
-      if (!data?.quiz_start_time) return
+      
+      if (error) {
+        console.error("Host timer fetch error:", error?.message, error?.details)
+        return
+      }
+      
+      // If quiz_start_time is not set yet (countdown still running), wait
+      if (!data?.quiz_start_time) {
+        console.log("[HOST] Waiting for countdown to finish before starting timer...")
+        return
+      }
+
+      console.log("[HOST] Quiz timer starting now!")
+
+      // Get server time offset to sync with player timer
+      const serverNow = await syncServerTime()
+      const clientOffset = serverNow - Date.now()
 
       const start = new Date(data.quiz_start_time).getTime()
       const limitMs = data.time_limit * 1000
 
       const tick = () => {
-        const remain = Math.max(0, start + limitMs - Date.now())
+        const now = Date.now() + clientOffset
+        const remain = Math.max(0, start + limitMs - now)
         setQuizTimeLeft(Math.floor(remain / 1000))
         if (remain <= 0) setIsTimerActive(false)
       }
 
       tick()
       const iv = setInterval(tick, 1000)
-      unsub = () => clearInterval(iv)
-    })()
+      unsub = () => {
+        clearInterval(iv)
+        if (pollInterval) clearInterval(pollInterval)
+      }
+    }
+
+    // Mulai polling untuk menunggu quiz_start_time
+    waitForQuizStart()
+    pollInterval = setInterval(waitForQuizStart, 500) // Poll setiap 500ms
 
     return unsub
   }, [quizStarted, gameSettings?.timeLimit, gameId])
@@ -1428,7 +1455,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
     const tick = async () => {
       try {
-        const { data } = await supabase.from("games").select("countdown_start_at").eq("id", gameId).single()
+        const { data } = await supabase.from("games").select("countdown_start_at, quiz_start_time").eq("id", gameId).single()
         if (!data?.countdown_start_at) return
 
         const start = new Date(data.countdown_start_at).getTime()
@@ -1441,7 +1468,18 @@ export default function HostContent({ gameCode }: HostContentProps) {
         } else {
           setCountdownLeft(0)
         }
-      } catch {
+
+        // Set quiz_start_time when countdown finishes (left === 0) and it hasn't been set yet
+        if (left === 0 && !data.quiz_start_time) {
+          console.log("[HOST] Countdown finished, setting quiz_start_time")
+          const quizStartTime = new Date(serverTime).toISOString()
+          await supabase
+            .from("games")
+            .update({ quiz_start_time: quizStartTime })
+            .eq("id", gameId)
+        }
+      } catch (error) {
+        console.error("[HOST] Error in countdown tick:", error)
         setCountdownLeft(0)
       }
     }
@@ -1476,7 +1514,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
         .update({
           is_started: true,
           countdown_start_at: startAt,
-          quiz_start_time: startAt,
+          // quiz_start_time will be set after countdown finishes
         })
         .eq("id", gameId)
       toast.success("🚀 Quiz started!")
@@ -1546,7 +1584,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
           .update({
             finished: true,
             is_started: false,
-            status: "ended",
+            status: "finished",
             quiz_start_time: null,
           })
           .eq("id", gameId)
@@ -1564,6 +1602,19 @@ export default function HostContent({ gameCode }: HostContentProps) {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
+  }
+
+  const formatTimeText = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    
+    if (mins > 0 && secs > 0) {
+      return `${mins} min ${secs} sec`
+    } else if (mins > 0) {
+      return `${mins} min`
+    } else {
+      return `${secs} sec`
+    }
   }
 
   const getRankIcon = (rank: number) => {
@@ -2148,7 +2199,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
                     <div className="flex items-center gap-2 text-white">
                       <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span className="text-base sm:text-lg font-mono">{formatTime(quizTimeLeft)}</span>
+                      <span className="text-base sm:text-lg font-mono">{formatTimeText(quizTimeLeft)}</span>
                     </div>
                     <PixelButton color="red" onClick={endQuiz} className="w-full sm:w-auto text-xs sm:text-sm">
                       ⏹ End Quiz
