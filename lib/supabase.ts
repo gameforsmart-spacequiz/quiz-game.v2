@@ -1,17 +1,43 @@
 import { createClient } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://mock.supabase.co"
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "mock-anon-key"
+// Get environment variables
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// Only show warning in development, don't throw error
-if (
-  (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) &&
-  process.env.NODE_ENV === "development"
-) {
-  console.warn(
-    "⚠️  Supabase environment variables not found. Using mock client for development. Configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Project Settings for production.",
+// Validate required environment variables
+if (!supabaseUrl || !supabaseAnonKey) {
+  const missingVars = []
+  if (!supabaseUrl) missingVars.push('NEXT_PUBLIC_SUPABASE_URL')
+  if (!supabaseAnonKey) missingVars.push('NEXT_PUBLIC_SUPABASE_ANON_KEY')
+  
+  throw new Error(
+    `❌ Missing required Supabase environment variables: ${missingVars.join(', ')}\n\n` +
+    `Please create a .env.local file with:\n` +
+    `NEXT_PUBLIC_SUPABASE_URL=your_supabase_url\n` +
+    `NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key\n\n` +
+    `Get these values from: https://supabase.com/dashboard -> Your Project -> Settings -> API`
   )
 }
+
+// Validate URL format
+try {
+  new URL(supabaseUrl)
+} catch {
+  throw new Error(
+    `❌ Invalid NEXT_PUBLIC_SUPABASE_URL format: ${supabaseUrl}\n` +
+    `Expected format: https://your-project-id.supabase.co`
+  )
+}
+
+// Validate anon key format (basic check)
+if (!supabaseAnonKey.startsWith('eyJ')) {
+  throw new Error(
+    `❌ Invalid NEXT_PUBLIC_SUPABASE_ANON_KEY format\n` +
+    `Expected JWT token starting with 'eyJ'`
+  )
+}
+
+console.log('✅ Supabase configured successfully:', supabaseUrl)
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
