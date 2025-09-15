@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Dialog,
@@ -41,8 +41,17 @@ interface RulesDialogProps {
 }
 
 export function RulesDialog({ open, onOpenChange, quiz, onStartGame }: RulesDialogProps) {
-  const [timeLimit, setTimeLimit] = useState(600)
+  const [timeLimitMinutes, setTimeLimitMinutes] = useState(10) // 10 minutes
+  const timeLimit = timeLimitMinutes * 60 // convert to seconds for game logic
   const [questionCount, setQuestionCount] = useState(9)
+
+  // Reset to default values when dialog opens
+  useEffect(() => {
+    if (open) {
+      setTimeLimitMinutes(10) // Reset to default 10 minutes
+      setQuestionCount(9) // Reset to default 9 questions
+    }
+  }, [open])
 
   const handleStartGame = () => {
     onStartGame({ timeLimit, questionCount })
@@ -59,7 +68,8 @@ export function RulesDialog({ open, onOpenChange, quiz, onStartGame }: RulesDial
     visible: { opacity: 1, y: 0 },
   }
 
-  const timeOptions = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]
+  const minTime = 5 // minimum 5 minutes
+  const maxTime = 60 // maximum 60 minutes
 
   const getQuestionOptions = () => {
     const maxQuestions = quiz?.questions?.length || 0
@@ -67,6 +77,13 @@ export function RulesDialog({ open, onOpenChange, quiz, onStartGame }: RulesDial
     for (let i = 3; i <= maxQuestions; i += 3) options.push(i)
     if (maxQuestions > 0 && maxQuestions % 3 !== 0) options.push(maxQuestions)
     return options
+  }
+
+  const getTimeLimitOptions = () => {
+    const options: number[] = []
+    // Add common time intervals: 5, 10, 15, 20, 30, 45, 60 minutes
+    const commonTimes = [5, 10, 15, 20, 30, 45, 60]
+    return commonTimes.filter(time => time >= minTime && time <= maxTime)
   }
 
   if (!quiz) return null
@@ -187,14 +204,14 @@ export function RulesDialog({ open, onOpenChange, quiz, onStartGame }: RulesDial
                       Time Limit
                     </Label>
                     <Select
-                      value={String(timeLimit / 60)}
-                      onValueChange={(value) => setTimeLimit(Number(value) * 60)}
+                      value={String(timeLimitMinutes)}
+                      onValueChange={(value) => setTimeLimitMinutes(Number(value))}
                     >
                       <SelectTrigger className="w-full bg-black/30 border-cyan-400/30 text-white placeholder:text-cyan-200/60 backdrop-blur-sm focus:border-cyan-400 focus:ring-cyan-400/20 font-mono">
                         <SelectValue placeholder="Select time limit" />
                       </SelectTrigger>
                       <SelectContent className="bg-black/90 border-cyan-400/30 backdrop-blur-xl">
-                        {timeOptions.map((minutes) => (
+                        {getTimeLimitOptions().map((minutes) => (
                           <SelectItem key={minutes} value={String(minutes)} className="text-cyan-100 hover:bg-cyan-400/30 hover:text-white focus:bg-cyan-400/30 focus:text-white font-mono transition-all duration-200 cursor-pointer">
                             {minutes} minutes
                           </SelectItem>

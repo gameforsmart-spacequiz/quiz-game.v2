@@ -493,23 +493,34 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
     };
   }, [gameCode, router]);
 
-  // Timer sinkron dengan server
+  // Timer sinkron dengan server - mulai setelah countdown selesai
   useEffect(() => {
     if (!isQuizStarted || !gameSettings) return;
 
     let unsub = () => {};
-    (async () => {
+    let pollInterval: NodeJS.Timeout;
+
+    // Poll untuk menunggu quiz_start_time di-set setelah countdown selesai
+    const waitForQuizStart = async () => {
       const { data, error } = await supabase
         .from("games")
         .select("quiz_start_time, time_limit")
         .eq("code", gameCode.toUpperCase())
         .single();
 
-      if (error || !data?.quiz_start_time) {
+      if (error) {
         console.error("Timer fetch error:", error?.message, error?.details);
         return;
       }
 
+      // Jika quiz_start_time belum di-set, tunggu (countdown masih berjalan)
+      if (!data?.quiz_start_time) {
+        console.log("[PLAYER] Waiting for countdown to finish...");
+        return;
+      }
+
+      console.log("[PLAYER] Quiz timer starting now!");
+      
       // Get server time offset to avoid client clock issues (Vercel/production)
       const serverNow = await syncServerTime();
       const clientOffset = serverNow - Date.now();
@@ -528,8 +539,15 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
 
       tick();
       const iv = setInterval(tick, 1000);
-      unsub = () => clearInterval(iv);
-    })();
+      unsub = () => {
+        clearInterval(iv);
+        if (pollInterval) clearInterval(pollInterval);
+      };
+    };
+
+    // Mulai polling untuk menunggu quiz_start_time
+    waitForQuizStart();
+    pollInterval = setInterval(waitForQuizStart, 500); // Poll setiap 500ms
 
     return unsub;
   }, [isQuizStarted, gameSettings, gameCode]);
@@ -556,6 +574,19 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const formatTimeText = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    
+    if (mins > 0 && secs > 0) {
+      return `${mins} min ${secs} sec`;
+    } else if (mins > 0) {
+      return `${mins} min`;
+    } else {
+      return `${secs} sec`;
+    }
   };
 
   const handleAnswerSelect = async (choice: {
@@ -867,7 +898,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="w-5 h-5" />
-                <span className="text-lg">{formatTime(timeLeft)}</span>
+                <span className="text-lg">{formatTimeText(timeLeft)}</span>
               </div>
             </div>
           </div>
