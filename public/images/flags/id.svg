@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 40" width="60" height="40">
+  <!-- Indonesian flag with proper proportions and border -->
+  <rect width="60" height="40" fill="white" stroke="#ddd" stroke-width="0.5"/>
+  <rect width="60" height="20" fill="#FF0000"/>
+  <rect width="60" height="20" y="20" fill="white"/>
+  <!-- Add subtle border to ensure visibility -->
+  <rect width="60" height="40" fill="none" stroke="#ccc" stroke-width="0.5"/>
+</svg>
