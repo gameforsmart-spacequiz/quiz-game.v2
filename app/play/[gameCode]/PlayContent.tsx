@@ -891,7 +891,17 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
 
         <div className="w-full max-w-4xl mx-auto p-4">
           <div className="mb-4">
-            <h1 className="text-lg sm:text-xl font-bold text-white mb-2">Space-Quiz</h1>
+            <div className="flex items-center justify-between mb-2">
+              <h1 className="text-lg sm:text-xl font-bold text-white">Space-Quiz</h1>
+              <Image
+                src="/images/gameforsmartlogo.png"
+                alt="GameForSmart"
+                width={200}
+                height={80}
+                className="w-28 h-auto sm:w-32 md:w-36 lg:w-40 xl:w-44 opacity-90 hover:opacity-100 transition-opacity duration-300"
+                priority
+              />
+            </div>
             <div className="flex justify-between items-center">
               <div className="text-lg">
                 {t('score', 'Score')}: <span className="font-bold text-yellow-300">{score}</span>

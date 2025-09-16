@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Trophy, Medal, Crown, Star } from "lucide-react";
 import { getFirstName, formatDisplayName } from "@/lib/utils";
 import React from "react";
+import Image from "next/image";
 
 interface PlayerResult {
   id: string;
@@ -179,14 +180,23 @@ export default function ResultContent({ gameCode }: { gameCode: string }) {
           className="max-w-4xl mx-auto"
         >
           <div className="text-center mb-8">
-            <motion.h2 
-              className="text-xl font-bold text-white/80 mb-2"
+            <motion.div 
+              className="flex items-center justify-center gap-3 mb-2"
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              Space-Quiz
-            </motion.h2>
+              <h2 className="text-xl font-bold text-white/80">Space-Quiz</h2>
+              <span className="text-xl font-bold text-white/80">-</span>
+              <Image
+                src="/images/gameforsmartlogo.png"
+                alt="GameForSmart"
+                width={250}
+                height={100}
+                className="w-32 h-auto sm:w-36 md:w-40 lg:w-44 xl:w-48 opacity-90 hover:opacity-100 transition-opacity duration-300"
+                priority
+              />
+            </motion.div>
             <motion.h1 
               className="text-5xl font-bold text-white mb-2 flex items-center justify-center gap-3"
               initial={{ scale: 0.8 }}
@@ -276,14 +286,23 @@ export default function ResultContent({ gameCode }: { gameCode: string }) {
           className="max-w-md w-full"
         >
           <div className="bg-black/70 border-4 border-white p-8 rounded-lg shadow-[8px_8px_0px_#000] font-mono text-white text-center space-y-6">
-            <motion.h2 
-              className="text-lg font-bold text-white/80 mb-2"
+            <motion.div 
+              className="flex items-center justify-center gap-2 mb-2"
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              Space-Quiz
-            </motion.h2>
+              <h2 className="text-lg font-bold text-white/80">Space-Quiz</h2>
+              <span className="text-lg font-bold text-white/80">-</span>
+              <Image
+                src="/images/gameforsmartlogo.png"
+                alt="GameForSmart"
+                width={220}
+                height={88}
+                className="w-24 h-auto sm:w-28 md:w-32 lg:w-36 xl:w-40 opacity-90 hover:opacity-100 transition-opacity duration-300"
+                priority
+              />
+            </motion.div>
             <motion.div
               animate={{ 
                 scale: [1, 1.05, 1],
