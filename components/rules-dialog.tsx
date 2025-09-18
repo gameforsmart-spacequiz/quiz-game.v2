@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Clock, Hash, Play, ArrowLeft, Gamepad2, Sparkles, Star, Settings } from "lucide-react"
+import { useLanguage } from "@/contexts/language-context"
 
 interface Quiz {
   id: number
@@ -41,6 +42,7 @@ interface RulesDialogProps {
 }
 
 export function RulesDialog({ open, onOpenChange, quiz, onStartGame }: RulesDialogProps) {
+  const { t } = useLanguage()
   const [timeLimitMinutes, setTimeLimitMinutes] = useState(10) // 10 minutes
   const timeLimit = timeLimitMinutes * 60 // convert to seconds for game logic
   const [questionCount, setQuestionCount] = useState(9)
@@ -167,10 +169,10 @@ export function RulesDialog({ open, onOpenChange, quiz, onStartGame }: RulesDial
                     }}
                   >
                     <Clock className="h-6 w-6 text-cyan-400" />
-                    Game Rules
+                    {t('gameRules')}
                   </DialogTitle>
                   <DialogDescription id="rules-description" className="sr-only">
-                    Configure the game settings and start the quiz
+                    {t('gameRules')}
                   </DialogDescription>
                 </DialogHeader>
 
@@ -201,19 +203,19 @@ export function RulesDialog({ open, onOpenChange, quiz, onStartGame }: RulesDial
                   <div className="space-y-3">
                     <Label className="text-base font-semibold text-cyan-100 flex items-center gap-2 font-mono">
                       <Clock className="h-4 w-4 text-cyan-400" />
-                      Time Limit
+                      {t('timeLimit')}
                     </Label>
                     <Select
                       value={String(timeLimitMinutes)}
                       onValueChange={(value) => setTimeLimitMinutes(Number(value))}
                     >
                       <SelectTrigger className="w-full bg-black/30 border-cyan-400/30 text-white placeholder:text-cyan-200/60 backdrop-blur-sm focus:border-cyan-400 focus:ring-cyan-400/20 font-mono">
-                        <SelectValue placeholder="Select time limit" />
+                        <SelectValue placeholder={t('selectTimeLimit')} />
                       </SelectTrigger>
                       <SelectContent className="bg-black/90 border-cyan-400/30 backdrop-blur-xl">
                         {getTimeLimitOptions().map((minutes) => (
                           <SelectItem key={minutes} value={String(minutes)} className="text-cyan-100 hover:bg-cyan-400/30 hover:text-white focus:bg-cyan-400/30 focus:text-white font-mono transition-all duration-200 cursor-pointer">
-                            {minutes} minutes
+                            {minutes} {t('minutes')}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -224,19 +226,19 @@ export function RulesDialog({ open, onOpenChange, quiz, onStartGame }: RulesDial
                   <div className="space-y-3">
                     <Label className="text-base font-semibold text-cyan-100 flex items-center gap-2 font-mono">
                       <Hash className="h-4 w-4 text-cyan-400" />
-                      Number of Questions
+                      {t('numberOfQuestions')}
                     </Label>
                     <Select
                       value={String(questionCount)}
                       onValueChange={(value) => setQuestionCount(Number(value))}
                     >
                       <SelectTrigger className="w-full bg-black/30 border-cyan-400/30 text-white placeholder:text-cyan-200/60 backdrop-blur-sm focus:border-cyan-400 focus:ring-cyan-400/20 font-mono">
-                        <SelectValue placeholder="Select number of questions" />
+                        <SelectValue placeholder={t('selectNumberOfQuestions')} />
                       </SelectTrigger>
                       <SelectContent className="bg-black/90 border-cyan-400/30 backdrop-blur-xl">
                         {getQuestionOptions().map((count) => (
                           <SelectItem key={count} value={String(count)} className="text-cyan-100 hover:bg-cyan-400/30 hover:text-white focus:bg-cyan-400/30 focus:text-white font-mono transition-all duration-200 cursor-pointer">
-                            {count} questions
+                            {count} {t('questions')}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -252,7 +254,7 @@ export function RulesDialog({ open, onOpenChange, quiz, onStartGame }: RulesDial
                         className="flex items-center gap-2 bg-black/30 border-cyan-400/30 text-cyan-100 hover:bg-cyan-500/30 hover:border-cyan-400 hover:text-white backdrop-blur-sm font-mono px-6 transition-all duration-200"
                       >
                         <ArrowLeft className="h-4 w-4" />
-                        Back
+                        {t('back')}
                       </Button>
                     </motion.div>
                     <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
@@ -264,7 +266,7 @@ export function RulesDialog({ open, onOpenChange, quiz, onStartGame }: RulesDial
                         <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/20 to-blue-400/20 animate-pulse"></div>
                         <Play className="h-4 w-4 relative z-10" />
                         {/* penanda */}
-                        <span className="relative z-10">Start Game</span>
+                        <span className="relative z-10">{t('startGame')}</span>
                         <div className="absolute top-2 right-2 w-2 h-2 bg-yellow-300 rounded-full animate-ping"></div>
                       </Button>
                     </motion.div>

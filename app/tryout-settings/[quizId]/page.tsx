@@ -16,6 +16,7 @@ import {
 import { Clock, Hash, Play, ArrowLeft, Settings, Sparkles, Star, Gamepad2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { useGameStore } from "@/lib/store"
+import { useLanguage } from "@/contexts/language-context"
 
 interface Quiz {
   id: number
@@ -30,6 +31,7 @@ interface TryoutSettings {
 }
 
 export default function TryoutSettingsPage() {
+  const { t } = useLanguage()
   const [quiz, setQuiz] = useState<Quiz | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isStarting, setIsStarting] = useState(false)
@@ -277,7 +279,7 @@ export default function TryoutSettingsPage() {
                 <div className="space-y-2 sm:space-y-3">
                   <Label className="text-sm sm:text-base font-semibold text-cyan-100 flex items-center gap-2">
                     <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-cyan-400 flex-shrink-0" />
-                    <span className="text-xs sm:text-sm md:text-base">Total time limit (1-60 minutes)</span>
+                    <span className="text-xs sm:text-sm md:text-base">{t('timeLimit')} (1-60 {t('minutes')})</span>
                   </Label>
                   <Input
                     type="number"
@@ -293,19 +295,19 @@ export default function TryoutSettingsPage() {
                 <div className="space-y-2 sm:space-y-3">
                   <Label className="text-sm sm:text-base font-semibold text-cyan-100 flex items-center gap-2">
                     <Hash className="h-3 w-3 sm:h-4 sm:w-4 text-cyan-400 flex-shrink-0" />
-                    <span className="text-xs sm:text-sm md:text-base">Number of Questions</span>
+                    <span className="text-xs sm:text-sm md:text-base">{t('numberOfQuestions')}</span>
                   </Label>
                   <Select
                     value={String(questionCount)}
                     onValueChange={(value) => setQuestionCount(Number(value))}
                   >
                     <SelectTrigger className="w-full bg-black/30 border-cyan-400/30 text-white placeholder:text-cyan-200/60 backdrop-blur-sm focus:border-cyan-400 focus:ring-cyan-400/20 h-8 sm:h-10 text-sm sm:text-base">
-                      <SelectValue placeholder="Select number of questions" />
+                      <SelectValue placeholder={t('selectNumberOfQuestions')} />
                     </SelectTrigger>
                     <SelectContent className="bg-black/90 border-cyan-400/30 backdrop-blur-xl max-h-48 sm:max-h-60 overflow-y-auto z-50">
                       {getQuestionOptions().map((count) => (
                         <SelectItem key={count} value={String(count)} className="text-cyan-100 hover:bg-cyan-400/30 hover:text-white focus:bg-cyan-400/30 focus:text-white text-sm sm:text-base">
-                          {count} Questions
+                          {count} {t('questions')}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -319,7 +321,7 @@ export default function TryoutSettingsPage() {
                     onClick={() => router.push("/select-quiz")}
                     className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2 sm:py-3 bg-white/10 backdrop-blur-lg border-white/20 text-white hover:bg-white/20 transition-all duration-300 text-sm sm:text-base"
                   >
-                    Back
+                    {t('back')}
                   </Button>
                   <Button
                     onClick={handleStartTryout}
@@ -329,13 +331,13 @@ export default function TryoutSettingsPage() {
                     {isStarting ? (
                       <>
                         <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-white"></div>
-                        <span className="hidden sm:inline">Starting...</span>
-                        <span className="sm:hidden">Starting</span>
+                        <span className="hidden sm:inline">{t('starting')}</span>
+                        <span className="sm:hidden">{t('starting')}</span>
                       </>
                     ) : (
                       <>
                         <Play className="h-3 w-3 sm:h-4 sm:w-4" />
-                        Start
+                        {t('start')}
                       </>
                     )}
                   </Button>

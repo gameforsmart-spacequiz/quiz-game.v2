@@ -12,6 +12,7 @@ import { Trophy, Medal, Crown, Star } from "lucide-react";
 import { getFirstName, formatDisplayName } from "@/lib/utils";
 import React from "react";
 import Image from "next/image";
+import { useLanguage } from "@/contexts/language-context";
 
 interface PlayerResult {
   id: string;
@@ -107,6 +108,7 @@ export default function ResultContent({ gameCode }: { gameCode: string }) {
   const [userPosition, setUserPosition] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const { playerName, playerAvatar, score, isHost, resetGame } = useGameStore();
+  const { t } = useLanguage();
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -186,7 +188,7 @@ export default function ResultContent({ gameCode }: { gameCode: string }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <h2 className="text-xl font-bold text-white/80">Space-Quiz</h2>
+              <h2 className="text-xl font-bold text-white/80">{t('spaceQuiz')}</h2>
               <span className="text-xl font-bold text-white/80">-</span>
               <Image
                 src="/images/gameforsmartlogo.png"
@@ -292,7 +294,7 @@ export default function ResultContent({ gameCode }: { gameCode: string }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <h2 className="text-lg font-bold text-white/80">Space-Quiz</h2>
+              <h2 className="text-lg font-bold text-white/80">{t('spaceQuiz')}</h2>
               <span className="text-lg font-bold text-white/80">-</span>
               <Image
                 src="/images/gameforsmartlogo.png"

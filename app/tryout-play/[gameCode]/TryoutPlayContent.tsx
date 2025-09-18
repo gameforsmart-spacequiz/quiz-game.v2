@@ -12,6 +12,7 @@ import type { Quiz, Question } from "@/lib/types"
 import Image from "next/image"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { useLanguage } from "@/contexts/language-context"
 
 function PixelButton({
   children,
@@ -43,6 +44,7 @@ interface TryoutPlayContentProps {
 }
 
 export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) {
+  const { t } = useLanguage()
   const router = useRouter()
   const { currentQuestion, score, correctAnswers, setCurrentQuestion, addScore, incrementCorrectAnswers, setGameId, gameId, playerId, setCorrectAnswers, setScore, resetGame, resetGameKeepMode, setGameMode } =
     useGameStore()
@@ -462,7 +464,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
       });
       
       // Show toast that questions are randomized
-      toast.success("Soal telah diacak! Urutan akan tetap sama selama sesi ini.");
+      toast.success(t('questionsRandomized'));
       setLoading(false);
     }
 
@@ -663,7 +665,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
               className="bg-white/10 backdrop-blur-lg border-white/20 text-white hover:bg-white/20 transition-all duration-300 flex-shrink-0 text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
             >
               <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Back</span>
+              <span className="hidden sm:inline">{t('back')}</span>
             </Button>
             
             <div className="text-left min-w-0 flex-1">
@@ -694,16 +696,16 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
               <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
                 <div className="flex flex-wrap gap-2 sm:gap-3">
                   <span className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-blue-300 border border-blue-400/30 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium backdrop-blur-sm">
-                    Soal {currentQuestion + 1}
+                    {t('questionNumber')} {currentQuestion + 1}
                   </span>
                   {answers[currentQuestion] && (
                     <span className="bg-gradient-to-r from-green-500/20 to-green-600/20 text-green-300 border border-green-400/30 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium backdrop-blur-sm">
-                      ✓ Sudah dijawab
+                      {t('alreadyAnsweredCheck')}
                     </span>
                   )}
                   {!answers[currentQuestion] && (
                     <span className="bg-gradient-to-r from-red-500/20 to-red-600/20 text-red-300 border border-red-400/30 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium backdrop-blur-sm">
-                      ⚠ Belum dijawab
+                      ⚠ {t('notAnswered')}
                     </span>
                   )}
                 </div>
@@ -818,7 +820,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                   disabled={currentQuestion === 0}
                   className="px-3 sm:px-4 py-2 rounded-lg border border-white/30 text-white/70 disabled:opacity-50 disabled:cursor-not-allowed bg-black/20 backdrop-blur-sm hover:bg-white/10 transition-all duration-200 text-sm sm:text-base"
                 >
-                  ← Previous
+                  ← {t('previous')}
                 </button>
                 <button
                   onClick={() => {
@@ -852,7 +854,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                   disabled={false}
                   className="px-3 sm:px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 backdrop-blur-sm hover:from-purple-500 hover:to-blue-500 transition-all duration-200 shadow-lg text-sm sm:text-base"
                 >
-                  {findNextUnansweredQuestion(currentQuestion) === -1 ? 'Selesai' : 'Next →'}
+                  {findNextUnansweredQuestion(currentQuestion) === -1 ? t('complete') : `${t('next')} →`}
                 </button>
               </div>
 
@@ -872,13 +874,13 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                   <div className="w-6 h-6 sm:w-6 sm:h-6 bg-gradient-to-br from-purple-500/30 to-blue-500/30 rounded-full flex items-center justify-center backdrop-blur-sm border border-purple-400/50">
                     <span className="text-purple-300 text-sm sm:text-sm">🧠</span>
                   </div>
-                  <h3 className="font-bold text-white text-sm sm:text-base">Progress</h3>
+                  <h3 className="font-bold text-white text-sm sm:text-base">{t('progress')}</h3>
                 </div>
                 
                 <div className="mb-4 sm:mb-4">
                   <div className="flex justify-between text-xs sm:text-sm text-gray-300 mb-2">
                     <span>{Object.keys(answers).length}/{allQuestions.length}</span>
-                    <span>{Math.round((Object.keys(answers).length / allQuestions.length) * 100)}% complete</span>
+                    <span>{Math.round((Object.keys(answers).length / allQuestions.length) * 100)}% {t('complete')}</span>
                   </div>
                   <div className="w-full bg-black/30 rounded-full h-2 sm:h-2 border border-white/20">
                     <div 
@@ -898,7 +900,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
               <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-blue-900/20 to-indigo-900/20 rounded-xl sm:rounded-2xl"></div>
               <div className="absolute bottom-0 right-0 w-12 h-12 sm:w-16 sm:h-16 bg-gradient-radial from-blue-400/20 to-transparent rounded-full blur-sm sm:blur-md"></div>
               <div className="relative z-10 flex flex-col h-full">
-                <h3 className="font-bold text-white mb-4 sm:mb-4 text-sm sm:text-base flex-shrink-0">Questions</h3>
+                <h3 className="font-bold text-white mb-4 sm:mb-4 text-sm sm:text-base flex-shrink-0">{t('questions')}</h3>
                 <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-purple-400/30 scrollbar-track-transparent max-h-48 sm:max-h-60 md:max-h-72">
                   <div className="grid grid-cols-5 sm:grid-cols-5 gap-2 sm:gap-3 md:gap-4 pb-4">
                     {allQuestions.map((_, index) => {
@@ -931,7 +933,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                               ? 'bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg border border-green-400/50'
                               : 'bg-gradient-to-br from-red-500/20 to-red-600/20 text-red-300 hover:bg-red-500/30 border border-red-400/30 hover:border-red-300'
                           }`}
-                          title={isAnswered ? `Soal ${index + 1} - Sudah dijawab` : `Soal ${index + 1} - Belum dijawab`}
+                          title={isAnswered ? `${t('question')} ${index + 1} - ${t('alreadyAnswered')}` : `${t('question')} ${index + 1} - ${t('notAnsweredYet')}`}
                         >
                           {index + 1}
                           {isAnswered && (
@@ -947,15 +949,15 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                 <div className="mt-4 sm:mt-4 space-y-2 sm:space-y-2 flex-shrink-0">
                   <div className="flex items-center gap-2 sm:gap-2 text-xs text-gray-300">
                     <div className="w-3 h-3 sm:w-3 sm:h-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded"></div>
-                    <span className="text-xs">Saat ini</span>
+                    <span className="text-xs">{t('currentQuestion')}</span>
                   </div>
                   <div className="flex items-center gap-2 sm:gap-2 text-xs text-gray-300">
                     <div className="w-3 h-3 sm:w-3 sm:h-3 bg-gradient-to-br from-green-500 to-green-600 rounded"></div>
-                    <span className="text-xs">Sudah dijawab</span>
+                    <span className="text-xs">{t('answered')}</span>
                   </div>
                   <div className="flex items-center gap-2 sm:gap-2 text-xs text-gray-300">
                     <div className="w-3 h-3 sm:w-3 sm:h-3 bg-gradient-to-br from-red-500/20 to-red-600/20 rounded border border-red-400/30"></div>
-                    <span className="text-xs">Belum dijawab</span>
+                    <span className="text-xs">{t('unanswered')}</span>
                   </div>
                 </div>
               </div>
@@ -977,30 +979,30 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                 <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg">
                   <span className="text-lg sm:text-xl md:text-2xl">✓</span>
                 </div>
-                <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-2">Quiz Selesai!</h3>
+                <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-2">{t('quizComplete')}</h3>
                 <p className="text-gray-300 text-xs sm:text-sm">
-                  Semua soal telah terjawab dengan lengkap
+                  {t('allQuestionsAnswered')}
                 </p>
               </div>
               <div className="bg-white/5 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6 border border-white/10">
                 <div className="flex justify-between items-center text-xs sm:text-sm">
-                  <span className="text-gray-300">Total Soal:</span>
+                  <span className="text-gray-300">{t('totalQuestions')}:</span>
                   <span className="text-white font-semibold">{allQuestions.length}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs sm:text-sm mt-2">
-                  <span className="text-gray-300">Sudah Dijawab:</span>
+                  <span className="text-gray-300">{t('answered')}:</span>
                   <span className="text-green-400 font-semibold">{Object.keys(answers).length}</span>
                 </div>
               </div>
               <p className="text-gray-300 mb-4 sm:mb-6 text-xs sm:text-sm">
-                Apakah Anda yakin ingin menyelesaikan quiz ini? Anda tidak dapat mengubah jawaban setelah ini.
+                {t('areYouSureFinishQuiz')} {t('cannotChangeAnswers')}
               </p>
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center">
                 <button
                   onClick={() => setShowFinishDialog(false)}
                   className="px-4 sm:px-6 py-2 rounded-lg border border-white/30 text-white/70 bg-black/20 backdrop-blur-sm hover:bg-white/10 transition-all duration-200 text-sm sm:text-base"
                 >
-                  Lanjutkan
+                  {t('continue')}
                 </button>
                 <button
                   onClick={() => {
@@ -1043,7 +1045,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                   }}
                   className="px-4 sm:px-6 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white backdrop-blur-sm hover:from-purple-500 hover:to-blue-500 transition-all duration-200 shadow-lg text-sm sm:text-base"
                 >
-                  Selesai
+                  {t('finish')}
                 </button>
               </div>
             </div>
@@ -1065,22 +1067,22 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                 <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                   <span className="text-2xl">⚠</span>
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-2">Masih Ada Soal yang Belum Dijawab!</h3>
+                <h3 className="text-2xl font-bold text-white mb-2">{t('stillUnanswered')}!</h3>
                 <p className="text-gray-300 text-sm">
-                  Anda masih memiliki {unansweredQuestions.length} soal yang belum dijawab
+                  {t('youStillHave')} {unansweredQuestions.length} {t('questionsNotAnswered')}
                 </p>
               </div>
               <div className="bg-white/5 rounded-lg p-4 mb-4 border border-white/10">
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-300">Total Soal:</span>
+                  <span className="text-gray-300">{t('totalQuestions')}:</span>
                   <span className="text-white font-semibold">{allQuestions.length}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm mt-2">
-                  <span className="text-gray-300">Sudah Dijawab:</span>
+                  <span className="text-gray-300">{t('answered')}:</span>
                   <span className="text-green-400 font-semibold">{Object.keys(answers).length}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm mt-2">
-                  <span className="text-gray-300">Belum Dijawab:</span>
+                  <span className="text-gray-300">{t('unanswered')}:</span>
                   <span className="text-red-400 font-semibold">{unansweredQuestions.length}</span>
                 </div>
               </div>
@@ -1089,14 +1091,14 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
             {/* Scrollable Content */}
             <div className="relative z-10 px-6 pb-4 max-h-80 overflow-y-auto">
               <div className="mb-4">
-                <p className="text-gray-300 mb-3 text-sm text-center">Soal yang belum dijawab:</p>
+                <p className="text-gray-300 mb-3 text-sm text-center">{t('unansweredQuestions')}</p>
                 <div className="grid grid-cols-5 gap-2">
                   {unansweredQuestions.map((questionIndex) => (
                     <span
                       key={questionIndex}
                       className="px-3 py-2 bg-red-500/20 text-red-300 border border-red-400/30 rounded-full text-sm font-medium text-center"
                     >
-                      Soal {questionIndex + 1}
+                      {t('questionNumber')} {questionIndex + 1}
                     </span>
                   ))}
                 </div>
@@ -1110,7 +1112,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                   onClick={() => setShowUnansweredDialog(false)}
                   className="px-6 py-2 rounded-lg border border-white/30 text-white/70 bg-black/20 backdrop-blur-sm hover:bg-white/10 transition-all duration-200"
                 >
-                  Tutup
+                  {t('close')}
                 </button>
                 <button
                   onClick={() => {
@@ -1125,7 +1127,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                   }}
                   className="px-6 py-2 rounded-lg bg-gradient-to-r from-red-600 to-orange-600 text-white backdrop-blur-sm hover:from-red-500 hover:to-orange-500 transition-all duration-200 shadow-lg"
                 >
-                  Jawab Sekarang
+                  {t('answerNow')}
                 </button>
               </div>
             </div>
@@ -1145,30 +1147,30 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                 <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                   <span className="text-2xl">⚠</span>
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-2">Konfirmasi Keluar</h3>
+                <h3 className="text-2xl font-bold text-white mb-2">{t('exitConfirmation')}</h3>
                 <p className="text-gray-300 text-sm">
-                  Apakah Anda yakin ingin keluar dari quiz ini?
+                  {t('areYouSureExitQuiz')}
                 </p>
               </div>
               <div className="bg-white/5 rounded-lg p-4 mb-6 border border-white/10">
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-300">Progress Saat Ini:</span>
-                  <span className="text-white font-semibold">{Object.keys(answers).length}/{allQuestions.length} soal</span>
+                  <span className="text-gray-300">{t('currentProgress')}</span>
+                  <span className="text-white font-semibold">{Object.keys(answers).length}/{allQuestions.length} {t('questions')}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm mt-2">
-                  <span className="text-gray-300">Waktu Tersisa:</span>
+                  <span className="text-gray-300">{t('timeRemaining')}</span>
                   <span className="text-blue-400 font-semibold">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
                 </div>
               </div>
               <p className="text-gray-300 mb-6 text-sm">
-                Progress Anda akan disimpan, tetapi Anda akan kehilangan waktu yang tersisa.
+                {t('progressWillBeSaved')}
               </p>
               <div className="flex gap-4 justify-center">
                 <button
                   onClick={() => setShowBackConfirmationDialog(false)}
                   className="px-6 py-2 rounded-lg border border-white/30 text-white/70 bg-black/20 backdrop-blur-sm hover:bg-white/10 transition-all duration-200"
                 >
-                  Batal
+                  {t('cancel')}
                 </button>
                 <button
                   onClick={() => {
@@ -1195,7 +1197,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                   }}
                   className="px-6 py-2 rounded-lg bg-gradient-to-r from-orange-600 to-red-600 text-white backdrop-blur-sm hover:from-orange-500 hover:to-red-500 transition-all duration-200 shadow-lg"
                 >
-                  Keluar
+                  {t('exit')}
                 </button>
               </div>
             </div>

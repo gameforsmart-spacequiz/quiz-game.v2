@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Clock, Trophy, Zap, Star, Heart, Bomb } from 'lucide-react'
 import { useMobileOptimization } from '@/hooks/use-mobile-optimization'
+import { useLanguage } from '@/contexts/language-context'
 
 interface MiniGameProps {
   level?: number
@@ -35,6 +36,7 @@ export default function MiniGame({ level = 1, onComplete }: MiniGameProps) {
   
   // Use mobile optimization hook
   const mobileConfig = useMobileOptimization(level)
+  const { t } = useLanguage()
 
   const itemTypes = useMemo(() => [
     { type: 'positive' as const, icon: <Star className="w-6 h-6" />, points: 50 },
@@ -214,9 +216,9 @@ export default function MiniGame({ level = 1, onComplete }: MiniGameProps) {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white/10 backdrop-blur-md border border-white/30 rounded-2xl p-8 max-w-md w-full text-center space-y-4"
           >
-            <h2 className="text-3xl font-bold">Permainan Selesai!</h2>
-            <p className="text-2xl">Skor Akhir: {score}</p>
-            <p className="text-sm">Tutup dalam 2 detik...</p>
+            <h2 className="text-3xl font-bold">{t('gameFinished')}</h2>
+            <p className="text-2xl">{t('finalScoreLabel')} {score}</p>
+            <p className="text-sm">{t('closingIn')}</p>
           </motion.div>
         )}
       </AnimatePresence>
