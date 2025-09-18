@@ -20,6 +20,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { useLanguage } from "@/contexts/language-context"
 
 interface Quiz {
   id: number
@@ -79,6 +80,7 @@ const getQuizImage = (title: string): string => {
 }
 
 export default function SelectQuizPage() {
+  const { t } = useLanguage()
   const [isLoading, setIsLoading] = useState<number | null>(null)
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [searchQuery, setSearchQuery] = useState("")
@@ -99,7 +101,7 @@ export default function SelectQuizPage() {
   console.log("SelectQuizPage - Current gameMode:", gameMode)
 
   const difficultyLevels = [
-    { value: "all", label: "All Category" },
+    { value: "all", label: t('allCategory') },
     { value: "TK", label: "TK Level" },
   ]
 
@@ -299,7 +301,7 @@ export default function SelectQuizPage() {
               <span className="hidden xs:inline">Back</span>
             </Button>
             <h1 className="text-base xs:text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-transparent bg-gradient-to-r from-cyan-300 via-purple-300 to-pink-300 bg-clip-text leading-tight">
-              Select Quiz
+              {t('selectQuiz')}
             </h1>
           </div>
 
@@ -309,7 +311,7 @@ export default function SelectQuizPage() {
               <Search className="absolute left-2 xs:left-3 top-1/2 -translate-y-1/2 h-3 w-3 xs:h-4 xs:w-4 text-gray-400" />
               <Input
                 type="text"
-                placeholder="Search quizzes..."
+                placeholder={t('searchQuizzes')}
                 value={searchQuery}
                 onChange={handleSearchInputChange}
                 onKeyPress={handleKeyPress}
@@ -319,7 +321,7 @@ export default function SelectQuizPage() {
               <button
                 onClick={handleSearch}
                 className="absolute right-2 xs:right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-purple-300 transition-colors duration-200"
-                title="Search quizzes"
+                title={t('searchQuizzes')}
               >
                 <Search className="h-3 w-3 xs:h-4 xs:w-4" />
               </button>
@@ -458,7 +460,7 @@ export default function SelectQuizPage() {
                     </CardHeader>
                     <CardContent className="pb-3 sm:pb-4 flex-1 flex flex-col justify-end">
                       <div className="flex items-center justify-between gap-2 sm:gap-3">
-                        <span className="text-xs sm:text-sm text-gray-300">{quiz.questions?.length || 0} Questions</span>
+                        <span className="text-xs sm:text-sm text-gray-300">{quiz.questions?.length || 0} {t('questions')}</span>
                         <div className="flex gap-1.5 sm:gap-2">
                           {/* Show Tryout button only when mode is not "host" */}
                           {gameMode !== "host" && (
@@ -491,11 +493,11 @@ export default function SelectQuizPage() {
                                 className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold rounded-lg shadow-md disabled:opacity-50 flex items-center gap-1 text-xs sm:text-sm"
                               >
                                 {isLoading === quiz.id ? (
-                                  <span className="truncate">Starting...</span>
+                                  <span className="truncate">{t('starting')}</span>
                                 ) : (
                                   <>
                                     <Play className="h-3 w-3 flex-shrink-0" />
-                                    <span className="truncate">Start</span>
+                                    <span className="truncate">{t('start')}</span>
                                   </>
                                 )}
                               </Button>

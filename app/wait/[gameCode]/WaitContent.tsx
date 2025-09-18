@@ -12,6 +12,8 @@ import { toast } from "sonner"
 import { getFirstName, formatDisplayName } from "@/lib/utils"
 import { LogOut } from "lucide-react"
 import React from "react"
+import { useLanguage } from "@/contexts/language-context"
+import type { TranslationKey } from "@/lib/locales/translations"
 
 interface WaitContentProps {
   gameCode: string
@@ -146,7 +148,8 @@ const PlayerList = React.memo(({
   players, 
   currentPlayerName,
   onExitGame,
-  isUpdating
+  isUpdating,
+  t
 }: { 
   players: Array<{
     id: string
@@ -157,13 +160,14 @@ const PlayerList = React.memo(({
   currentPlayerName: string
   onExitGame: () => void
   isUpdating: boolean
+  t: (key: TranslationKey) => string
 }) => {
   return (
     <div className="w-full max-w-6xl mx-auto">
       {/* Player Count */}
       <div className="text-center mb-3 sm:mb-4 md:mb-6">
         <h3 className="text-white text-sm sm:text-base md:text-lg font-bold drop-shadow-[2px_2px_0px_#000] flex items-center justify-center gap-2">
-          Players ({players.length})
+          {t('players')} ({players.length})
           {isUpdating && (
             <motion.div
               animate={{ rotate: 360 }}
@@ -205,6 +209,7 @@ export const dynamic = "force-dynamic"
 export default function WaitContent({ gameCode }: WaitContentProps) {
   const router = useRouter()
   const { clearGame } = useGameStore()
+  const { t } = useLanguage()
 
   const [loading, setLoading] = useState(true)
   const [playerName, setPlayerName] = useState("")
@@ -702,7 +707,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
         <Background />
         <div className="relative z-10 min-h-screen flex items-center justify-center font-mono text-white">
           <div className="bg-black/70 border-4 border-white p-6 rounded-lg">
-            <p>Loading...</p>
+            <p>{t('loadingWait')}</p>
           </div>
         </div>
       </>
@@ -718,7 +723,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-black/80 border-4 border-white p-12 rounded-lg text-center"
           >
-            <p className="text-3xl mb-6 font-bold">Game Starting!</p>
+            <p className="text-3xl mb-6 font-bold">{t('gameStartingWait')}</p>
             <motion.div
               key={countdownValue}
               initial={{ scale: 1.5, opacity: 0 }}
@@ -729,7 +734,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
             >
               {countdownValue}
             </motion.div>
-            <p className="text-lg mt-4 opacity-80">Get ready in {countdownValue} seconds...</p>
+            <p className="text-lg mt-4 opacity-80">{t('getReadyIn')} {countdownValue} {t('seconds')}...</p>
           </motion.div>
         </div>
       </>
@@ -747,10 +752,10 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
             className="text-center mb-4 sm:mb-6 md:mb-8 lg:mb-10"
           >
             <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold drop-shadow-[2px_2px_0px_#000] mb-1 sm:mb-2">
-              Get Ready!
+              {t('getReady')}
             </h1>
             <div className="text-sm sm:text-base md:text-lg text-white/80 flex items-center justify-center gap-2">
-              Waiting host to start
+              {t('waitingHostToStart')}
               <motion.span
                 animate={{ opacity: [0, 1, 0] }}
                 transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY }}
@@ -772,6 +777,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
               currentPlayerName={playerName}
               onExitGame={showExitDialog}
               isUpdating={isUpdating}
+              t={t}
             />
           </motion.div>
         </div>
@@ -797,22 +803,22 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
             >
               <div className="text-center">
                 <div className="text-4xl mb-4">⚠️</div>
-                <h2 className="text-xl mb-4 font-bold">Exit Game?</h2>
+                <h2 className="text-xl mb-4 font-bold">{t('exitGameQuestionWait')}</h2>
                 <p className="text-sm mb-6 text-white/80">
-                  Are you sure you want to leave the game? You will need to join again if you change your mind.
+                  {t('exitGameWarningWait')} {t('youWillNeedToJoinAgain')}
                 </p>
                 <div className="flex flex-col sm:flex-row justify-center gap-3">
                   <button
                     onClick={() => setShowExitConfirm(false)}
                     className="bg-gray-500 hover:bg-gray-600 border-2 border-gray-700 px-4 py-2 rounded-lg text-white font-bold shadow-[4px_4px_0px_#000] text-sm"
                   >
-                    Cancel
+                    {t('cancel')}
                   </button>
                   <button
                     onClick={handleExitConfirm}
                     className="bg-red-500 hover:bg-red-600 border-2 border-red-700 px-4 py-2 rounded-lg text-white font-bold shadow-[4px_4px_0px_#000] text-sm"
                   >
-                    Exit Game
+                    {t('exitGame')}
                   </button>
                 </div>
               </div>

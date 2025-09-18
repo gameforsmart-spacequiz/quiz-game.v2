@@ -579,14 +579,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
   const formatTimeText = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    
-    if (mins > 0 && secs > 0) {
-      return `${mins} min ${secs} sec`;
-    } else if (mins > 0) {
-      return `${mins} min`;
-    } else {
-      return `${secs} sec`;
-    }
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
   const handleAnswerSelect = async (choice: {
@@ -892,7 +885,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
         <div className="w-full max-w-4xl mx-auto p-4">
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
-              <h1 className="text-lg sm:text-xl font-bold text-white">Space-Quiz</h1>
+              <h1 className="text-lg sm:text-xl font-bold text-white">{t('spaceQuiz')}</h1>
               <Image
                 src="/images/gameforsmartlogo.png"
                 alt="GameForSmart"

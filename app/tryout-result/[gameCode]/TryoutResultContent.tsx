@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Trophy, RotateCcw, Home, Star } from "lucide-react"
 import { useGameStore } from "@/lib/store"
 import { supabase } from "@/lib/supabase"
+import { useLanguage } from "@/contexts/language-context"
 
 interface TryoutResultContentProps {
   gameCode: string
@@ -16,6 +17,7 @@ interface TryoutResultContentProps {
 export default function TryoutResultContent({ gameCode }: TryoutResultContentProps) {
   const router = useRouter()
   const { score, correctAnswers, resetGame, resetGameKeepMode, setGameMode } = useGameStore()
+  const { t } = useLanguage()
   const [loading, setLoading] = useState(true)
   const [quiz, setQuiz] = useState<any>(null)
   const [totalQuestions, setTotalQuestions] = useState(0)
@@ -70,11 +72,11 @@ export default function TryoutResultContent({ gameCode }: TryoutResultContentPro
   const percentage = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0
 
   const getPerformanceMessage = () => {
-    if (percentage >= 90) return "Excellent! 🌟"
-    if (percentage >= 80) return "Great job! 🎉"
-    if (percentage >= 70) return "Good work! 👍"
-    if (percentage >= 60) return "Not bad! 😊"
-    return "Keep practicing! 💪"
+    if (percentage >= 90) return t('excellent')
+    if (percentage >= 80) return t('greatJob')
+    if (percentage >= 70) return t('goodWork')
+    if (percentage >= 60) return t('notBad')
+    return t('keepPracticing')
   }
 
   const getPerformanceColor = () => {
@@ -161,7 +163,7 @@ export default function TryoutResultContent({ gameCode }: TryoutResultContentPro
         <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-b-2 border-purple-400 mx-auto mb-3 sm:mb-4"></div>
-            <p className="text-white text-sm sm:text-base md:text-lg">Loading results...</p>
+            <p className="text-white text-sm sm:text-base md:text-lg">{t('loadingResults')}</p>
           </div>
         </div>
       </div>
@@ -198,7 +200,7 @@ export default function TryoutResultContent({ gameCode }: TryoutResultContentPro
                 <Trophy className="w-12 h-12 sm:w-16 sm:h-16 text-yellow-400" />
               </motion.div>
               <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold text-transparent bg-gradient-to-r from-cyan-300 via-purple-300 to-pink-300 bg-clip-text">
-                Tryout Complete!
+                {t('tryoutComplete')}
               </CardTitle>
               {quiz && (
                 <p className="text-gray-300 mt-1 sm:mt-2 text-sm sm:text-base">{quiz.title}</p>
@@ -210,7 +212,7 @@ export default function TryoutResultContent({ gameCode }: TryoutResultContentPro
               {playerName && (
                 <div className="text-center">
                   <p className="text-white text-sm sm:text-base md:text-lg">
-                    <span className="text-gray-400">Player:</span> {playerName}
+                    <span className="text-gray-400">{t('player')}</span> {playerName}
                   </p>
                 </div>
               )}
@@ -219,11 +221,11 @@ export default function TryoutResultContent({ gameCode }: TryoutResultContentPro
               <div className="grid grid-cols-2 gap-2 sm:gap-4 text-center">
                 <div className="bg-white/10 rounded-lg p-3 sm:p-4">
                   <div className="text-lg sm:text-xl md:text-2xl font-bold text-yellow-300">{score}</div>
-                  <div className="text-xs sm:text-sm text-gray-300">Total Score</div>
+                  <div className="text-xs sm:text-sm text-gray-300">{t('totalScore')}</div>
                 </div>
                 <div className="bg-white/10 rounded-lg p-3 sm:p-4">
                   <div className="text-lg sm:text-xl md:text-2xl font-bold text-green-300">{correctAnswers}/{totalQuestions}</div>
-                  <div className="text-xs sm:text-sm text-gray-300">Correct Answers</div>
+                  <div className="text-xs sm:text-sm text-gray-300">{t('correctAnswersLabel')}</div>
                 </div>
               </div>
 
@@ -262,13 +264,13 @@ export default function TryoutResultContent({ gameCode }: TryoutResultContentPro
                   {isRestarting ? (
                     <>
                       <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-white"></div>
-                      <span className="hidden sm:inline">Restarting...</span>
-                      <span className="sm:hidden">Restarting</span>
+                      <span className="hidden sm:inline">{t('restarting')}</span>
+                      <span className="sm:hidden">{t('restarting')}</span>
                     </>
                   ) : (
                     <>
                       <RotateCcw className="w-3 h-3 sm:w-4 sm:h-4" />
-                      Restart
+                      {t('restart')}
                     </>
                   )}
                 </Button>
@@ -281,7 +283,7 @@ export default function TryoutResultContent({ gameCode }: TryoutResultContentPro
                   className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold flex items-center justify-center gap-2 text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3"
                 >
                   <Home className="w-3 h-3 sm:w-4 sm:h-4" />
-                  Back to Quizzes
+                  {t('backToQuizzes')}
                 </Button>
               </div>
 

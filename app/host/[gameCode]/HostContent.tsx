@@ -33,6 +33,19 @@ import { RulesDialog } from "@/components/rules-dialog"
 import { QRCodeModal } from "@/components/qr-code-modal"
 import { syncServerTime } from "@/lib/server-time"
 import { getFirstName, formatDisplayName } from "@/lib/utils"
+import { useLanguage } from "@/contexts/language-context"
+import { translations } from "@/lib/locales/translations"
+
+// Fallback translator for non-hook helpers in this module
+const tStatic = (key: keyof typeof translations['en']) => {
+  try {
+    const lang = typeof window !== 'undefined' ? (localStorage.getItem('i18nextLng') || 'en') : 'en'
+    const dict = (translations as any)[lang] || translations.en
+    return dict[key] || key
+  } catch {
+    return (translations as any).en[key] || String(key)
+  }
+}
 
 // === TYPES ===
 interface PlayerProgress {
@@ -235,7 +248,7 @@ const PodiumLeaderboard = React.memo(
               className="flex items-center justify-center gap-3 mb-2 sm:mb-4"
             >
               <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white/80">
-                Space-Quiz
+                {tStatic('spaceQuiz')}
               </h2>
               <span className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white/80">-</span>
               <Image
@@ -348,7 +361,7 @@ const PodiumLeaderboard = React.memo(
               className="flex items-center justify-center gap-3 mb-2 sm:mb-4"
             >
               <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white/80">
-                Space-Quiz
+                {tStatic('spaceQuiz')}
               </h2>
               <span className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white/80">-</span>
               <Image
@@ -508,7 +521,7 @@ const PodiumLeaderboard = React.memo(
               className="flex items-center justify-center gap-3 mb-2 sm:mb-4"
             >
               <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white/80">
-                Space-Quiz
+                {tStatic('spaceQuiz')}
               </h2>
               <span className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white/80">-</span>
               <Image
@@ -740,6 +753,7 @@ PodiumLeaderboard.displayName = "PodiumLeaderboard"
 
 // === HOST CONTENT COMPONENT ===
 export default function HostContent({ gameCode }: HostContentProps) {
+  const { t } = useLanguage()
   const router = useRouter()
   const [gameId, setGameId] = useState<string | null>(null)
   const [quiz, setQuiz] = useState<Quiz | null>(null)
@@ -1640,14 +1654,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
   const formatTimeText = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
-    
-    if (mins > 0 && secs > 0) {
-      return `${mins} min ${secs} sec`
-    } else if (mins > 0) {
-      return `${mins} min`
-    } else {
-      return `${secs} sec`
-    }
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
   }
 
   const getRankIcon = (rank: number) => {
@@ -1703,7 +1710,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
           animate={{ scale: 1, opacity: 1 }}
           className="bg-black/90 border-4 border-white p-12 rounded-lg text-center font-mono text-white"
         >
-          <p className="text-3xl mb-4 font-bold">Quiz Starting!</p>
+          <p className="text-3xl mb-4 font-bold">{t('quizStarting')}</p>
           <motion.div
             key={countdownLeft}
             initial={{ scale: 1.5, opacity: 0 }}
@@ -2054,7 +2061,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
               <div className="bg-white/10 border-2 border-white/20 p-4 sm:p-6 rounded-lg backdrop-blur-sm">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-base sm:text-2xl font-bold flex items-center gap-2">
-                    Space-Quiz
+                    {t('spaceQuiz')}
                   </h2>
                   {/* GameForSmart Logo */}
                   <Image
@@ -2074,7 +2081,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
                   </div>
                   <div className="flex items-center gap-1 sm:gap-2 bg-green-100 text-green-800 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
                     <HelpCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                    {gameSettings.questionCount} questions
+                    {gameSettings.questionCount} {t('questions')}
                   </div>
                 </div>
 
@@ -2137,14 +2144,14 @@ export default function HostContent({ gameCode }: HostContentProps) {
               <div className="bg-white/10 border-2 border-white/20 p-4 sm:p-6 rounded-lg backdrop-blur-sm">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
                   <h2 className="text-base sm:text-lg font-bold flex items-center gap-2">
-                    <Users className="w-4 h-4 sm:w-5 sm:h-5" /> Players ({players.length})
+                    <Users className="w-4 h-4 sm:w-5 sm:h-5" /> {t('playersLabel')} ({players.length})
                   </h2>
                   <div className="flex gap-2 sm:gap-3">
                     <PixelButton color="red" size="sm" onClick={() => setShowExitModal(true)}>
-                      ❌ Exit Game
+                      ❌ {t('exitGame')}
                     </PixelButton>
                     <PixelButton color="green" onClick={startQuiz} disabled={players.length === 0 || isStarting}>
-                      <Play className="w-4 h-4 inline-block mr-2" /> Start Quiz
+                      <Play className="w-4 h-4 inline-block mr-2" /> {t('startQuiz')}
                     </PixelButton>
                   </div>
                 </div>
@@ -2152,7 +2159,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
 {players.length === 0 ? (
                   <div className="text-center py-12 text-white/60">
                     <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg">Waiting for players to join...</p>
+                    <p className="text-lg">{t('waitingForPlayersToJoin')}</p>
                   </div>
 ) : (
                   <>
@@ -2227,7 +2234,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span className="text-sm sm:text-lg">Space-Quiz</span>
+                      <span className="text-sm sm:text-lg">{t('spaceQuiz')}</span>
                       <span className="text-sm sm:text-lg">-</span>
                       <Image
                         src="/images/gameforsmartlogo.png"
@@ -2245,7 +2252,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
                       </div>
                       <div className="flex items-center gap-1 sm:gap-2 bg-green-100 text-green-800 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
                         <HelpCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                        {gameSettings.questionCount} questions
+                        {gameSettings.questionCount} {t('questions')}
                       </div>
                     </div>
                   </div>
@@ -2255,7 +2262,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
                       <span className="text-base sm:text-lg font-mono">{formatTimeText(quizTimeLeft)}</span>
                     </div>
                     <PixelButton color="red" onClick={endQuiz} className="w-full sm:w-auto text-xs sm:text-sm">
-                      ⏹ End Quiz
+                      ⏹ {t('endQuiz')}
                     </PixelButton>
                   </div>
                 </div>
@@ -2493,17 +2500,16 @@ export default function HostContent({ gameCode }: HostContentProps) {
               >
                 <div className="text-center">
                   <div className="text-2xl sm:text-4xl mb-4">⚠️</div>
-                  <h2 className="text-lg sm:text-xl mb-4 font-bold">Exit Game?</h2>
+                  <h2 className="text-lg sm:text-xl mb-4 font-bold">{t('exitGameQuestion')}</h2>
                   <p className="text-xs sm:text-sm mb-6 text-white/80">
-                    Are you sure you want to exit? The game session will end immediately and all players will be
-                    disconnected.
+                    {tStatic('exitGameWarning')}
                   </p>
                   <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-4">
                     <PixelButton color="gray" onClick={() => setShowExitModal(false)} className="text-xs sm:text-sm">
-                      Cancel
+                      {tStatic('cancel')}
                     </PixelButton>
                     <PixelButton color="red" onClick={handleExitGame} className="text-xs sm:text-sm">
-                      End Session
+                      {tStatic('endSession')}
                     </PixelButton>
                   </div>
                 </div>
