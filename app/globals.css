@@ -457,3 +457,75 @@ body { font-family: 'Press Start 2P', cursive; }
   will-change: transform;
   transform: translateZ(0);
 }
+
+/* Mobile-specific optimizations for waiting room */
+@media (max-width: 768px) {
+  /* Prevent horizontal scroll on mobile */
+  body {
+    overflow-x: hidden;
+  }
+  
+  /* Optimize player cards for mobile */
+  .player-card-mobile {
+    min-height: 140px;
+    max-height: 160px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* Better touch targets */
+  button, .clickable {
+    min-height: 48px;
+    min-width: 48px;
+    touch-action: manipulation;
+  }
+  
+  /* Optimize grid for mobile */
+  .mobile-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  /* Prevent zoom on input focus */
+  input, textarea, select {
+    font-size: 16px;
+  }
+  
+  /* Optimize scrolling */
+  .scroll-container {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    scroll-behavior: smooth;
+  }
+}
+
+/* Extra small mobile devices */
+@media (max-width: 480px) {
+  .mobile-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.4rem;
+  }
+  
+  .player-card-mobile {
+    min-height: 120px;
+    max-height: 140px;
+    padding: 0.5rem;
+  }
+  
+  /* Smaller text for very small screens */
+  .player-card-mobile h4 {
+    font-size: 0.7rem;
+  }
+  
+  /* Smaller avatars for very small screens */
+  .player-card-mobile img {
+    width: 2rem;
+    height: 2rem;
+  }
+  
+  /* Smaller buttons for very small screens */
+  .clickable {
+    min-height: 40px;
+    min-width: 40px;
+    padding: 0.25rem;
+  }
+}

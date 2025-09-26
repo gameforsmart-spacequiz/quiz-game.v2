@@ -82,7 +82,7 @@ const PlayerCard = React.memo(({
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: index * 0.1 }}
-      className={`relative rounded-lg p-3 sm:p-4 w-full max-w-[180px] sm:max-w-[200px] md:max-w-[220px] lg:max-w-[250px] transition-all duration-300 ${
+      className={`relative rounded-lg p-3 sm:p-4 md:p-5 w-full max-w-[160px] sm:max-w-[180px] md:max-w-[200px] lg:max-w-[220px] xl:max-w-[240px] transition-all duration-300 player-card-mobile ${
         isCurrentPlayer 
           ? 'bg-gradient-to-br from-blue-900/90 to-purple-900/90 border-2 border-green-400 shadow-[0_0_25px_rgba(34,197,94,0.6)] hover:shadow-[0_0_30px_rgba(34,197,94,0.8)]' 
           : 'bg-black/90 border-2 border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.4)] hover:shadow-[0_0_25px_rgba(59,130,246,0.6)]'
@@ -90,7 +90,7 @@ const PlayerCard = React.memo(({
     >
       {/* Player Name */}
       <div className="text-center mb-2 sm:mb-3">
-        <h4 className="text-white font-bold text-sm sm:text-base md:text-lg drop-shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1">
+        <h4 className="text-white font-bold text-sm sm:text-base md:text-lg lg:text-xl drop-shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1">
           <SmartNameDisplay 
             name={player.name} 
             maxLength={12}
@@ -98,7 +98,7 @@ const PlayerCard = React.memo(({
             multilineClassName="text-white"
           />
           {isCurrentPlayer && (
-            <span className="text-green-400 text-xs font-bold bg-green-400/20 px-1.5 py-0.5 rounded-full border border-green-400/30">
+            <span className="text-green-400 text-xs sm:text-sm font-bold bg-green-400/20 px-2 py-1 rounded-full border border-green-400/30">
               YOU
             </span>
           )}
@@ -111,7 +111,7 @@ const PlayerCard = React.memo(({
         <motion.img
           src={player.avatar}
           alt={getFirstName(player.name)}
-          className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full object-cover border-2 shadow-[0_0_10px_rgba(59,130,246,0.4)] ${
+          className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 rounded-full object-cover border-2 shadow-[0_0_10px_rgba(59,130,246,0.4)] ${
             isCurrentPlayer 
               ? 'border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.6)]' 
               : 'border-blue-400'
@@ -127,15 +127,15 @@ const PlayerCard = React.memo(({
         <div className="flex justify-center">
           <button
             onClick={onExitGame}
-            className="bg-blue-600 hover:bg-blue-700 text-white p-1.5 sm:p-2 rounded-lg font-bold transition-all duration-200 flex items-center justify-center shadow-[0_0_10px_rgba(59,130,246,0.4)] hover:shadow-[0_0_15px_rgba(59,130,246,0.6)]"
+            className="bg-blue-600 hover:bg-blue-700 text-white p-2 sm:p-2.5 md:p-3 rounded-lg font-bold transition-all duration-200 flex items-center justify-center shadow-[0_0_10px_rgba(59,130,246,0.4)] hover:shadow-[0_0_15px_rgba(59,130,246,0.6)] clickable min-h-[44px] min-w-[44px]"
             title="Exit Game"
           >
-            <LogOut className="w-3 h-3 sm:w-4 sm:h-4" />
+            <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
       ) : (
         <div className="flex justify-center">
-          <span className="text-gray-400 text-xs sm:text-sm">Waiting...</span>
+          <span className="text-gray-400 text-xs sm:text-sm md:text-base font-medium">Waiting...</span>
         </div>
       )}
     </motion.div>
@@ -165,21 +165,21 @@ const PlayerList = React.memo(({
   return (
     <div className="w-full max-w-6xl mx-auto">
       {/* Player Count */}
-      <div className="text-center mb-3 sm:mb-4 md:mb-6">
-        <h3 className="text-white text-sm sm:text-base md:text-lg font-bold drop-shadow-[2px_2px_0px_#000] flex items-center justify-center gap-2">
+      <div className="text-center mb-6 sm:mb-7 md:mb-8">
+        <h3 className="text-white text-lg sm:text-xl md:text-2xl font-bold drop-shadow-[2px_2px_0px_#000] flex items-center justify-center gap-3">
           {t('players')} ({players.length})
           {isUpdating && (
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full"
+              className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-blue-400 border-t-transparent rounded-full"
             />
           )}
         </h3>
       </div>
 
       {/* Players Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4 max-h-80 sm:max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-blue-500/30 scrollbar-track-transparent pr-1 sm:pr-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5 md:gap-6 max-h-[70vh] sm:max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-blue-500/30 scrollbar-track-transparent pr-2 sm:pr-3 scroll-container mobile-grid">
         {players
           .sort((a, b) => {
             // Put current player first
@@ -743,22 +743,23 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
   return (
     <>
       <Background />
-      <div className="relative z-10 min-h-screen font-mono text-white p-2 sm:p-3 md:p-4">
+      <div className="relative z-10 min-h-screen font-mono text-white p-3 sm:p-4 md:p-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-4 sm:mb-6 md:mb-8 lg:mb-10"
+            className="text-center mb-8 sm:mb-10 md:mb-12 lg:mb-14"
           >
-            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold drop-shadow-[2px_2px_0px_#000] mb-1 sm:mb-2">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold drop-shadow-[2px_2px_0px_#000] mb-3 sm:mb-4">
               {t('getReady')}
             </h1>
-            <div className="text-sm sm:text-base md:text-lg text-white/80 flex items-center justify-center gap-2">
+            <div className="text-lg sm:text-xl md:text-2xl text-white/90 flex items-center justify-center gap-2">
               {t('waitingHostToStart')}
               <motion.span
                 animate={{ opacity: [0, 1, 0] }}
                 transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY }}
+                className="text-2xl"
               >
                 ...
               </motion.span>
@@ -807,16 +808,16 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
                 <p className="text-sm mb-6 text-white/80">
                   {t('exitGameWarningWait')} {t('youWillNeedToJoinAgain')}
                 </p>
-                <div className="flex flex-col sm:flex-row justify-center gap-3">
+                <div className="flex flex-col sm:flex-row justify-center gap-4">
                   <button
                     onClick={() => setShowExitConfirm(false)}
-                    className="bg-gray-500 hover:bg-gray-600 border-2 border-gray-700 px-4 py-2 rounded-lg text-white font-bold shadow-[4px_4px_0px_#000] text-sm"
+                    className="bg-gray-500 hover:bg-gray-600 border-2 border-gray-700 px-6 py-3 rounded-lg text-white font-bold shadow-[4px_4px_0px_#000] text-base clickable min-h-[48px]"
                   >
                     {t('cancel')}
                   </button>
                   <button
                     onClick={handleExitConfirm}
-                    className="bg-red-500 hover:bg-red-600 border-2 border-red-700 px-4 py-2 rounded-lg text-white font-bold shadow-[4px_4px_0px_#000] text-sm"
+                    className="bg-red-500 hover:bg-red-600 border-2 border-red-700 px-6 py-3 rounded-lg text-white font-bold shadow-[4px_4px_0px_#000] text-base clickable min-h-[48px]"
                   >
                     {t('exitGame')}
                   </button>
