@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress"
 import SpaceDodge from "@/components/space-dodge"
 import { useGameStore } from "@/lib/store"
 import { supabase } from "@/lib/supabase"
+import { generateXID } from "@/lib/id-generator"
 import { syncServerTime } from "@/lib/server-time"
 import type { Quiz, Question } from "@/lib/types"
 import Image from "next/image"
@@ -611,7 +612,9 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
       }
 
       // Debug: Log data yang akan diinsert
+      const answerId = generateXID();
       const dataToInsert = {
+        id: answerId,
         game_id: gameId,
         player_id: playerId,
         question_index: currentQuestion,
@@ -758,6 +761,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
         supabase
           .from("player_answers")
           .insert({
+            id: generateXID(),
             game_id: gameId,
             player_id: playerId,
             question_index: -1,

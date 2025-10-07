@@ -15,7 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { X, Users, Gamepad2, Sparkles, Star } from "lucide-react"
 import { useGameStore } from "@/lib/store"
 import { supabase } from "@/lib/supabase"
-import { v4 as uuidv4 } from "uuid"
+import { generateXID } from "@/lib/id-generator"
 import { useLanguage } from "@/contexts/language-context"
 // penanda
 // penanda
@@ -127,7 +127,7 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
         return
       }
 
-      const playerId = uuidv4()
+      const playerId = generateXID()
 
       // Insert fresh player record
       await supabase.from("players").insert({

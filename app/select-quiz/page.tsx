@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useGameStore } from "@/lib/store"
 import { supabase } from "@/lib/supabase"
+import { generateXID } from "@/lib/id-generator"
 import { Input } from "@/components/ui/input"
 import { Search, Play, ChevronDown, ChevronUp, ArrowLeft } from "lucide-react"
 import { RulesDialog } from "@/components/rules-dialog"
@@ -163,10 +164,12 @@ export default function SelectQuizPage() {
       }
 
       const gameCode = Math.random().toString(36).substring(2, 8).toUpperCase()
+      const gameId = generateXID()
 
       const { data, error } = await supabase
         .from("games")
         .insert({
+          id: gameId,
           code: gameCode,
           quiz_id: selectedQuiz.id,
           status: "waiting",

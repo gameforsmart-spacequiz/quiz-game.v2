@@ -1,5 +1,6 @@
 import { supabase } from "./supabase"
 import type { GameSettings } from "./types"
+import { generateXID } from "./id-generator"
 
 // Generate a unique 6-character game code
 export function generateGameCode(): string {
@@ -14,13 +15,16 @@ export function generateGameCode(): string {
 // Create a new game in the database with user settings
 export async function createGame(quizId: number, hostId: string, settings: GameSettings) {
   const gameCode = generateGameCode()
+  const gameId = generateXID()
+  const newHostId = generateXID()
 
   const { data, error } = await supabase
     .from("games")
     .insert({
+      id: gameId,
       code: gameCode,
       quiz_id: quizId,
-      host_id: hostId,
+      host_id: newHostId,
       status: "waiting",
       time_limit: settings.timeLimit,
       question_count: settings.questionCount,

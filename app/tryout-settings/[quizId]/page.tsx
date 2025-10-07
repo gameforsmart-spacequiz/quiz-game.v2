@@ -16,6 +16,7 @@ import {
 import { Clock, Hash, Play, ArrowLeft, Settings, Sparkles, Star, Gamepad2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { useGameStore } from "@/lib/store"
+import { generateXID } from "@/lib/id-generator"
 import { useLanguage } from "@/contexts/language-context"
 
 interface Quiz {
@@ -124,10 +125,12 @@ export default function TryoutSettingsPage() {
       }
 
       const gameCode = Math.random().toString(36).substring(2, 8).toUpperCase()
+      const gameId = generateXID()
 
       const { data, error } = await supabase
         .from("games")
         .insert({
+          id: gameId,
           code: gameCode,
           quiz_id: quiz.id,
           status: "playing", // Use valid status value for tryout
