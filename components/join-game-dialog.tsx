@@ -128,7 +128,7 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
       }
 
       const playerId = generateXID()
-//
+////
       // Insert fresh player record
       await supabase.from("players").insert({
         id: playerId,
