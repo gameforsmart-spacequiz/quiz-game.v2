@@ -327,15 +327,15 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
       const shuffledQuestions = seededShuffle(quizData.questions, seed).slice(0, questionCount)
       
       return shuffledQuestions.map((q: any, idx: number) => {
-        if (!q || !q.choices || !Array.isArray(q.choices)) {
+        if (!q || !q.answers || !Array.isArray(q.answers)) {
           console.error("Invalid question structure:", q);
           return q;
         }
         
-        const choiceSeed = seed + (q.id || idx) * 101
+        const answerSeed = seed + (q.id || idx) * 101
         return {
           ...q,
-          choices: seededShuffle(q.choices, choiceSeed),
+          answers: seededShuffle(q.answers, answerSeed),
         }
       })
     } catch (error) {
@@ -361,9 +361,9 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
       }
 
       const { data: gameData, error: gameErr } = await supabase
-        .from("games")
-        .select("id, quiz_id, time_limit, question_count, is_started, quiz_start_time")
-        .eq("code", gameCode.toUpperCase())
+        .from("game_sessions")
+        .select("id, quiz_id, total_time_minutes, question_limit, status, started_at, participants")
+        .eq("game_pin", gameCode.toUpperCase())
         .single()
 
       if (gameErr || !gameData) {
@@ -384,12 +384,8 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
         setTimeLeft(gameData.time_limit);
       }
 
-      // Get player name from the players table
-      const { data: playerData } = await supabase
-        .from("players")
-        .select("name")
-        .eq("game_id", gameData.id)
-        .single()
+      // Get player name from the participants array
+      const playerData = gameData.participants?.find((p: any) => p.id === playerId)
 
       if (playerData?.name) {
         setPlayerName(playerData.name);
@@ -483,19 +479,19 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
     setSelectedChoiceId(choiceId);
 
     const currentQ = allQuestions[currentQuestion];
-    const selectedChoice = currentQ?.choices?.find(c => c.id === choiceId);
+    const selectedChoice = currentQ?.answers?.find(c => c.id === choiceId);
 
     // Save answer without showing result
     let updatedAnswers = answers;
     if (selectedChoice) {
       updatedAnswers = {
         ...answers,
-        [currentQuestion]: selectedChoice.choice_text || ''
+        [currentQuestion]: selectedChoice.answer || ''
       };
       setAnswers(updatedAnswers);
     }
 
-    console.log("Answer saved:", selectedChoice?.choice_text);
+    console.log("Answer saved:", selectedChoice?.answer);
 
     // Auto-advance after 0.5 seconds
     setTimeout(() => {
@@ -543,8 +539,8 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
     allQuestions.forEach((question, index) => {
       const userAnswer = answers[index];
       if (userAnswer) {
-        const correctChoice = question.choices?.find(c => c.is_correct);
-        if (correctChoice && correctChoice.choice_text === userAnswer) {
+        const correctChoice = question.answers?.find(c => c.is_correct);
+        if (correctChoice && correctChoice.answer === userAnswer) {
           finalScore += 10;
           finalCorrect += 1;
         }
@@ -734,11 +730,11 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                 )}
               </div>
 
-              {/* Choices */}
+              {/* Answers */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6 flex-shrink-0">
-                {currentQ.choices?.map((choice, index) => {
+                {currentQ.answers?.map((choice, index) => {
                   const isSelected = selectedChoiceId === choice.id;
-                  const isAnswered = answers[currentQuestion] === choice.choice_text;
+                  const isAnswered = answers[currentQuestion] === choice.answer;
 
                   return (
                     <button
@@ -760,7 +756,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                         }`}>
                           {String.fromCharCode(65 + index)}
                         </div>
-                        <span className="text-white font-medium text-sm sm:text-base leading-tight flex-1 text-left">{choice.choice_text}</span>
+                        <span className="text-white font-medium text-sm sm:text-base leading-tight flex-1 text-left">{choice.answer}</span>
                         {isAnswered && (
                           <span className="ml-auto text-xs text-purple-300 flex-shrink-0">✓</span>
                         )}
@@ -790,7 +786,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                       
                       // Set the selected choice if there's a previous answer
                       if (prevAnswer && prevQuestion) {
-                        const selectedChoice = prevQuestion.choices?.find(c => c.choice_text === prevAnswer);
+                        const selectedChoice = prevQuestion.answers?.find(c => c.answer === prevAnswer);
                         setSelectedChoiceId(selectedChoice?.id || null);
                         setIsAnswered(true);
                       } else {
@@ -807,7 +803,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                       
                       // Set the selected choice if there's a previous answer
                       if (prevAnswer && prevQuestion) {
-                        const selectedChoice = prevQuestion.choices?.find(c => c.choice_text === prevAnswer);
+                        const selectedChoice = prevQuestion.answers?.find(c => c.answer === prevAnswer);
                         setSelectedChoiceId(selectedChoice?.id || null);
                         setIsAnswered(true);
                       } else {
@@ -837,7 +833,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                       
                       // Set the selected choice if there's an answer for this question
                       if (nextAnswer && nextQuestion) {
-                        const selectedChoice = nextQuestion.choices?.find(c => c.choice_text === nextAnswer);
+                        const selectedChoice = nextQuestion.answers?.find(c => c.answer === nextAnswer);
                         setSelectedChoiceId(selectedChoice?.id || null);
                         setIsAnswered(true);
                       } else {
@@ -917,7 +913,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                             
                             // Set the selected choice if there's an answer for this question
                             if (targetAnswer && targetQuestion) {
-                              const selectedChoice = targetQuestion.choices?.find(c => c.choice_text === targetAnswer);
+                              const selectedChoice = targetQuestion.answers?.find(c => c.answer === targetAnswer);
                               setSelectedChoiceId(selectedChoice?.id || null);
                               setIsAnswered(true);
                             } else {
@@ -1013,7 +1009,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                     allQuestions.forEach((question, index) => {
                       const userAnswer = answers[index];
                       if (userAnswer) {
-                        const correctChoice = question.choices?.find(c => c.is_correct);
+                        const correctChoice = question.answers?.find(c => c.is_correct);
                         if (correctChoice && correctChoice.choice_text === userAnswer) {
                           finalScore += 10;
                           finalCorrect += 1;

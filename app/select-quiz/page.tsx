@@ -24,23 +24,34 @@ import {
 import { useLanguage } from "@/contexts/language-context"
 
 interface Quiz {
-  id: number
+  id: string
   title: string
   description: string
-  difficulty_level?: string
+  category: string
+  language: string
+  image_url?: string
+  cover_image?: string
+  is_public: boolean
+  creator_id: string
   questions: Question[]
+  created_at: string
+  updated_at: string
 }
 
 interface Question {
-  id: number
+  id: string
+  type: string
+  image?: string
+  points: number
+  answers: Answer[]
+  correct: string
   question: string
-  choices: Choice[]
 }
 
-interface Choice {
-  id: number
-  choice_text: string
-  is_correct: boolean
+interface Answer {
+  id: string
+  image?: string
+  answer: string
 }
 
 interface GameSettings {
@@ -55,7 +66,7 @@ const getQuizImage = (title: string): string => {
   
   // Mapping quiz titles to appropriate images
   if (titleLower.includes('angka') || titleLower.includes('berhitung') || titleLower.includes('matematika')) {
-    return '/images/perbaikan.png'
+    return '/images/1-buku.png'
   } else if (titleLower.includes('hewan') || titleLower.includes('binatang') || titleLower.includes('animal')) {
     return '/images/kucing-lucu.png'
   } else if (titleLower.includes('buah') || titleLower.includes('fruit')) {
@@ -103,31 +114,21 @@ export default function SelectQuizPage() {
 
   const difficultyLevels = [
     { value: "all", label: t('allCategory') },
-    { value: "TK", label: "TK Level" },
+    { value: "general", label: "General" },
+    { value: "technology", label: "Technology" },
   ]
 
   const fetchQuizzes = useCallback(async () => {
     let query = supabase
       .from("quizzes")
-      .select(`
-        *,
-        questions (
-          id,
-          question,
-          choices (
-            id,
-            choice_text,
-            is_correct
-          )
-        )
-      `)
+      .select("*")
     
     // Apply level filter only if not "all"
     if (selectedLevel !== "all") {
-      query = query.eq("difficulty_level", selectedLevel)
+      query = query.eq("category", selectedLevel)
     }
     
-    const { data, error } = await query.order("id")
+    const { data, error } = await query.order("created_at", { ascending: false })
 
     if (!error && data) {
       setQuizzes(data as Quiz[])
@@ -167,14 +168,20 @@ export default function SelectQuizPage() {
       const gameId = generateXID()
 
       const { data, error } = await supabase
-        .from("games")
+        .from("game_sessions")
         .insert({
           id: gameId,
-          code: gameCode,
+          game_pin: gameCode,
           quiz_id: selectedQuiz.id,
+          host_id: "01mdpz2b00100000000p", // Use existing profile ID
           status: "waiting",
-          time_limit: settings.timeLimit,
-          question_count: settings.questionCount,
+          total_time_minutes: settings.timeLimit,
+          question_limit: settings.questionCount.toString(),
+          participants: [],
+          responses: [],
+          chat_messages: [],
+          current_questions: [],
+          application: "space-quiz"
         })
         .select()
         .single()
@@ -428,7 +435,7 @@ export default function SelectQuizPage() {
                             </TooltipContent>
                           </Tooltip>
                           <span className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs flex-shrink-0">
-                            {quiz.difficulty_level || "Unknown"} Level
+                            {quiz.category || "Unknown"} Level
                           </span>
                         </div>
 

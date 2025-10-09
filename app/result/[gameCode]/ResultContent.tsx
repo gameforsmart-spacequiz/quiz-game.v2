@@ -114,9 +114,9 @@ export default function ResultContent({ gameCode }: { gameCode: string }) {
     const fetchResults = async () => {
       try {
         const { data: gameData, error: gameErr } = await supabase
-          .from("games")
-          .select("id")
-          .eq("code", gameCode.toUpperCase())
+          .from("game_sessions")
+          .select("id, participants")
+          .eq("game_pin", gameCode.toUpperCase())
           .single();
 
         if (gameErr || !gameData) {
@@ -126,15 +126,21 @@ export default function ResultContent({ gameCode }: { gameCode: string }) {
         }
 
         const gameId = gameData.id;
-        if (playerId && score) await supabase.from("players").update({ score }).eq("id", playerId);
+        // Update player score in participants array if needed
+        if (playerId && score) {
+          const updatedParticipants = gameData.participants.map((p: any) => 
+            p.id === playerId ? { ...p, score } : p
+          );
+          await supabase
+            .from("game_sessions")
+            .update({ participants: updatedParticipants })
+            .eq("id", gameId);
+        }
 
-        const { data: players, error } = await supabase
-          .from("players")
-          .select("*")
-          .eq("game_id", gameId)
-          .order("score", { ascending: false });
+        const players = (gameData.participants || [])
+          .sort((a: any, b: any) => (b.score || 0) - (a.score || 0));
 
-        if (error || !players) setPlayerResults([]);
+        if (!players) setPlayerResults([]);
         else {
           const results = players.map((p, idx) => ({
             id: p.id,

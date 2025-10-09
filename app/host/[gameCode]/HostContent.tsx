@@ -935,11 +935,11 @@ export default function HostContent({ gameCode }: HostContentProps) {
       }
 
       const { data: gameData, error: gameErr } = await supabase
-        .from("games")
+        .from("game_sessions")
         .select(
-          "id, quiz_id, time_limit, question_count, is_started, finished, countdown_start_at",
+          "id, quiz_id, total_time_minutes, question_limit, status, countdown_started_at, participants, responses",
         )
-        .eq("code", gameCode.toUpperCase())
+        .eq("game_pin", gameCode.toUpperCase())
         .single()
 
       if (gameErr || !gameData) {
@@ -951,10 +951,13 @@ export default function HostContent({ gameCode }: HostContentProps) {
       setGameId(gameData.id)
       setGameCode(gameCode)
       setQuizId(gameData.quiz_id)
-      setGameSettings({ timeLimit: gameData.time_limit, questionCount: gameData.question_count })
+      setGameSettings({ 
+        timeLimit: gameData.total_time_minutes > 100 ? Math.round(gameData.total_time_minutes / 60) : gameData.total_time_minutes, // Handle legacy data
+        questionCount: gameData.question_limit === 'all' ? 999 : parseInt(gameData.question_limit)
+      })
       setIsHost(true)
-      setQuizStarted(gameData.is_started)
-      setShowLeaderboard(gameData.finished)
+      setQuizStarted(gameData.status === 'playing')
+      setShowLeaderboard(gameData.status === 'finished')
 
       const quizzes = await fetchQuizzes()
       const found = quizzes.find((q) => q.id === gameData.quiz_id)
@@ -975,24 +978,35 @@ export default function HostContent({ gameCode }: HostContentProps) {
     isUpdating.current = true
 
     try {
-      const [answersResult, playersResult] = await Promise.all([
-        supabase.from("player_answers").select("*").eq("game_id", gameId).not("question_index", "eq", -1),
-        supabase.from("players").select("*").eq("game_id", gameId),
-      ])
+      // Get game session data with participants and responses
+      const { data: gameSession, error: gameError } = await supabase
+        .from("game_sessions")
+        .select("participants, responses")
+        .eq("id", gameId)
+        .single()
 
-      const answers = answersResult.data || []
-      const playersData = playersResult.data || []
+      if (gameError) {
+        console.error("Error fetching game session:", gameError)
+        return
+      }
+
+      const participants = gameSession.participants || []
+      const responses = gameSession.responses || []
+      
+      // Filter out mini-game responses
+      const answers = responses.filter((r: any) => r.question_id !== 'mini-game')
+      const playersData = participants
 
       const progressMap = new Map<string, PlayerProgress>()
 
-      playersData.forEach((player: Player) => {
-        const playerAnswers = answers.filter((a) => a.player_id === player.id && a.question_index >= 0)
+      playersData.forEach((player: any) => {
+        const playerAnswers = answers.filter((a: any) => a.player_id === player.id)
 
-        const uniqueQuestionIndices = new Set(playerAnswers.map((a) => a.question_index))
-        const answeredQuestions = uniqueQuestionIndices.size
+        const uniqueQuestionIds = new Set(playerAnswers.map((a: any) => a.question_id))
+        const answeredQuestions = uniqueQuestionIds.size
         const totalQuestions = gameSettings.questionCount || quiz.questionCount || 10
 
-        const calculatedScore = playerAnswers.reduce((sum, a) => sum + (a.points_earned || 0), 0)
+        const calculatedScore = playerAnswers.reduce((sum: number, a: any) => sum + (a.points_earned || 0), 0)
         // Prevent score from flickering to 0 by using the higher value
         const score = Math.max(player.score || 0, calculatedScore)
 
@@ -1064,20 +1078,20 @@ export default function HostContent({ gameCode }: HostContentProps) {
           }
           // Additional safety check: ensure quiz has been running for at least 30 seconds
           const quizStartTime = await supabase
-            .from("games")
-            .select("quiz_start_time")
+            .from("game_sessions")
+            .select("started_at")
             .eq("id", gameId)
             .single()
           
-          if (quizStartTime.data?.quiz_start_time) {
-            const startTime = new Date(quizStartTime.data.quiz_start_time).getTime()
+          if (quizStartTime.data?.started_at) {
+            const startTime = new Date(quizStartTime.data.started_at).getTime()
             const currentTime = Date.now()
             const quizDuration = currentTime - startTime
-            
+
             // Only auto-finish if quiz has been running for at least 30 seconds
             if (quizDuration > 30000) { // 30 seconds
               console.log("[HOST] 🎉 All players completed quiz - finishing game")
-              await supabase.from("games").update({ finished: true, is_started: false }).eq("id", gameId)
+              await supabase.from("game_sessions").update({ status: 'finished', ended_at: new Date().toISOString() }).eq("id", gameId)
               setShowLeaderboard(true)
 
             } else {
@@ -1108,10 +1122,20 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
     try {
       console.log("[v0] Fetching players for game:", gameId)
-      const [playersResult, answersResult] = await Promise.all([
-        supabase.from("players").select("*").eq("game_id", gameId),
-        supabase.from("player_answers").select("*").eq("game_id", gameId).not("question_index", "eq", -1)
-      ])
+      // Get game session data with participants and responses
+      const { data: gameSession, error: gameError } = await supabase
+        .from("game_sessions")
+        .select("participants, responses")
+        .eq("id", gameId)
+        .single()
+
+      if (gameError) {
+        console.error("Error fetching game session:", gameError)
+        return
+      }
+
+      const playersResult = { data: gameSession.participants || [] }
+      const answersResult = { data: (gameSession.responses || []).filter((r: any) => r.question_id !== 'mini-game') }
       
       if (playersResult.error) {
         console.error("Error fetching players:", playersResult.error)
@@ -1183,10 +1207,9 @@ export default function HostContent({ gameCode }: HostContentProps) {
     const now = Date.now()
     const timeSinceLastRefresh = now - lastRefreshTime.current
     
-    // Only refresh if:
-    // 1. Enough time has passed (prevents infinite loops)
-    // 2. We're not in quiz mode (to avoid disrupting active quiz)
-    if (timeSinceLastRefresh >= refreshDebounceTime && !quizStarted) {
+    // Only refresh if enough time has passed (prevents infinite loops)
+    // Allow refresh during quiz for real-time progress updates
+    if (timeSinceLastRefresh >= refreshDebounceTime) {
       console.log("[HOST] 🔄 Player state changed, smart refresh triggered")
       lastRefreshTime.current = now
       
@@ -1199,8 +1222,6 @@ export default function HostContent({ gameCode }: HostContentProps) {
       }, 500)
       
       return () => clearTimeout(refreshTimeout)
-    } else if (quizStarted) {
-      console.log("[HOST] 🎮 Quiz active, skipping smart refresh")
     } else {
       console.log("[HOST] ⏳ Refresh debounced, waiting for cooldown")
     }
@@ -1213,14 +1234,24 @@ export default function HostContent({ gameCode }: HostContentProps) {
       .channel("game_status")
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "games", filter: `id=eq.${gameId}` },
+        { event: "UPDATE", schema: "public", table: "game_sessions", filter: `id=eq.${gameId}` },
         (payload) => {
-          if (payload.new.finished) {
+          console.log("[HOST] 📡 Game status update:", payload.new)
+          
+          if (payload.new.status === 'finished') {
             setQuizStarted(false)
             setShowLeaderboard(true)
-
           }
-          if (payload.new.is_started) setQuizStarted(true)
+          
+          if (payload.new.status === 'playing') {
+            setQuizStarted(true)
+            setShowLeaderboard(false)
+          }
+          
+          if (payload.new.countdown_started_at) {
+            setQuizStarted(true)
+            setShowLeaderboard(false)
+          }
           
           // No need to refresh players on updated_at change - real-time subscriptions handle this
         },
@@ -1231,123 +1262,50 @@ export default function HostContent({ gameCode }: HostContentProps) {
       .channel(`players-${gameId}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "players", filter: `game_id=eq.${gameId}` },
+        { event: "UPDATE", schema: "public", table: "game_sessions", filter: `id=eq.${gameId}` },
         async (payload) => {
-          console.log("[HOST] 🟢 Player joined:", payload.new)
-          const newPlayer = payload.new as Player
+          console.log("[HOST] 📡 Game participants update:", payload.new)
           
-          // Immediate state update for instant UI response
-          setPlayers(prev => {
-            const exists = prev.find(p => p.id === newPlayer.id)
-            if (exists) {
-              console.log("[HOST] ⚠️ Player already exists in state:", newPlayer.name)
-              return prev
-            }
-            console.log("[HOST] ➕ Adding player to state:", newPlayer.name)
-            return [...prev, newPlayer]
-          })
-          
-          // Also update progress immediately
-          const newProgress = {
-            id: newPlayer.id,
-            name: newPlayer.name,
-            avatar: newPlayer.avatar || "/placeholder.svg?height=40&width=40&text=Player",
-            score: newPlayer.score || 0,
-            currentQuestion: 0,
-            totalQuestions: gameSettings.questionCount || quiz?.questionCount || 10,
-            isActive: true,
-            rank: 0,
+          // Check if participants array has changed
+          if (payload.new.participants) {
+            const participants = payload.new.participants;
+            console.log("[HOST] 🟢 Participants updated:", participants.length, "players");
+            
+            // Update players state
+            setPlayers(participants);
           }
-          
-          setPlayerProgress(prev => {
-            const exists = prev.find(p => p.id === newPlayer.id)
-            if (exists) return prev
-            const updated = [...prev, newProgress]
-            const sorted = updated.sort((a, b) => b.score - a.score)
-            const ranked = sorted.map((p, idx) => ({ ...p, rank: idx + 1 }))
-            console.log("[HOST] 📊 Added to progress. Total:", ranked.length)
-            return ranked
-          })
-          
-          // No backup refresh needed for INSERT - real-time update is sufficient
         },
       )
       .on(
         "postgres_changes",
-        { event: "DELETE", schema: "public", table: "players", filter: `game_id=eq.${gameId}` },
+        { event: "UPDATE", schema: "public", table: "game_sessions", filter: `id=eq.${gameId}` },
         async (payload) => {
-          console.log("[HOST] 🔴 Player left:", payload.old)
-          const deletedPlayerId = payload.old.id
-          const deletedPlayerName = payload.old.name
+          console.log("[HOST] 📡 Game participants update (DELETE):", payload.new)
           
-          // Immediate state update
-          setPlayers(prev => {
-            const filtered = prev.filter(p => p.id !== deletedPlayerId)
-            console.log(`[HOST] 🗑️ Removed player "${deletedPlayerName}" from state. Remaining:`, filtered.length)
+          // Check if participants array has changed
+          if (payload.new.participants) {
+            const participants = payload.new.participants;
+            console.log("[HOST] 🔴 Participants updated:", participants.length, "players");
             
-            // Special handling for last player
-            if (filtered.length === 0) {
-              console.log("[HOST] 🚨 LAST PLAYER LEFT - Forcing empty state")
-            }
-            
-            return filtered
-          })
-          
-          setPlayerProgress(prev => {
-            const filtered = prev.filter(p => p.id !== deletedPlayerId)
-            const sorted = filtered.sort((a, b) => b.score - a.score)
-            const ranked = sorted.map((p, idx) => ({ ...p, rank: idx + 1 }))
-            console.log(`[HOST] 📊 Updated progress after "${deletedPlayerName}" left. Remaining:`, ranked.length)
-            
-            // Special handling for last player
-            if (ranked.length === 0) {
-              console.log("[HOST] 🚨 PROGRESS NOW EMPTY - All players gone")
-            }
-            
-            return ranked
-          })
-          
-          // Force re-render by resetting pagination for empty state
-          if (players.length === 1) { // Will become 0 after deletion
-            console.log("[HOST] 🔄 Last player leaving, resetting pagination and forcing update")
-            setCurrentPlayerPage(0)
-            setCurrentProgressPage(0)
-            // Force component re-render for last player scenario
-            setTimeout(() => setForceUpdateKey(prev => prev + 1), 100)
+            // Update players state
+            setPlayers(participants);
           }
-          
-          // Single backup refresh to ensure consistency
-          setTimeout(() => {
-            console.log("[HOST] 🔄 Backup refresh after player deletion")
-            fetchPlayers()
-            updatePlayerProgress()
-          }, 500)
         },
       )
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "players", filter: `game_id=eq.${gameId}` },
+        { event: "UPDATE", schema: "public", table: "game_sessions", filter: `id=eq.${gameId}` },
         async (payload) => {
-          console.log("[HOST] 🔄 Player updated:", payload.new)
-          const updatedPlayer = payload.new as Player
+          console.log("[HOST] 📡 Game participants update (UPDATE):", payload.new)
           
-          // Immediate state update
-          setPlayers(prev => prev.map(p => p.id === updatedPlayer.id ? updatedPlayer : p))
-          
-          // Update progress with flicker prevention
-          setPlayerProgress(prev => {
-            const updated = prev.map(p => p.id === updatedPlayer.id ? {
-              ...p,
-              name: updatedPlayer.name,
-              avatar: updatedPlayer.avatar || p.avatar,
-              // Prevent score from flickering to 0 by using the higher value
-              score: Math.max(p.score, updatedPlayer.score || 0),
-            } : p)
-            const sorted = updated.sort((a, b) => b.score - a.score)
-            return sorted.map((p, idx) => ({ ...p, rank: idx + 1 }))
-          })
-          
-          // No backup refresh needed for UPDATE - real-time update is sufficient
+          // Check if participants array has changed
+          if (payload.new.participants) {
+            const participants = payload.new.participants;
+            console.log("[HOST] 🔄 Participants updated:", participants.length, "players");
+            
+            // Update players state
+            setPlayers(participants);
+          }
         },
       )
       .subscribe((status) => {
@@ -1367,14 +1325,29 @@ export default function HostContent({ gameCode }: HostContentProps) {
       }, 500) // Increased to 500ms for better batching with many players
     }
 
-    const answersSubscription = supabase
-      .channel("player_answers")
+    // Subscribe to responses changes in game_sessions
+    const responsesSubscription = supabase
+      .channel(`responses-${gameId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "player_answers", filter: `game_id=eq.${gameId}` },
-        () => debouncedUpdatePlayerProgress(),
+        { event: "UPDATE", schema: "public", table: "game_sessions", filter: `id=eq.${gameId}` },
+        async (payload) => {
+          console.log("[HOST] 📡 Responses update detected:", payload.new)
+          
+          // Check if responses array has changed
+          if (payload.new.responses) {
+            console.log("[HOST] 🎯 Responses updated, triggering progress update")
+            // Trigger debounced progress update
+            debouncedUpdatePlayerProgress()
+          }
+        },
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log("[HOST] 📡 Responses subscription status:", status)
+        if (status === 'SUBSCRIBED') {
+          console.log("[HOST] ✅ Successfully subscribed to responses changes")
+        }
+      })
 
     setTimeout(async () => {
       await fetchPlayers()
@@ -1387,10 +1360,13 @@ export default function HostContent({ gameCode }: HostContentProps) {
       
       try {
         // Check player count from database
-        const { data: currentPlayers, error } = await supabase
-          .from("players")
-          .select("id, name")
-          .eq("game_id", gameId)
+        const { data: gameSession, error } = await supabase
+          .from("game_sessions")
+          .select("participants")
+          .eq("id", gameId)
+          .single()
+
+        const currentPlayers = gameSession?.participants || []
         
         if (error) {
           console.error("[HOST] ❌ Health check error:", error)
@@ -1431,7 +1407,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
     return () => {
       supabase.removeChannel(gameSubscription)
       supabase.removeChannel(playersSubscription)
-      supabase.removeChannel(answersSubscription)
+      supabase.removeChannel(responsesSubscription)
       clearInterval(healthCheckInterval)
       
       // Cleanup debounced update
@@ -1447,11 +1423,11 @@ export default function HostContent({ gameCode }: HostContentProps) {
     let unsub = () => {}
     let pollInterval: NodeJS.Timeout
 
-    // Poll untuk menunggu quiz_start_time di-set setelah countdown selesai
+    // Poll untuk menunggu started_at di-set setelah countdown selesai
     const waitForQuizStart = async () => {
       const { data, error } = await supabase
-        .from("games")
-        .select("quiz_start_time, time_limit")
+        .from("game_sessions")
+        .select("started_at, total_time_minutes")
         .eq("id", gameId)
         .single()
       
@@ -1461,7 +1437,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
       }
       
       // If quiz_start_time is not set yet (countdown still running), wait
-      if (!data?.quiz_start_time) {
+      if (!data?.started_at) {
         console.log("[HOST] Waiting for countdown to finish before starting timer...")
         return
       }
@@ -1472,8 +1448,8 @@ export default function HostContent({ gameCode }: HostContentProps) {
       const serverNow = await syncServerTime()
       const clientOffset = serverNow - Date.now()
 
-      const start = new Date(data.quiz_start_time).getTime()
-      const limitMs = data.time_limit * 1000
+      const start = new Date(data.started_at).getTime()
+      const limitMs = data.total_time_minutes * 60 * 1000 // Convert minutes to milliseconds
 
       const tick = () => {
         const now = Date.now() + clientOffset
@@ -1502,10 +1478,10 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
     const tick = async () => {
       try {
-        const { data } = await supabase.from("games").select("countdown_start_at, quiz_start_time").eq("id", gameId).single()
-        if (!data?.countdown_start_at) return
+        const { data } = await supabase.from("game_sessions").select("countdown_started_at, started_at").eq("id", gameId).single()
+        if (!data?.countdown_started_at) return
 
-        const start = new Date(data.countdown_start_at).getTime()
+        const start = new Date(data.countdown_started_at).getTime()
         const serverTime = await syncServerTime()
         const elapsed = Math.floor((serverTime - start) / 1000)
         const left = Math.max(0, 10 - elapsed)
@@ -1516,13 +1492,13 @@ export default function HostContent({ gameCode }: HostContentProps) {
           setCountdownLeft(0)
         }
 
-        // Set quiz_start_time when countdown finishes (left === 0) and it hasn't been set yet
-        if (left === 0 && !data.quiz_start_time) {
-          console.log("[HOST] Countdown finished, setting quiz_start_time")
-          const quizStartTime = new Date(serverTime).toISOString()
+        // Set started_at when countdown finishes (left === 0) and it hasn't been set yet
+        if (left === 0 && !data.started_at) {
+          console.log("[HOST] Countdown finished, setting started_at")
+          const startedAt = new Date(serverTime).toISOString()
           await supabase
-            .from("games")
-            .update({ quiz_start_time: quizStartTime })
+            .from("game_sessions")
+            .update({ started_at: startedAt, status: 'playing' })
             .eq("id", gameId)
         }
       } catch (error) {
@@ -1557,11 +1533,11 @@ export default function HostContent({ gameCode }: HostContentProps) {
     try {
       const startAt = new Date().toISOString()
       await supabase
-        .from("games")
+        .from("game_sessions")
         .update({
-          is_started: true,
-          countdown_start_at: startAt,
-          // quiz_start_time will be set after countdown finishes
+          status: 'playing',
+          countdown_started_at: startAt,
+          // started_at will be set after countdown finishes
         })
         .eq("id", gameId)
       toast.success("🚀 Quiz started!")
@@ -1576,12 +1552,24 @@ export default function HostContent({ gameCode }: HostContentProps) {
     try {
       console.log("[HOST] 🦵 Kicking player:", playerName, "ID:", playerId, "Game ID:", gameId)
       
-      // Delete player from database - this will trigger real-time listeners
-      const { error, data } = await supabase
-        .from("players")
-        .delete()
-        .eq("id", playerId)
-        .eq("game_id", gameId)
+      // Remove player from participants array
+      const { data: gameSession, error: gameError } = await supabase
+        .from("game_sessions")
+        .select("participants")
+        .eq("id", gameId)
+        .single()
+
+      if (gameError) {
+        console.error("Error fetching game session:", gameError)
+        return
+      }
+
+      const updatedParticipants = gameSession.participants.filter((p: any) => p.id !== playerId)
+      
+      const { error } = await supabase
+        .from("game_sessions")
+        .update({ participants: updatedParticipants })
+        .eq("id", gameId)
         .select()
 
       if (error) {
@@ -1606,11 +1594,10 @@ export default function HostContent({ gameCode }: HostContentProps) {
   const endQuiz = async () => {
     try {
       await supabase
-        .from("games")
+        .from("game_sessions")
         .update({
-          is_started: false,
-          finished: true,
-          quiz_start_time: null,
+          status: 'finished',
+          ended_at: new Date().toISOString(),
         })
         .eq("id", gameId)
 
@@ -1627,16 +1614,18 @@ export default function HostContent({ gameCode }: HostContentProps) {
     if (gameId) {
       try {
         await supabase
-          .from("games")
+          .from("game_sessions")
           .update({
-            finished: true,
-            is_started: false,
-            status: "finished",
-            quiz_start_time: null,
+            status: 'finished',
+            ended_at: new Date().toISOString(),
           })
           .eq("id", gameId)
 
-        await supabase.from("players").delete().eq("game_id", gameId)
+        // Clear participants array
+        await supabase
+          .from("game_sessions")
+          .update({ participants: [] })
+          .eq("id", gameId)
         toast.success("🚪 Game session ended")
       } catch {
         toast.error("❌ Failed to end session properly")

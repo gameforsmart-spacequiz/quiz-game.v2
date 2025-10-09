@@ -44,91 +44,110 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 export type Database = {
   public: {
     Tables: {
-      games: {
+      game_sessions: {
         Row: {
           id: string
-          code: string
-          quiz_id: number
+          quiz_id: string
+          host_id: string
+          game_pin: string
           status: "waiting" | "playing" | "finished"
+          total_time_minutes: number
+          question_limit: string
+          game_end_mode: string
+          allow_join_after_start: boolean
+          participants: any[]
+          responses: any[]
+          chat_messages: any[]
           created_at: string
-          host_id?: string
-          time_limit?: number
-          question_count?: number
+          countdown_started_at?: string
+          started_at?: string
+          ended_at?: string
+          current_questions: any[]
+          application: string
         }
         Insert: {
           id?: string
-          code: string
-          quiz_id: number
+          quiz_id: string
+          host_id: string
+          game_pin: string
           status?: "waiting" | "playing" | "finished"
+          total_time_minutes?: number
+          question_limit?: string
+          game_end_mode?: string
+          allow_join_after_start?: boolean
+          participants?: any[]
+          responses?: any[]
+          chat_messages?: any[]
           created_at?: string
-          host_id?: string
-          time_limit?: number
-          question_count?: number
+          countdown_started_at?: string
+          started_at?: string
+          ended_at?: string
+          current_questions?: any[]
+          application?: string
         }
         Update: {
           id?: string
-          code?: string
-          quiz_id?: number
-          status?: "waiting" | "playing" | "finished"
-          created_at?: string
+          quiz_id?: string
           host_id?: string
-          time_limit?: number
-          question_count?: number
+          game_pin?: string
+          status?: "waiting" | "playing" | "finished"
+          total_time_minutes?: number
+          question_limit?: string
+          game_end_mode?: string
+          allow_join_after_start?: boolean
+          participants?: any[]
+          responses?: any[]
+          chat_messages?: any[]
+          created_at?: string
+          countdown_started_at?: string
+          started_at?: string
+          ended_at?: string
+          current_questions?: any[]
+          application?: string
         }
       }
-      players: {
+      quizzes: {
         Row: {
           id: string
-          game_id: string
-          name: string
-          avatar: string
-          score: number
-          current_question: number
+          title: string
+          description?: string
+          category?: string
+          language: string
+          image_url?: string
+          cover_image?: string
+          is_public: boolean
+          creator_id: string
+          questions: any[]
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
-          game_id: string
-          name: string
-          avatar: string
-          score?: number
-          current_question?: number
+          title: string
+          description?: string
+          category?: string
+          language?: string
+          image_url?: string
+          cover_image?: string
+          is_public?: boolean
+          creator_id: string
+          questions?: any[]
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
-          game_id?: string
-          name?: string
-          avatar?: string
-          score?: number
-          current_question?: number
+          title?: string
+          description?: string
+          category?: string
+          language?: string
+          image_url?: string
+          cover_image?: string
+          is_public?: boolean
+          creator_id?: string
+          questions?: any[]
           created_at?: string
-        }
-      }
-      answers: {
-        Row: {
-          id: string
-          player_id: string
-          question_id: number
-          answer: string
-          is_correct: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          player_id: string
-          question_id: number
-          answer: string
-          is_correct: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          player_id?: string
-          question_id?: number
-          answer?: string
-          is_correct?: boolean
-          created_at?: string
+          updated_at?: string
         }
       }
     }
