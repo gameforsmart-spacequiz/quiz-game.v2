@@ -85,7 +85,7 @@ export const useGameStore = create<GameState>()(
       // Initial state
       gameCode: "",
       gameId: "",
-      quizId: 0,
+      quizId: "",
       gameStatus: "waiting",
       playerId: "",
       playerName: "",
@@ -148,7 +148,7 @@ export const useGameStore = create<GameState>()(
         set({
           gameCode: "",
           gameId: "",
-          quizId: 0,
+          quizId: "",
           gameStatus: "waiting",
           playerId: "",
           playerName: "",
@@ -172,7 +172,7 @@ export const useGameStore = create<GameState>()(
         set({
           gameCode: "",
           gameId: "",
-          quizId: 0,
+          quizId: "",
           gameStatus: "waiting",
           playerId: "",
           playerName: "",

@@ -11,10 +11,8 @@ const nextConfig = {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   },
-  // Add experimental features for better production support
-  experimental: {
-    serverComponentsExternalPackages: ['@supabase/supabase-js'],
-  },
+  // Add server external packages for better production support
+  serverExternalPackages: ['@supabase/supabase-js'],
 };
 
 module.exports = nextConfig;
