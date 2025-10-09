@@ -1,4 +1,5 @@
 # Use the official Node.js 20 Alpine image as base
+# Force rebuild - updated for production deployment
 FROM node:20-alpine AS base
 
 # Install dependencies only when needed
