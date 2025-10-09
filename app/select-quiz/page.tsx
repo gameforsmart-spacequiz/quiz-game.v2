@@ -22,42 +22,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import { useLanguage } from "@/contexts/language-context"
-
-interface Quiz {
-  id: string
-  title: string
-  description: string
-  category: string
-  language: string
-  image_url?: string
-  cover_image?: string
-  is_public: boolean
-  creator_id: string
-  questions: Question[]
-  created_at: string
-  updated_at: string
-}
-
-interface Question {
-  id: string
-  type: string
-  image?: string
-  points: number
-  answers: Answer[]
-  correct: string
-  question: string
-}
-
-interface Answer {
-  id: string
-  image?: string
-  answer: string
-}
-
-interface GameSettings {
-  timeLimit: number
-  questionCount: number
-}
+import { Quiz, Question, Answer, GameSettings } from "@/lib/types"
 
 
 // Function to get appropriate image based on quiz title
@@ -120,9 +85,13 @@ export default function SelectQuizPage() {
 
   const fetchQuizzes = useCallback(async () => {
     try {
-      console.log("Starting to fetch quizzes...")
+      console.log("========================================")
+      console.log("QUIZ FETCH DEBUG INFO")
+      console.log("========================================")
       console.log("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL)
       console.log("Supabase Key exists:", !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+      console.log("Selected Level:", selectedLevel)
+      console.log("Supabase client:", supabase)
       
       let query = supabase
         .from("quizzes")
@@ -133,8 +102,10 @@ export default function SelectQuizPage() {
         query = query.eq("category", selectedLevel)
       }
       
-      console.log("Executing query...")
+      console.log("Executing simple SELECT * query...")
       const { data, error } = await query.order("created_at", { ascending: false })
+      
+      console.log("Query completed!")
 
       if (error) {
         console.error("Error fetching quizzes:", error)
@@ -180,7 +151,7 @@ export default function SelectQuizPage() {
   const handleCreateGame = async (settings: GameSettings) => {
     if (!selectedQuiz) return
 
-    setIsLoading(selectedQuiz.id)
+    setIsLoading(parseInt(selectedQuiz.id))
     try {
       if (!selectedQuiz.questions || selectedQuiz.questions.length === 0) {
         throw new Error("Selected quiz has no questions")
@@ -282,7 +253,7 @@ export default function SelectQuizPage() {
   const filteredQuizzes = quizzes.filter(
     (quiz) =>
       quiz.title.toLowerCase().includes(appliedSearchQuery.toLowerCase()) ||
-      quiz.description.toLowerCase().includes(appliedSearchQuery.toLowerCase()),
+      (quiz.description || "").toLowerCase().includes(appliedSearchQuery.toLowerCase()),
   )
 
   const totalPages = Math.ceil(filteredQuizzes.length / itemsPerPage)
@@ -453,7 +424,7 @@ export default function SelectQuizPage() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <CardTitle
-                                className={`text-sm sm:text-base md:text-lg hover:text-purple-300 transition-colors duration-200 leading-tight ${expandedQuizId === quiz.id ? "" : "truncate"}`}
+                                className={`text-sm sm:text-base md:text-lg hover:text-purple-300 transition-colors duration-200 leading-tight ${expandedQuizId === parseInt(quiz.id) ? "" : "truncate"}`}
                               >
                                 {quiz.title}
                               </CardTitle>
@@ -470,11 +441,11 @@ export default function SelectQuizPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
-                            setExpandedQuizId(expandedQuizId === quiz.id ? null : quiz.id)
+                            setExpandedQuizId(expandedQuizId === parseInt(quiz.id) ? null : parseInt(quiz.id))
                           }}
                           className="text-gray-300 hover:text-purple-300 transition-colors flex-shrink-0 p-1"
                         >
-                          {expandedQuizId === quiz.id ? (
+                          {expandedQuizId === parseInt(quiz.id) ? (
                             <ChevronUp className="h-4 w-4 sm:h-5 sm:w-5" />
                           ) : (
                             <ChevronDown className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -483,7 +454,7 @@ export default function SelectQuizPage() {
                       </div>
 
                       <AnimatePresence>
-                        {expandedQuizId === quiz.id && (
+                        {expandedQuizId === parseInt(quiz.id) && (
                           <motion.div
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: "auto", opacity: 1 }}
@@ -509,7 +480,7 @@ export default function SelectQuizPage() {
                                   console.log("Tryout button clicked, gameMode:", gameMode)
                                   handleTryoutGame(quiz)
                                 }}
-                                disabled={isLoading === quiz.id}
+                                disabled={isLoading === parseInt(quiz.id)}
                                 size="sm"
                                 variant="outline"
                                 className="bg-white/10 backdrop-blur-lg border-white/20 text-white hover:bg-white/20 transition-all duration-300 flex items-center gap-1 text-xs sm:text-sm"
@@ -526,11 +497,11 @@ export default function SelectQuizPage() {
                                   e.stopPropagation()
                                   handleStartGame(quiz)
                                 }}
-                                disabled={isLoading === quiz.id}
+                                disabled={isLoading === parseInt(quiz.id)}
                                 size="sm"
                                 className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold rounded-lg shadow-md disabled:opacity-50 flex items-center gap-1 text-xs sm:text-sm"
                               >
-                                {isLoading === quiz.id ? (
+                                {isLoading === parseInt(quiz.id) ? (
                                   <span className="truncate">{t('starting')}</span>
                                 ) : (
                                   <>

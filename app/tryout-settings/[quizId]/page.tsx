@@ -18,13 +18,7 @@ import { supabase } from "@/lib/supabase"
 import { useGameStore } from "@/lib/store"
 import { generateXID } from "@/lib/id-generator"
 import { useLanguage } from "@/contexts/language-context"
-
-interface Quiz {
-  id: number
-  title: string
-  description: string
-  questions: any[]
-}
+import { Quiz } from "@/lib/types"
 
 interface TryoutSettings {
   timeLimit: number

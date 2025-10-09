@@ -1,5 +1,6 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
+import { Quiz } from "./types"
 
 export interface Player {
   id: string
@@ -18,19 +19,14 @@ export interface Question {
   option_images?: string[]
 }
 
-export interface Quiz {
-  id: number
-  title: string
-  description: string
-  questions: Question[]
-}
+// Quiz interface moved to lib/types.ts to avoid conflicts
 
 export interface GameState {
   clearGame(): unknown
   // Game info
   gameCode: string
   gameId: string
-  quizId: number
+  quizId: string
   gameStatus: "waiting" | "playing" | "finished"
 
   // Player info
@@ -61,7 +57,7 @@ export interface GameState {
   // Actions
   setGameCode: (code: string) => void
   setGameId: (id: string) => void
-  setQuizId: (id: number) => void
+  setQuizId: (id: string) => void
   setGameStatus: (status: "waiting" | "playing" | "finished") => void
   setPlayer: (id: string, name: string, avatar: string) => void
   setIsHost: (isHost: boolean) => void

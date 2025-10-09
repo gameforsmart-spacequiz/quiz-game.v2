@@ -142,7 +142,7 @@ export default function ResultContent({ gameCode }: { gameCode: string }) {
 
         if (!players) setPlayerResults([]);
         else {
-          const results = players.map((p, idx) => ({
+          const results = players.map((p: any, idx: number) => ({
             id: p.id,
             name: p.name || "Unknown",
             avatar: p.avatar || "/default-avatar.png",
@@ -150,7 +150,7 @@ export default function ResultContent({ gameCode }: { gameCode: string }) {
             position: idx + 1,
           }));
           setPlayerResults(results);
-          setUserPosition(results.findIndex((p) => p.id === playerId) + 1 || 0);
+          setUserPosition(results.findIndex((p: any) => p.id === playerId) + 1 || 0);
         }
       } catch (err) {
         toast.error("Failed to load results");

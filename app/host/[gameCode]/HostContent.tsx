@@ -1004,7 +1004,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
         const uniqueQuestionIds = new Set(playerAnswers.map((a: any) => a.question_id))
         const answeredQuestions = uniqueQuestionIds.size
-        const totalQuestions = gameSettings.questionCount || quiz.questionCount || 10
+        const totalQuestions = gameSettings.questionCount || 10
 
         const calculatedScore = playerAnswers.reduce((sum: number, a: any) => sum + (a.points_earned || 0), 0)
         // Prevent score from flickering to 0 by using the higher value
@@ -1066,7 +1066,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
         // 5. Quiz was not manually ended
         // 6. Quiz has been running for a reasonable time
         // 7. Players have answered a reasonable number of questions (not just 1)
-        const minQuestionsRequired = Math.max(3, Math.floor((gameSettings.questionCount || quiz?.questionCount || 10) * 0.3)) // At least 30% of questions or 3 questions minimum
+        const minQuestionsRequired = Math.max(3, Math.floor((gameSettings.questionCount || 10) * 0.3)) // At least 30% of questions or 3 questions minimum
         
         if (activePlayers.length > 0 && allActivePlayersCompleted && !hasPlayersStillActive && !quizManuallyEnded) {
           // Additional check: ensure players have answered enough questions
@@ -1136,11 +1136,6 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
       const playersResult = { data: gameSession.participants || [] }
       const answersResult = { data: (gameSession.responses || []).filter((r: any) => r.question_id !== 'mini-game') }
-      
-      if (playersResult.error) {
-        console.error("Error fetching players:", playersResult.error)
-        return
-      }
 
       const playersData = playersResult.data || []
       const answers = answersResult.data || []
@@ -1151,8 +1146,8 @@ export default function HostContent({ gameCode }: HostContentProps) {
         const progressMap = new Map<string, PlayerProgress>()
         playersData.forEach((player: Player) => {
           // Calculate actual progress from answers
-          const playerAnswers = answers.filter((a) => a.player_id === player.id && a.question_index >= 0)
-          const uniqueQuestionIndices = new Set(playerAnswers.map((a) => a.question_index))
+          const playerAnswers = answers.filter((a: any) => a.player_id === player.id && a.question_index >= 0)
+          const uniqueQuestionIndices = new Set(playerAnswers.map((a: any) => a.question_index))
           const answeredQuestions = uniqueQuestionIndices.size
           
           console.log(`[HOST] 📊 Player ${player.name}: score=${player.score}, answers=${playerAnswers.length}, uniqueQuestions=${uniqueQuestionIndices.size}, currentQuestion=${answeredQuestions}`)
@@ -1163,8 +1158,8 @@ export default function HostContent({ gameCode }: HostContentProps) {
             avatar: player.avatar || "/placeholder.svg?height=40&width=40&text=Player",
             score: player.score || 0,
             currentQuestion: answeredQuestions,
-            totalQuestions: gameSettings.questionCount || quiz?.questionCount || 10,
-            isActive: answeredQuestions < (gameSettings.questionCount || quiz?.questionCount || 10),
+            totalQuestions: gameSettings.questionCount || 10,
+            isActive: answeredQuestions < (gameSettings.questionCount || 10),
             rank: 0,
           })
         })
@@ -1184,7 +1179,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
     } catch (error) {
       console.error("[HOST] Error fetching players:", error)
     }
-  }, [gameId, gameSettings.questionCount, quiz?.questionCount])
+  }, [gameId, gameSettings.questionCount])
 
   // Reset pagination when players change
   useEffect(() => {
@@ -1379,7 +1374,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
         // If there's a mismatch, update the state
         if (dbPlayerCount !== statePlayerCount) {
           console.log(`[HOST] 🔄 Player count mismatch! DB: ${dbPlayerCount}, State: ${statePlayerCount}`)
-          console.log("[HOST] 🔄 Current players in DB:", currentPlayers?.map(p => p.name))
+          console.log("[HOST] 🔄 Current players in DB:", currentPlayers?.map((p: any) => p.name))
           console.log("[HOST] 🔄 Current players in state:", players.map(p => p.name))
           
           // Special handling when DB shows 0 but state still has players
@@ -1566,7 +1561,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
       const updatedParticipants = gameSession.participants.filter((p: any) => p.id !== playerId)
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("game_sessions")
         .update({ participants: updatedParticipants })
         .eq("id", gameId)
@@ -1579,7 +1574,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
       }
 
       console.log("[HOST] ✅ Player kicked successfully:", playerName)
-      console.log("[HOST] 📊 Deleted data:", data)
+      console.log("[HOST] 📊 Updated data:", data)
       toast.success(`Kicked ${playerName} from the game`)
       
       // The real-time listener will automatically handle removing the player from state
