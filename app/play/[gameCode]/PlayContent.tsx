@@ -1025,7 +1025,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
                   if (isRight) buttonColor = "green";
                   else if (isSelected && !isRight) buttonColor = "red";
                 }
-
+//
                 return (
                   <PixelButton
                     key={answer.id}
