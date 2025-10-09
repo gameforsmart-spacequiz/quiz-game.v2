@@ -119,19 +119,35 @@ export default function SelectQuizPage() {
   ]
 
   const fetchQuizzes = useCallback(async () => {
-    let query = supabase
-      .from("quizzes")
-      .select("*")
-    
-    // Apply level filter only if not "all"
-    if (selectedLevel !== "all") {
-      query = query.eq("category", selectedLevel)
-    }
-    
-    const { data, error } = await query.order("created_at", { ascending: false })
+    try {
+      let query = supabase
+        .from("quizzes")
+        .select("*")
+      
+      // Apply level filter only if not "all"
+      if (selectedLevel !== "all") {
+        query = query.eq("category", selectedLevel)
+      }
+      
+      const { data, error } = await query.order("created_at", { ascending: false })
 
-    if (!error && data) {
-      setQuizzes(data as Quiz[])
+      if (error) {
+        console.error("Error fetching quizzes:", error)
+        // Show user-friendly error message
+        alert(`Failed to load quizzes: ${error.message}`)
+        return
+      }
+
+      if (data) {
+        console.log("Successfully fetched quizzes:", data.length)
+        setQuizzes(data as Quiz[])
+      } else {
+        console.warn("No quiz data returned from database")
+        setQuizzes([])
+      }
+    } catch (err) {
+      console.error("Unexpected error fetching quizzes:", err)
+      alert("An unexpected error occurred while loading quizzes")
     }
   }, [selectedLevel])
 
