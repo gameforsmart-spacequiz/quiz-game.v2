@@ -29,13 +29,13 @@ export default function TryoutResultContent({ gameCode }: TryoutResultContentPro
       try {
         // Get game and quiz info
         const { data: gameData } = await supabase
-          .from("games")
-          .select("quiz_id, question_count")
-          .eq("code", gameCode.toUpperCase())
+          .from("game_sessions")
+          .select("quiz_id, question_limit, participants")
+          .eq("game_pin", gameCode.toUpperCase())
           .single()
 
         if (gameData) {
-          setTotalQuestions(gameData.question_count)
+          setTotalQuestions(gameData.question_limit === 'all' ? 999 : parseInt(gameData.question_limit))
 
           const { data: quizData } = await supabase
             .from("quizzes")
@@ -49,12 +49,8 @@ export default function TryoutResultContent({ gameCode }: TryoutResultContentPro
 
         }
 
-        // Get player name
-        const { data: playerData } = await supabase
-          .from("players")
-          .select("name")
-          .eq("game_id", gameCode)
-          .single()
+        // Get player name from participants
+        const playerData = gameData.participants?.find((p: any) => p.id === playerId)
 
         if (playerData) {
           setPlayerName(playerData.name)
@@ -97,9 +93,9 @@ export default function TryoutResultContent({ gameCode }: TryoutResultContentPro
     try {
       // Get current game settings
       const { data: currentGame } = await supabase
-        .from("games")
-        .select("time_limit, question_count, quiz_id")
-        .eq("code", gameCode.toUpperCase())
+        .from("game_sessions")
+        .select("total_time_minutes, question_limit, quiz_id")
+        .eq("game_pin", gameCode.toUpperCase())
         .single()
 
       if (!currentGame) {
@@ -114,15 +110,19 @@ export default function TryoutResultContent({ gameCode }: TryoutResultContentPro
       const newGameCode = Math.random().toString(36).substring(2, 8).toUpperCase()
 
       const { data, error } = await supabase
-        .from("games")
+        .from("game_sessions")
         .insert({
-          code: newGameCode,
+          game_pin: newGameCode,
           quiz_id: currentGame.quiz_id,
           status: "playing",
-          time_limit: currentGame.time_limit,
-          question_count: currentGame.question_count,
-          is_started: true,
-          quiz_start_time: new Date().toISOString(),
+          total_time_minutes: currentGame.total_time_minutes,
+          question_limit: currentGame.question_limit,
+          started_at: new Date().toISOString(),
+          participants: [],
+          responses: [],
+          chat_messages: [],
+          current_questions: [],
+          application: 'space-quiz'
         })
         .select()
         .single()

@@ -1,49 +1,41 @@
 export interface Player {
   id: string
   name: string
-  avatar?: string
-  game_id: string
+  avatar: string
   score: number
-  correct_answers: number
-  created_at: string
+  current_question: number
   joined_at?: string // When player joined
 }
 
 export interface Quiz {
-  id: number
+  id: string
   title: string
-  description: string
-  difficulty_level: string
-  created_at: string
-  questionCount: number
-  timeLimit: number
+  description?: string
+  category?: string
+  language: string
+  image_url?: string
+  cover_image?: string
+  is_public: boolean
+  creator_id: string
   questions: Question[]
-  thumbnail?: string // For backward compatibility
-  updated_at?: string // For backward compatibility
+  created_at: string
+  updated_at: string
 }
 
 export interface Question {
-  id: number
+  id: string
   question: string // Teks pertanyaan
   type: string // Tipe pertanyaan (misal: 'multiple_choice')
-  order_index: number
-  question_image_url?: string | null // URL gambar pertanyaan
-  question_image_alt?: string | null // Alt text untuk gambar pertanyaan
-  choices: Choice[]
-  options?: string[] // For backward compatibility
-  correctAnswer?: number // For backward compatibility
-  correct_answer?: number // For backward compatibility
-  time_limit?: number // For backward compatibility
-  points?: number // For backward compatibility
+  image?: string | null // URL gambar pertanyaan
+  points: number
+  answers: Answer[]
+  correct: string // ID of correct answer
 }
 
-export interface Choice {
-  id: number
-  choice_text: string | null // Bisa null jika hanya ada gambar
-  is_correct: boolean
-  order_index: number
-  choice_image_url?: string | null // URL gambar pilihan jawaban
-  choice_image_alt?: string | null // Alt text untuk gambar pilihan jawaban
+export interface Answer {
+  id: string
+  answer: string
+  image?: string | null // URL gambar pilihan jawaban
 }
 
 export interface GameSettings {
@@ -53,27 +45,32 @@ export interface GameSettings {
 
 export interface Game {
   id: string
-  quiz_id: number
-  host_name: string
-  is_started: boolean
-  finished: boolean
+  quiz_id: string
+  host_id: string
+  game_pin: string
+  status: "waiting" | "playing" | "finished"
+  total_time_minutes: number
+  question_limit: string
+  game_end_mode: string
+  allow_join_after_start: boolean
+  participants: Player[]
+  responses: any[]
+  chat_messages: any[]
   created_at: string
-  code?: string // Game code for joining
-  host_id?: string // Host identifier
-  time_limit?: number // Time limit setting
-  question_count?: number // Number of questions setting
-  quiz_start_time?: string
+  countdown_started_at?: string
+  started_at?: string
+  ended_at?: string
+  current_questions: Question[]
+  application: string
 }
 
 export interface PlayerAnswer {
   id: string
-  player_id: string
-  game_id: string
-  question_index: number
+  answer_id: string
+  question_id: string
   is_correct: boolean
   points_earned: number
   created_at: string
-  selected_answer?: number // Selected answer index
   answered_at?: string // When answer was submitted
 }
 

@@ -89,7 +89,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
     return a
   }, [createRng])
 
-  // Function to regenerate questions and choices with a seeded shuffle
+  // Function to regenerate questions and answers with a seeded shuffle
   const regenerateQuestionsWithSeed = useCallback((seed: number, quizData: any, questionCount: number, gameId: string, quizStartTime: string | null) => {
     try {
       // Validate input data
@@ -119,18 +119,23 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
       
       return shuffledQuestions.map((q: any, idx: number) => {
         // Validate question structure
-        if (!q || !q.choices || !Array.isArray(q.choices)) {
+        if (!q || !q.answers || !Array.isArray(q.answers)) {
           console.error("Invalid question structure:", q);
-          return q; // Return original question if invalid
+          console.error("Question index:", idx);
+          console.error("Question ID:", q?.id);
+          console.error("Question text:", q?.question);
+          console.error("Answers:", q?.answers);
+          // Skip invalid questions instead of returning them
+          return null;
         }
         
-        // derive a sub-seed for choices to reduce correlation with question order
-        const choiceSeed = seed + (q.id || idx) * 101
+        // derive a sub-seed for answers to reduce correlation with question order
+        const answerSeed = seed + (q.id || idx) * 101
         return {
           ...q,
-          choices: seededShuffle(q.choices, choiceSeed),
+          answers: seededShuffle(q.answers, answerSeed),
         }
-      })
+      }).filter(q => q !== null) // Remove null values from invalid questions
     } catch (error) {
       console.error("Error in regenerateQuestionsWithSeed:", error);
       return [];
@@ -147,9 +152,9 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
       }
 
       const { data: gameData, error: gameErr } = await supabase
-        .from("games")
-        .select("id, quiz_id, time_limit, question_count, is_started, quiz_start_time")
-        .eq("code", gameCode.toUpperCase())
+        .from("game_sessions")
+        .select("id, quiz_id, total_time_minutes, question_limit, status, started_at, current_questions")
+        .eq("game_pin", gameCode.toUpperCase())
         .single()
 
       if (gameErr || !gameData) {
@@ -162,29 +167,14 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
 
       setGameId(gameData.id); // Set gameId ke store
       setGameSettings({
-        timeLimit: gameData.time_limit,
-        questionCount: gameData.question_count,
+        timeLimit: gameData.total_time_minutes > 100 ? Math.round(gameData.total_time_minutes / 60) : gameData.total_time_minutes, // Handle legacy data
+        questionCount: gameData.question_limit === 'all' ? 999 : parseInt(gameData.question_limit),
       });
-      setTimeLeft(gameData.time_limit);
+      setTimeLeft(gameData.total_time_minutes * 60); // Convert to seconds for timer
 
       const { data: quizData, error: quizErr } = await supabase
         .from("quizzes")
-        .select(`
-          *,
-          questions (
-            id,
-            question,
-            question_image_url,
-            question_image_alt,
-            choices (
-              id,
-              choice_text,
-              choice_image_url,
-              choice_image_alt,
-              is_correct
-            )
-          )
-        `)
+        .select("*")
         .eq("id", gameData.quiz_id)
         .single()
 
@@ -207,9 +197,40 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
 
       setQuiz(quizData as Quiz);
 
+      // Use the current_questions from game_sessions if available, otherwise use quiz questions
+      let questionsToUse = gameData.current_questions && gameData.current_questions.length > 0 
+        ? gameData.current_questions 
+        : quizData.questions;
+
+      // Validate questionsToUse structure
+      if (!questionsToUse || !Array.isArray(questionsToUse) || questionsToUse.length === 0) {
+        console.error("Invalid questionsToUse:", questionsToUse);
+        console.log("Falling back to quiz questions:", quizData.questions);
+        questionsToUse = quizData.questions;
+      }
+
+      // Validate each question has required structure
+      const validQuestions = questionsToUse.filter((q: any) => {
+        if (!q || !q.answers || !Array.isArray(q.answers)) {
+          console.warn("Invalid question structure found:", q);
+          return false;
+        }
+        return true;
+      });
+
+      if (validQuestions.length === 0) {
+        console.error("No valid questions found after filtering");
+        toast.error("No valid questions found!");
+        router.replace("/");
+        return;
+      }
+
+      console.log(`Using ${validQuestions.length} valid questions out of ${questionsToUse.length} total`);
+      questionsToUse = validQuestions;
+
       // Build a per-session seed key for HOST-PLAYER mode
       // Same questions for all players, but different order per player
-      const sessionKey = `session-seed-${gameData.id}-${playerId}-${gameData.quiz_start_time || "nostart"}`
+      const sessionKey = `session-seed-${gameData.id}-${playerId}-${gameData.started_at || "nostart"}`
       const existingSeed = typeof window !== "undefined" ? localStorage.getItem(sessionKey) : null;
       let seed: number;
       
@@ -221,7 +242,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
       } else {
         // Create unique seed per player for different question order
         // Include playerId so each player gets different order of the SAME questions
-        const base = `${gameData.id}-${playerId || 'anonymous'}-${gameData.quiz_start_time || Date.now()}`
+        const base = `${gameData.id}-${playerId || 'anonymous'}-${gameData.started_at || Date.now()}`
         seed = base.split('').reduce((a: number, b: string) => a + b.charCodeAt(0), 0)
         // Store the session seed for consistency within the same session
         setSessionSeed(seed);
@@ -230,27 +251,59 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
       }
       
       // Generate questions using the seed
-      const shuffled = regenerateQuestionsWithSeed(seed, quizData, gameData.question_count, gameData.id, gameData.quiz_start_time);
+      const shuffled = regenerateQuestionsWithSeed(seed, { questions: questionsToUse }, gameData.question_limit === 'all' ? 999 : parseInt(gameData.question_limit), gameData.id, gameData.started_at);
       
       // Validate generated questions
       if (!shuffled || shuffled.length === 0) {
         console.error("Failed to generate questions from quiz data");
+        console.error("Input questionsToUse:", questionsToUse);
+        console.error("Generated shuffled:", shuffled);
         toast.error("Failed to load quiz questions!");
         router.replace("/");
         return;
       }
+
+      // Additional validation for each generated question
+      const validShuffled = shuffled.filter(q => {
+        if (!q || !q.answers || !Array.isArray(q.answers)) {
+          console.warn("Invalid shuffled question:", q);
+          return false;
+        }
+        return true;
+      });
+
+      if (validShuffled.length === 0) {
+        console.error("No valid questions after shuffling");
+        toast.error("No valid questions after processing!");
+        router.replace("/");
+        return;
+      }
+
+      console.log(`Generated ${validShuffled.length} valid questions after shuffling`);
       
-      setAllQuestions(shuffled);
+      setAllQuestions(validShuffled);
+      
+      // Save questions to database current_questions field
+      const { error: updateError } = await supabase
+        .from("game_sessions")
+        .update({ current_questions: validShuffled })
+        .eq("id", gameData.id);
+      
+      if (updateError) {
+        console.error("Error saving questions to database:", updateError);
+      } else {
+        console.log("Questions saved to database successfully");
+      }
       
       console.log(`Quiz loaded successfully:`, {
         gameId: gameData.id,
         quizId: gameData.quiz_id,
-        questionCount: gameData.question_count,
+        questionCount: gameData.question_limit === 'all' ? 999 : parseInt(gameData.question_limit),
         questionsLoaded: shuffled.length,
-        isStarted: gameData.is_started
+        isStarted: gameData.status === 'playing'
       });
 
-      if (gameData.is_started) {
+      if (gameData.status === 'playing') {
         setIsQuizStarted(true);
       } else {
         setIsQuizStarted(false);
@@ -286,7 +339,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
               .from("players")
               .update({ 
                 score: 0, 
-                current_question: 0 
+                // current_question removed - calculate from responses instead 
               })
               .eq("id", playerId);
               
@@ -304,72 +357,53 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
       // Existing session - restore progress from database
       const restoreProgress = async () => {
         try {
-          // Fetch current session start time
-          const { data: gameSession, error: gameTimeErr } = await supabase
-            .from("games")
-            .select("quiz_start_time")
+          // Fetch current game session data
+          const { data: gameSession, error: gameError } = await supabase
+            .from("game_sessions")
+            .select("participants, responses, started_at")
             .eq("id", gameId)
             .single()
 
-          if (gameTimeErr) {
-            console.error("Error fetching quiz_start_time:", gameTimeErr)
-          }
-
-          const startAt = gameSession?.quiz_start_time || null
-
-          // Build answers query scoped to this session
-          let answersQuery = supabase
-            .from("player_answers")
-            .select("question_index, points_earned, is_correct, created_at")
-            .eq("game_id", gameId)
-            .eq("player_id", playerId)
-            .order("question_index", { ascending: true })
-
-          if (startAt) {
-            answersQuery = answersQuery.gte("created_at", startAt)
-          }
-
-          const { data: playerAnswers, error: answersError } = await answersQuery
-
-          if (answersError) {
-            console.error("Error fetching player answers:", answersError);
+          if (gameError) {
+            console.error("Error fetching game session:", gameError)
             setProgressRestored(true);
-          } else if (playerAnswers && playerAnswers.length > 0) {
-            // Determine progress from normal questions only (>= 0)
-            const normalAnswers = playerAnswers.filter(a => (a.question_index ?? -1) >= 0)
-            const lastAnsweredIndex = normalAnswers.length > 0 ? Math.max(...normalAnswers.map(a => a.question_index)) : -1;
+            return;
+          }
+
+          // Find player in participants array
+          const player = gameSession.participants.find((p: any) => p.id === playerId);
+          if (!player) {
+            console.error("Player not found in game session");
+            setProgressRestored(true);
+            return;
+          }
+
+          // Get player's responses from this session
+          const playerResponses = gameSession.responses.filter((r: any) => r.player_id === playerId);
+          const normalAnswers = playerResponses.filter((r: any) => r.question_id !== 'mini-game');
+          
+          if (normalAnswers.length > 0) {
+            const lastAnsweredIndex = normalAnswers.length - 1;
             const nextQuestion = lastAnsweredIndex + 1;
             
             if (nextQuestion < (gameSettings?.questionCount || 15)) {
               setCurrentQuestion(nextQuestion);
               console.log(`Restored progress: player at question ${nextQuestion}/${gameSettings?.questionCount}`);
+              
               // Correct count from normal answers only
-              const correctCount = normalAnswers.filter(answer => answer.is_correct).length;
+              const correctCount = normalAnswers.filter((answer: any) => answer.is_correct).length;
               setCorrectAnswers(correctCount);
-              // Authoritative score from players table
-              const { data: playerRow } = await supabase
-                .from("players")
-                .select("score")
-                .eq("id", playerId)
-                .single()
-              if (playerRow?.score !== undefined && playerRow?.score !== null) {
-                setScore(playerRow.score)
-              }
+              
+              // Set score from participant data
+              setScore(player.score || 0);
               setProgressRestored(true);
             } else {
               router.replace(`/result/${gameCode}`);
               return;
             }
           } else {
-            // Sync score even if no answers captured in this session
-            const { data: playerRow } = await supabase
-              .from("players")
-              .select("score")
-              .eq("id", playerId)
-              .single()
-            if (playerRow?.score !== undefined && playerRow?.score !== null) {
-              setScore(playerRow.score)
-            }
+            // No answers yet, sync score from participant data
+            setScore(player.score || 0);
             setProgressRestored(true);
           }
         } catch (error) {
@@ -387,14 +421,34 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
     const handleBeforeUnload = async () => {
       if (gameId && playerId) {
         try {
-          // Mark player as inactive or remove them
+          // Get current game session data
+          const { data: gameSession, error: gameError } = await supabase
+            .from("game_sessions")
+            .select("participants")
+            .eq("id", gameId)
+            .single()
+
+          if (gameError) {
+            console.error("Error fetching game session for cleanup:", gameError)
+            return
+          }
+
+          // Update participants array to mark player as inactive
+          const updatedParticipants = gameSession.participants.map((participant: any) => {
+            if (participant.id === playerId) {
+              return {
+                ...participant,
+                // current_question removed - calculate from responses instead
+              };
+            }
+            return participant;
+          });
+
+          // Update game session
           await supabase
-            .from("players")
-            .update({ 
-              current_question: -1 // Mark as inactive
-            })
-            .eq("id", playerId)
-            .eq("game_id", gameId)
+            .from("game_sessions")
+            .update({ participants: updatedParticipants })
+            .eq("id", gameId)
         } catch (error) {
           console.error("Error marking player as inactive on leave:", error)
         }
@@ -404,14 +458,34 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
     const handleVisibilityChange = async () => {
       if (document.visibilityState === 'hidden' && gameId && playerId) {
         try {
-          // Mark player as inactive when they switch tabs
+          // Get current game session data
+          const { data: gameSession, error: gameError } = await supabase
+            .from("game_sessions")
+            .select("participants")
+            .eq("id", gameId)
+            .single()
+
+          if (gameError) {
+            console.error("Error fetching game session for cleanup:", gameError)
+            return
+          }
+
+          // Update participants array to mark player as inactive
+          const updatedParticipants = gameSession.participants.map((participant: any) => {
+            if (participant.id === playerId) {
+              return {
+                ...participant,
+                // current_question removed - calculate from responses instead
+              };
+            }
+            return participant;
+          });
+
+          // Update game session
           await supabase
-            .from("players")
-            .update({ 
-              current_question: -1 // Mark as inactive
-            })
-            .eq("id", playerId)
-            .eq("game_id", gameId)
+            .from("game_sessions")
+            .update({ participants: updatedParticipants })
+            .eq("id", gameId)
         } catch (error) {
           console.error("Error marking player as inactive on visibility change:", error)
         }
@@ -434,9 +508,9 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
       .channel("game-start")
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "games", filter: `code=eq.${gameCode.toUpperCase()}` },
+        { event: "UPDATE", schema: "public", table: "game_sessions", filter: `game_pin=eq.${gameCode.toUpperCase()}` },
         (payload) => {
-          if (payload.new.is_started && !isQuizStarted) {
+          if (payload.new.status === 'playing' && !isQuizStarted) {
             setIsQuizStarted(true);
           }
         },
@@ -455,11 +529,11 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
     const poll = async () => {
       try {
         const { data } = await supabase
-          .from("games")
-          .select("is_started, quiz_start_time")
-          .eq("code", gameCode.toUpperCase())
+          .from("game_sessions")
+          .select("status, started_at")
+          .eq("game_pin", gameCode.toUpperCase())
           .single();
-        if (!cancelled && data?.is_started && data?.quiz_start_time) {
+        if (!cancelled && data?.status === 'playing' && data?.started_at) {
           setIsQuizStarted(true);
         }
       } catch {}
@@ -480,9 +554,9 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
       .channel("game-finished")
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "games", filter: `code=eq.${gameCode.toUpperCase()}` },
+        { event: "UPDATE", schema: "public", table: "game_sessions", filter: `game_pin=eq.${gameCode.toUpperCase()}` },
         (payload) => {
-          if (payload.new.finished) {
+          if (payload.new.status === 'finished') {
             router.replace(`/result/${gameCode}`);
           }
         },
@@ -501,12 +575,12 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
     let unsub = () => {};
     let pollInterval: NodeJS.Timeout;
 
-    // Poll untuk menunggu quiz_start_time di-set setelah countdown selesai
+    // Poll untuk menunggu started_at di-set setelah countdown selesai
     const waitForQuizStart = async () => {
       const { data, error } = await supabase
-        .from("games")
-        .select("quiz_start_time, time_limit")
-        .eq("code", gameCode.toUpperCase())
+        .from("game_sessions")
+        .select("started_at, total_time_minutes")
+        .eq("game_pin", gameCode.toUpperCase())
         .single();
 
       if (error) {
@@ -514,8 +588,8 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
         return;
       }
 
-      // Jika quiz_start_time belum di-set, tunggu (countdown masih berjalan)
-      if (!data?.quiz_start_time) {
+      // Jika started_at belum di-set, tunggu (countdown masih berjalan)
+      if (!data?.started_at) {
         console.log("[PLAYER] Waiting for countdown to finish...");
         return;
       }
@@ -526,8 +600,8 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
       const serverNow = await syncServerTime();
       const clientOffset = serverNow - Date.now();
 
-      const start = new Date(data.quiz_start_time).getTime();
-      const limitMs = data.time_limit * 1000;
+      const start = new Date(data.started_at).getTime();
+      const limitMs = data.total_time_minutes * 60 * 1000; // Convert minutes to milliseconds (correct)
 
       const tick = () => {
         const now = Date.now() + clientOffset;
@@ -611,78 +685,70 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
         return;
       }
 
-      // Debug: Log data yang akan diinsert
-      const answerId = generateXID();
-      const dataToInsert = {
-        id: answerId,
-        game_id: gameId,
-        player_id: playerId,
-        question_index: currentQuestion,
-        points_earned: earnedPoints,
-        is_correct: correct,
-      };
-      console.log("Inserting to player_answers:", JSON.stringify(dataToInsert, null, 2));
+      // Get current game session data
+      const { data: gameSession, error: gameError } = await supabase
+        .from("game_sessions")
+        .select("participants, responses")
+        .eq("id", gameId)
+        .single();
 
-      // Insert ke player_answers
-      const { error: insertError } = await supabase.from("player_answers").insert(dataToInsert);
-      if (insertError) {
-        console.error("Supabase insert error:", insertError.message, insertError.details, insertError.hint);
-        throw insertError;
+      if (gameError) {
+        console.error("Game session fetch error:", gameError.message, gameError.details);
+        throw gameError;
       }
 
-      // Update player score jika jawaban benar
-      if (correct) {
-        const { data: player, error: playerError } = await supabase
-          .from("players")
-          .select("score")
-          .eq("id", playerId)
-          .single();
-
-        if (playerError) {
-          console.error("Player fetch error:", playerError.message, playerError.details);
-          throw playerError;
+      // Update participants array with new score
+      const updatedParticipants = gameSession.participants.map((participant: any) => {
+        if (participant.id === playerId) {
+          return {
+            ...participant,
+            score: (participant.score || 0) + earnedPoints,
+            // current_question removed - calculate from responses instead
+          };
         }
+        return participant;
+      });
 
-        if (player) {
-          const newScore = (player.score || 0) + earnedPoints;
-          const { error: updateError } = await supabase
-            .from("players")
-            .update({ score: newScore })
-            .eq("id", playerId);
+      // Add response to responses array
+      const newResponse = {
+        id: generateXID(),
+        player_id: playerId,
+        question_id: question.id,
+        answer_id: selectedChoiceId,
+        is_correct: correct,
+        points_earned: earnedPoints,
+        created_at: new Date().toISOString()
+      };
 
-          if (updateError) {
-            console.error("Player update error:", updateError.message, updateError.details);
-            throw updateError;
-          }
-        }
+      const updatedResponses = [...(gameSession.responses || []), newResponse];
+
+      // Update game session with new data
+      const { error: updateError } = await supabase
+        .from("game_sessions")
+        .update({
+          participants: updatedParticipants,
+          responses: updatedResponses
+        })
+        .eq("id", gameId);
+
+      if (updateError) {
+        console.error("Game session update error:", updateError.message, updateError.details);
+        throw updateError;
       }
 
       // Cek jika semua soal selesai
       if (currentQuestion + 1 >= gameSettings!.questionCount) {
-        const { data: gameData, error: gameError } = await supabase
-          .from("games")
-          .select("id")
-          .eq("code", gameCode.toUpperCase())
-          .single();
+        const { error: updateError } = await supabase
+          .from("game_sessions")
+          .update({
+            status: 'finished',
+            ended_at: new Date().toISOString()
+          })
+          .eq("id", gameId);
 
-        if (gameError) {
-          console.error("Game fetch error:", gameError.message, gameError.details);
-          throw gameError;
-        }
-
-        if (gameData) {
-          const { error: updateError } = await supabase
-            .from("games")
-            .update({
-              finished: true,
-              is_started: false,
-            })
-            .eq("id", gameData.id);
-
-          if (updateError) {
-            console.error("Game update error:", updateError.message, updateError.details);
-            throw updateError;
-          }
+        if (updateError) {
+          console.error("Game session update error:", updateError.message, updateError.details);
+          throw updateError;
         }
       }
     } catch (error: any) {
@@ -737,56 +803,61 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
 
       console.log("Processing mini-game completion:", { gameId, playerId, score });
 
-      // Use database transaction to ensure data consistency
-      const { data: currentPlayer, error: fetchError } = await supabase
-        .from("players")
-        .select("score")
-        .eq("id", playerId)
+      // Get current game session data
+      const { data: gameSession, error: fetchError } = await supabase
+        .from("game_sessions")
+        .select("participants, responses")
+        .eq("id", gameId)
         .single();
 
       if (fetchError) {
-        console.error("Failed to fetch current player score:", fetchError);
+        console.error("Failed to fetch game session:", fetchError);
         toast.error("Failed to update score - please try again");
         return;
       }
 
-      const newScore = (currentPlayer?.score || 0) + score;
+      // Update participants array with mini-game score
+      const updatedParticipants = gameSession.participants.map((participant: any) => {
+        if (participant.id === playerId) {
+          return {
+            ...participant,
+            score: (participant.score || 0) + score
+          };
+        }
+        return participant;
+      });
 
-      // Atomic operations using Promise.all for better reliability
-      const [updateResult, insertResult] = await Promise.all([
-        supabase
-          .from("players")
-          .update({ score: newScore })
-          .eq("id", playerId),
-        supabase
-          .from("player_answers")
-          .insert({
-            id: generateXID(),
-            game_id: gameId,
-            player_id: playerId,
-            question_index: -1,
-            points_earned: score,
-            is_correct: false, // Mini-game bonus points
-            created_at: new Date().toISOString()
-          })
-      ]);
+      // Add mini-game response to responses array
+      const miniGameResponse = {
+        id: generateXID(),
+        player_id: playerId,
+        question_id: 'mini-game',
+        answer_id: 'mini-game',
+        is_correct: false, // Mini-game bonus points
+        points_earned: score,
+        created_at: new Date().toISOString()
+      };
 
-      if (updateResult.error) {
-        console.error("Player score update failed:", updateResult.error);
-        toast.error("Failed to update player score");
-        return;
-      }
+      const updatedResponses = [...(gameSession.responses || []), miniGameResponse];
 
-      if (insertResult.error) {
-        console.error("Mini-game record insert failed:", insertResult.error);
-        toast.error("Failed to record mini-game bonus");
+      // Update game session with new data
+      const { error: updateError } = await supabase
+        .from("game_sessions")
+        .update({
+          participants: updatedParticipants,
+          responses: updatedResponses
+        })
+        .eq("id", gameId);
+
+      if (updateError) {
+        console.error("Game session update failed:", updateError);
+        toast.error("Failed to update game session");
         return;
       }
 
       console.log("Mini-game score saved successfully:", { 
         playerId, 
-        score, 
-        newTotalScore: newScore 
+        score
       });
       
       toast.success(`Mini-game bonus: +${score} points!`);
@@ -926,11 +997,11 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
             <h2 className="text-xl mb-4">
               {t('questionOf', 'Question {current} of {total}').replace('{current}', String(currentQuestion + 1)).replace('{total}', String(gameSettings.questionCount))}
             </h2>
-            {question.question_image_url && (
+            {question.image && (
               <div className="mb-6 flex justify-center">
                 <Image
-                  src={question.question_image_url || "/images/placeholder.svg"}
-                  alt={question.question_image_alt || t('questionImage', 'Question image')}
+                  src={question.image || "/images/placeholder.svg"}
+                  alt={t('questionImage', 'Question image')}
                   width={300}
                   height={200}
                   sizes="(max-width: 768px) 100vw, 300px"
@@ -943,11 +1014,11 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
             <p className="text-lg mb-6">{question.question}</p>
 
             <div
-              className={`grid ${question.choices.length === 3 ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"} gap-4`}
+              className={`grid ${question.answers.length === 3 ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"} gap-4`}
             >
-              {question.choices.map((choice, index) => {
-                const isSelected = selectedChoiceId === choice.id;
-                const isRight = choice.is_correct;
+              {question.answers.map((answer, index) => {
+                const isSelected = selectedChoiceId === parseInt(answer.id);
+                const isRight = answer.id === question.correct;
                 let buttonColor: "blue" | "green" | "red" = "blue";
 
                 if (isAnswered) {
@@ -957,10 +1028,10 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
 
                 return (
                   <PixelButton
-                    key={choice.id}
+                    key={answer.id}
                     color={buttonColor}
                     disabled={isAnswered}
-                    onClick={() => handleAnswerSelect(choice)}
+                    onClick={() => handleAnswerSelect({ id: parseInt(answer.id), choice_text: answer.answer, is_correct: isRight })}
                     className={`${isAnswered ? "cursor-not-allowed" : ""} ${isAnswered && !isSelected ? "opacity-50" : ""} text-left`}
                   >
                     <div className="flex items-center gap-3">
@@ -968,10 +1039,10 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
                         {String.fromCharCode(65 + index)}
                       </span>
                       <div className="flex-1 flex items-center gap-3">
-                        {choice.choice_image_url && (
+                        {answer.image && (
                           <Image
-                            src={choice.choice_image_url || "/images/placeholder.svg"}
-                            alt={choice.choice_image_alt || "Pilihan jawaban"}
+                            src={answer.image || "/images/placeholder.svg"}
+                            alt="Pilihan jawaban"
                             width={48}
                             height={48}
                             sizes="48px"
@@ -979,7 +1050,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
                             style={{ imageRendering: "pixelated" }}
                           />
                         )}
-                        {choice.choice_text && <span className="flex-1">{choice.choice_text}</span>}
+                        <span className="flex-1">{answer.answer}</span>
                       </div>
                     </div>
                   </PixelButton>

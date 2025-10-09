@@ -91,9 +91,9 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
     setIsLoading(true)
     try {
       const { data: game, error: gameError } = await supabase
-        .from("games")
+        .from("game_sessions")
         .select("*")
-        .eq("code", data.gameCode.toUpperCase())
+        .eq("game_pin", data.gameCode.toUpperCase())
         .single()
 
       if (gameError || !game) {
@@ -102,7 +102,7 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
       }
 
       // Check if game is finished or ended (host has left)
-      if (game.finished === true || game.status === "finished") {
+      if (game.status === "finished") {
         form.setError("gameCode", { message: "Game has ended. Host has left the session." })
         return
       }
@@ -114,12 +114,7 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
       }
 
       // Check if player name already exists in this game
-      const { data: existingPlayer, error: checkError } = await supabase
-        .from("players")
-        .select("name")
-        .eq("game_id", game.id)
-        .eq("name", data.name)
-        .single()
+      const existingPlayer = game.participants?.find((p: any) => p.name === data.name)
 
       if (existingPlayer) {
         form.setError("name", { message: "Nama sudah digunakan oleh player lain. Silakan gunakan nama yang berbeda." })
@@ -128,16 +123,24 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
       }
 
       const playerId = generateXID()
-////
-      // Insert fresh player record
-      await supabase.from("players").insert({
+      
+      // Add player to participants array
+      const newParticipant = {
         id: playerId,
-        game_id: game.id,
         name: data.name,
         avatar: selectedAvatar,
         score: 0,
-        current_question: 0,
-      })
+        // current_question removed - calculate from responses instead
+        joined_at: new Date().toISOString()
+      }
+
+      const updatedParticipants = [...(game.participants || []), newParticipant]
+
+      // Update game session with new participant
+      await supabase
+        .from("game_sessions")
+        .update({ participants: updatedParticipants })
+        .eq("id", game.id)
 
       setPlayer(playerId, data.name, selectedAvatar)
       setGameCode(data.gameCode.toUpperCase())

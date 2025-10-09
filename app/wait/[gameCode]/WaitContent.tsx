@@ -245,9 +245,9 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
     const fetchGame = async () => {
       console.log("[WAIT] Fetching game data for code:", gameCode)
       const { data, error } = await supabase
-        .from("games")
-        .select("id, is_started, quiz_id, countdown_start_at, finished, status")
-        .eq("code", gameCode.toUpperCase())
+        .from("game_sessions")
+        .select("id, status, quiz_id, countdown_started_at, participants")
+        .eq("game_pin", gameCode.toUpperCase())
         .single()
 
       if (error || !data) {
@@ -258,7 +258,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
       }
 
       // Check if game is finished or ended (host has left)
-      if (data.finished === true || data.status === "finished") {
+      if (data.status === "finished") {
         console.log("[WAIT] Game has ended, host has left the session")
         toast.error("Game has ended. Host has left the session.")
         router.replace("/")
@@ -269,39 +269,35 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
       setGameId(data.id)
 
       // Check if player still exists in the game
-      const { data: playerData, error: playerError } = await supabase
-        .from("players")
-        .select("id, name")
-        .eq("game_id", data.id)
-        .eq("name", name)
-        .single()
+      const playerExists = data.participants?.find((p: any) => p.name === name)
 
-      if (playerError || !playerData) {
+      if (!playerExists) {
         console.log("[WAIT] Player not found in game, redirecting to home")
         toast.error("You are not in this game")
         router.replace("/")
         return
       }
 
-      if (data.is_started && !data.countdown_start_at) {
+      if (data.status === 'playing' && !data.countdown_started_at) {
         console.log("[WAIT] Game already started, redirecting to play")
         router.replace(`/play/${gameCode}`)
         return
       }
 
-      // Fetch all players in the game
+      // Fetch all players from participants JSONB field
       const fetchPlayers = async () => {
-        const { data: playersData, error: playersError } = await supabase
-          .from("players")
-          .select("id, name, avatar, created_at")
-          .eq("game_id", data.id)
-          .order("created_at", { ascending: true })
+        // Players are now stored in the participants JSONB field
+        const participants = data.participants || []
+        
+        // Convert participants to the expected format
+        const playersData = participants.map((participant: any, index: number) => ({
+          id: participant.id || `player-${index}`,
+          name: participant.name || 'Anonymous',
+          avatar: participant.avatar || '',
+          created_at: participant.created_at || new Date().toISOString()
+        }))
 
-        if (playersError) {
-          console.error("Error fetching players:", playersError)
-        } else {
-          setAllPlayers(playersData || [])
-        }
+        setAllPlayers(playersData)
       }
 
       await fetchPlayers()
@@ -315,13 +311,21 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
       if (!gameId || !playerName) return
       
       try {
-        const { data: playersData, error: playersError } = await supabase
-          .from("players")
-          .select("id, name, avatar, created_at")
-          .eq("game_id", gameId)
-          .order("created_at", { ascending: true })
+        // Get game data to fetch participants from JSONB field
+        const { data: gameData, error: gameError } = await supabase
+          .from("game_sessions")
+          .select("participants")
+          .eq("id", gameId)
+          .single()
 
-        if (!playersError && playersData) {
+        if (!gameError && gameData) {
+          const participants = gameData.participants || []
+          const playersData = participants.map((participant: any, index: number) => ({
+            id: participant.id || `player-${index}`,
+            name: participant.name || 'Anonymous',
+            avatar: participant.avatar || '',
+            created_at: participant.created_at || new Date().toISOString()
+          }))
           setAllPlayers(playersData)
         }
       } catch (error) {
@@ -447,13 +451,20 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
           // Force refresh to ensure consistency
           setTimeout(async () => {
             try {
-              const { data: playersData, error: playersError } = await supabase
-                .from("players")
-                .select("id, name, avatar, created_at")
-                .eq("game_id", gameId)
-                .order("created_at", { ascending: true })
+              const { data: gameData, error: gameError } = await supabase
+                .from("game_sessions")
+                .select("participants")
+                .eq("id", gameId)
+                .single()
 
-              if (!playersError && playersData) {
+              if (!gameError && gameData) {
+                const participants = gameData.participants || []
+                const playersData = participants.map((participant: any, index: number) => ({
+                  id: participant.id || `player-${index}`,
+                  name: participant.name || 'Anonymous',
+                  avatar: participant.avatar || '',
+                  created_at: participant.created_at || new Date().toISOString()
+                }))
                 setAllPlayers(playersData)
                 console.log("[PLAYER] 🔄 Refreshed player list after deletion")
               }
@@ -473,20 +484,37 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
         }
       })
 
-    // Fallback: Check if player still exists in database every 2 seconds
+    // Fallback: Check if player still exists in participants JSONB field every 2 seconds
     const playerCheckInterval = setInterval(async () => {
       if (!gameId || !playerName || isRedirecting) return
       
       try {
-        const { data, error } = await supabase
-          .from("players")
-          .select("id, name")
-          .eq("game_id", gameId)
-          .eq("name", playerName)
+        const { data: gameData, error: gameError } = await supabase
+          .from("game_sessions")
+          .select("participants")
+          .eq("id", gameId)
           .single()
 
-        if (error || !data) {
-          console.log("[PLAYER] 🔍 Player not found in database - might have been kicked")
+        if (gameError || !gameData) {
+          console.log("[PLAYER] 🔍 Game not found - might have been deleted")
+          console.log("[PLAYER] 🦵 Redirecting to home page")
+          toast.error("Game has been deleted by the host")
+          
+          await cleanupPresence()
+          clearGame?.()
+          localStorage.removeItem("player")
+          router.replace("/")
+          return
+        }
+
+        // Check if player still exists in participants
+        const participants = gameData.participants || []
+        const playerExists = participants.some((participant: any) => 
+          participant.name === playerName
+        )
+
+        if (!playerExists) {
+          console.log("[PLAYER] 🔍 Player not found in participants - might have been kicked")
           console.log("[PLAYER] 🦵 Redirecting to home page")
           toast.error("You have been kicked from the game by the host")
           
@@ -504,15 +532,15 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
     const tick = async () => {
       try {
         const { data, error } = await supabase
-          .from("games")
-          .select("countdown_start_at, is_started")
+          .from("game_sessions")
+          .select("countdown_started_at, status")
           .eq("id", gameId)
           .single()
 
         if (!data) return
 
-        if (data.countdown_start_at) {
-          const start = new Date(data.countdown_start_at).getTime()
+        if (data.countdown_started_at) {
+          const start = new Date(data.countdown_started_at).getTime()
 
           let serverTime: number
           try {
@@ -554,7 +582,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
             setIsRedirecting(true)
             router.replace(`/play/${gameCode}`)
           }
-        } else if (data.is_started) {
+        } else if (data.status === 'playing') {
           console.log("[v0] Game already started, redirecting")
           setIsRedirecting(true)
           router.replace(`/play/${gameCode}`)
@@ -564,17 +592,17 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
 
         try {
           const { data } = await supabase
-            .from("games")
-            .select("countdown_start_at, is_started")
+            .from("game_sessions")
+            .select("countdown_started_at, status")
             .eq("id", gameId)
             .single()
 
-          if (data?.is_started) {
+          if (data?.status === 'playing') {
             console.log("[v0] Fallback: game started, redirecting")
             setIsRedirecting(true)
             router.replace(`/play/${gameCode}`)
-          } else if (data?.countdown_start_at) {
-            const start = new Date(data.countdown_start_at).getTime()
+          } else if (data?.countdown_started_at) {
+            const start = new Date(data.countdown_started_at).getTime()
             const elapsed = Math.floor((Date.now() - start) / 1000)
 
             if (elapsed >= 10) {
@@ -618,68 +646,76 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
       await cleanupPresence()
 
       if (gameId && playerName) {
-        console.log("[v0] Deleting player from database...")
+        console.log("[v0] Removing player from participants...")
 
-        // First, find the player to get their ID for more reliable deletion
-        const { data: playerToDelete, error: findError } = await supabase
-          .from("players")
-          .select("id, name")
-          .eq("game_id", gameId)
-          .eq("name", playerName)
+        // Get current game data
+        const { data: gameData, error: gameError } = await supabase
+          .from("game_sessions")
+          .select("participants")
+          .eq("id", gameId)
           .single()
 
-        if (findError) {
-          console.error("[v0] Error finding player to delete:", findError)
-          // If player not found, they might have already been deleted
-          console.log("[v0] Player not found, might already be deleted")
+        if (gameError || !gameData) {
+          console.error("[v0] Error finding game:", gameError)
+          console.log("[v0] Game not found, might already be deleted")
           toast.success("Left the game successfully")
           clearGame?.()
           localStorage.removeItem("player")
           router.replace("/")
           return
-        } else {
-          console.log("[v0] Found player to delete:", playerToDelete)
-          
-          // Delete using both ID and name for maximum reliability
-          const { error: deleteError, data: deletedData } = await supabase
-            .from("players")
-            .delete()
-            .eq("id", playerToDelete.id)
-            .eq("game_id", gameId)
-            .select()
+        }
 
-          if (deleteError) {
-            console.error("[PLAYER] ❌ Error removing player by ID:", deleteError)
-            toast.error("Failed to remove player from game")
-            return
-          } else {
-            console.log("[PLAYER] ✅ Player successfully deleted from database:", deletedData)
-            console.log("[PLAYER] 📡 Broadcasting deletion event for player ID:", playerToDelete.id)
-          }
+        // Remove player from participants array
+        const participants = gameData.participants || []
+        const updatedParticipants = participants.filter((participant: any) => 
+          participant.name !== playerName
+        )
+
+        // Update game_sessions with new participants array
+        const { error: updateError } = await supabase
+          .from("game_sessions")
+          .update({ participants: updatedParticipants })
+          .eq("id", gameId)
+
+        if (updateError) {
+          console.error("[PLAYER] ❌ Error removing player from participants:", updateError)
+          toast.error("Failed to remove player from game")
+          return
+        } else {
+          console.log("[PLAYER] ✅ Player successfully removed from participants")
         }
 
         // Wait a moment for real-time updates to propagate
         await new Promise(resolve => setTimeout(resolve, 300))
 
         // Verify deletion was successful
-        const { data: verifyData, error: verifyError } = await supabase
-          .from("players")
-          .select("id, name")
-          .eq("game_id", gameId)
-          .eq("name", playerName)
+        const { data: verifyGameData, error: verifyError } = await supabase
+          .from("game_sessions")
+          .select("participants")
+          .eq("id", gameId)
+          .single()
 
         if (verifyError) {
           console.log("[v0] Verification query failed (this might be normal):", verifyError)
-        } else if (verifyData && verifyData.length > 0) {
-          console.warn("[v0] Player still exists after deletion, attempting final cleanup:", verifyData)
-          // Final cleanup attempt
-          await supabase
-            .from("players")
-            .delete()
-            .eq("game_id", gameId)
-            .eq("name", playerName)
-        } else {
-          console.log("[v0] Player successfully removed from database")
+        } else if (verifyGameData) {
+          const participants = verifyGameData.participants || []
+          const playerStillExists = participants.some((participant: any) => 
+            participant.name === playerName
+          )
+          
+          if (playerStillExists) {
+            console.warn("[v0] Player still exists in participants after deletion")
+            // Final cleanup attempt - remove player again
+            const finalParticipants = participants.filter((participant: any) => 
+              participant.name !== playerName
+            )
+            await supabase
+              .from("game_sessions")
+              .update({ participants: finalParticipants })
+              .eq("id", gameId)
+          } else {
+            console.log("[v0] Player successfully removed from participants")
+          }
         }
 
         // No need to trigger host notification - real-time subscriptions handle this automatically

@@ -36,7 +36,7 @@ export default function TryoutSettingsPage() {
   const [quiz, setQuiz] = useState<Quiz | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isStarting, setIsStarting] = useState(false)
-  const [timeLimit, setTimeLimit] = useState(600) // 10 minutes default
+  const [timeLimit, setTimeLimit] = useState(10) // 10 minutes default
   const [questionCount, setQuestionCount] = useState(9)
 
   const router = useRouter()
