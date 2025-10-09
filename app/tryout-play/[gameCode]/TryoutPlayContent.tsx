@@ -393,22 +393,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
 
       const { data: quizData, error: quizErr } = await supabase
         .from("quizzes")
-        .select(`
-          *,
-          questions (
-            id,
-            question,
-            question_image_url,
-            question_image_alt,
-            choices (
-              id,
-              choice_text,
-              choice_image_url,
-              choice_image_alt,
-              is_correct
-            )
-          )
-        `)
+        .select("*")
         .eq("id", gameData.quiz_id)
         .single()
 
