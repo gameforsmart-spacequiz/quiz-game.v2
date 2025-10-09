@@ -16,7 +16,7 @@ interface TryoutResultContentProps {
 
 export default function TryoutResultContent({ gameCode }: TryoutResultContentProps) {
   const router = useRouter()
-  const { score, correctAnswers, resetGame, resetGameKeepMode, setGameMode } = useGameStore()
+  const { score, correctAnswers, resetGame, resetGameKeepMode, setGameMode, playerId } = useGameStore()
   const { t } = useLanguage()
   const [loading, setLoading] = useState(true)
   const [quiz, setQuiz] = useState<any>(null)
@@ -50,7 +50,7 @@ export default function TryoutResultContent({ gameCode }: TryoutResultContentPro
         }
 
         // Get player name from participants
-        const playerData = gameData.participants?.find((p: any) => p.id === playerId)
+        const playerData = gameData?.participants?.find((p: any) => p.id === playerId)
 
         if (playerData) {
           setPlayerName(playerData.name)

@@ -21,18 +21,7 @@ import {
 } from "@/components/ui/select"
 import { Clock, Hash, Play, ArrowLeft, Gamepad2, Sparkles, Star, Settings } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
-
-interface Quiz {
-  id: number
-  title: string
-  description: string
-  questions: any[]
-}
-
-interface GameSettings {
-  timeLimit: number
-  questionCount: number
-}
+import { Quiz, GameSettings } from "@/lib/types"
 
 interface RulesDialogProps {
   open: boolean

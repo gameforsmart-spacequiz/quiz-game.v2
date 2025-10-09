@@ -375,13 +375,13 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
 
       setGameId(gameData.id);
       setGameSettings({
-        timeLimit: gameData.time_limit,
-        questionCount: gameData.question_count,
+        timeLimit: gameData.total_time_minutes,
+        questionCount: parseInt(gameData.question_limit),
       });
       
       // Only set time if not already loaded from localStorage
       if (timeLeft === 0) {
-        setTimeLeft(gameData.time_limit);
+        setTimeLeft(gameData.total_time_minutes);
       }
 
       // Get player name from the participants array
@@ -425,7 +425,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
         console.log("Using existing seed for consistent randomization:", seed);
       }
       
-      const shuffled = regenerateQuestionsWithSeed(seed!, quizData, gameData.question_count);
+      const shuffled = regenerateQuestionsWithSeed(seed!, quizData, parseInt(gameData.question_limit));
       
       if (!shuffled || shuffled.length === 0) {
         console.error("Failed to generate questions from quiz data");
@@ -437,8 +437,8 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
       setAllQuestions(shuffled);
       console.log("Tryout quiz loaded with consistent randomization:", {
         questionsCount: shuffled.length,
-        timeLimit: gameData.time_limit,
-        questionCount: gameData.question_count,
+        timeLimit: gameData.total_time_minutes,
+        questionCount: parseInt(gameData.question_limit),
         seed: seed,
         firstQuestionId: shuffled[0]?.id,
         lastQuestionId: shuffled[shuffled.length - 1]?.id
@@ -464,7 +464,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
     setSelectedChoiceId(choiceId);
 
     const currentQ = allQuestions[currentQuestion];
-    const selectedChoice = currentQ?.answers?.find(c => c.id === choiceId);
+    const selectedChoice = currentQ?.answers?.find(c => c.id?.toString() === choiceId?.toString());
 
     // Save answer without showing result
     let updatedAnswers = answers;
@@ -524,7 +524,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
     allQuestions.forEach((question, index) => {
       const userAnswer = answers[index];
       if (userAnswer) {
-        const correctChoice = question.answers?.find(c => c.is_correct);
+        const correctChoice = question.answers?.find(c => c.id === question.correct);
         if (correctChoice && correctChoice.answer === userAnswer) {
           finalScore += 10;
           finalCorrect += 1;
@@ -703,11 +703,11 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                 <h2 className="text-base sm:text-lg md:text-xl font-bold text-white mb-3 sm:mb-4 leading-tight">
                   {currentQ.question}
                 </h2>
-                {currentQ.question_image_url && (
+                {currentQ.image && (
                   <div className="relative w-full max-w-xs sm:max-w-sm md:max-w-md mx-auto h-32 sm:h-40 md:h-48 mb-3 sm:mb-4">
                     <Image
-                      src={currentQ.question_image_url}
-                      alt={currentQ.question_image_alt || currentQ.question}
+                      src={currentQ.image}
+                      alt={currentQ.question}
                       fill
                       className="object-contain rounded-lg"
                     />
@@ -718,13 +718,13 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
               {/* Answers */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6 flex-shrink-0">
                 {currentQ.answers?.map((choice, index) => {
-                  const isSelected = selectedChoiceId === choice.id;
+                  const isSelected = selectedChoiceId?.toString() === choice.id?.toString();
                   const isAnswered = answers[currentQuestion] === choice.answer;
 
                   return (
                     <button
                       key={choice.id}
-                      onClick={() => handleAnswer(choice.id)}
+                      onClick={() => handleAnswer(parseInt(choice.id?.toString() || "0"))}
                       className={`p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border-2 transition-all duration-200 backdrop-blur-sm relative overflow-hidden ${
                         isSelected || isAnswered
                           ? 'border-purple-400 bg-purple-500/20'
@@ -772,7 +772,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                       // Set the selected choice if there's a previous answer
                       if (prevAnswer && prevQuestion) {
                         const selectedChoice = prevQuestion.answers?.find(c => c.answer === prevAnswer);
-                        setSelectedChoiceId(selectedChoice?.id || null);
+                        setSelectedChoiceId(selectedChoice?.id ? parseInt(selectedChoice.id.toString()) : null);
                         setIsAnswered(true);
                       } else {
                         setSelectedChoiceId(null);
@@ -789,7 +789,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                       // Set the selected choice if there's a previous answer
                       if (prevAnswer && prevQuestion) {
                         const selectedChoice = prevQuestion.answers?.find(c => c.answer === prevAnswer);
-                        setSelectedChoiceId(selectedChoice?.id || null);
+                        setSelectedChoiceId(selectedChoice?.id ? parseInt(selectedChoice.id.toString()) : null);
                         setIsAnswered(true);
                       } else {
                         setSelectedChoiceId(null);
@@ -819,7 +819,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                       // Set the selected choice if there's an answer for this question
                       if (nextAnswer && nextQuestion) {
                         const selectedChoice = nextQuestion.answers?.find(c => c.answer === nextAnswer);
-                        setSelectedChoiceId(selectedChoice?.id || null);
+                        setSelectedChoiceId(selectedChoice?.id ? parseInt(selectedChoice.id.toString()) : null);
                         setIsAnswered(true);
                       } else {
                         setSelectedChoiceId(null);
@@ -899,7 +899,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                             // Set the selected choice if there's an answer for this question
                             if (targetAnswer && targetQuestion) {
                               const selectedChoice = targetQuestion.answers?.find(c => c.answer === targetAnswer);
-                              setSelectedChoiceId(selectedChoice?.id || null);
+                              setSelectedChoiceId(selectedChoice?.id ? parseInt(selectedChoice.id.toString()) : null);
                               setIsAnswered(true);
                             } else {
                               setSelectedChoiceId(null);
@@ -994,8 +994,8 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                     allQuestions.forEach((question, index) => {
                       const userAnswer = answers[index];
                       if (userAnswer) {
-                        const correctChoice = question.answers?.find(c => c.is_correct);
-                        if (correctChoice && correctChoice.choice_text === userAnswer) {
+                        const correctChoice = question.answers?.find(c => c.id === question.correct);
+                        if (correctChoice && correctChoice.answer === userAnswer) {
                           finalScore += 10;
                           finalCorrect += 1;
                         }
