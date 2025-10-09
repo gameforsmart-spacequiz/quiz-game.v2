@@ -50,18 +50,7 @@ export default function TryoutSettingsPage() {
       try {
         const { data, error } = await supabase
           .from("quizzes")
-          .select(`
-            *,
-            questions (
-              id,
-              question,
-              choices (
-                id,
-                choice_text,
-                is_correct
-              )
-            )
-          `)
+          .select("*")
           .eq("id", quizId)
           .single()
 

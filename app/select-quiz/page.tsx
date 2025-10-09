@@ -120,6 +120,10 @@ export default function SelectQuizPage() {
 
   const fetchQuizzes = useCallback(async () => {
     try {
+      console.log("Starting to fetch quizzes...")
+      console.log("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL)
+      console.log("Supabase Key exists:", !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+      
       let query = supabase
         .from("quizzes")
         .select("*")
@@ -129,10 +133,17 @@ export default function SelectQuizPage() {
         query = query.eq("category", selectedLevel)
       }
       
+      console.log("Executing query...")
       const { data, error } = await query.order("created_at", { ascending: false })
 
       if (error) {
         console.error("Error fetching quizzes:", error)
+        console.error("Error details:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        })
         // Show user-friendly error message
         alert(`Failed to load quizzes: ${error.message}`)
         return
@@ -140,6 +151,7 @@ export default function SelectQuizPage() {
 
       if (data) {
         console.log("Successfully fetched quizzes:", data.length)
+        console.log("Quiz data:", data)
         setQuizzes(data as Quiz[])
       } else {
         console.warn("No quiz data returned from database")
