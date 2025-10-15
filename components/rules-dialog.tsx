@@ -32,14 +32,14 @@ interface RulesDialogProps {
 
 export function RulesDialog({ open, onOpenChange, quiz, onStartGame }: RulesDialogProps) {
   const { t } = useLanguage()
-  const [timeLimitMinutes, setTimeLimitMinutes] = useState(10) // 10 minutes
+  const [timeLimitMinutes, setTimeLimitMinutes] = useState(5) // 5 minutes
   const timeLimit = timeLimitMinutes // Already in minutes for database
   const [questionCount, setQuestionCount] = useState(9)
 
   // Reset to default values when dialog opens
   useEffect(() => {
     if (open) {
-      setTimeLimitMinutes(10) // Reset to default 10 minutes
+      setTimeLimitMinutes(5) // Reset to default 5 minutes
       setQuestionCount(9) // Reset to default 9 questions
     }
   }, [open])

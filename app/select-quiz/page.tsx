@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { motion, AnimatePresence, type Transition } from "framer-motion"
+import { motion, type Transition } from "framer-motion"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -10,7 +10,7 @@ import { useGameStore } from "@/lib/store"
 import { supabase } from "@/lib/supabase"
 import { generateXID } from "@/lib/id-generator"
 import { Input } from "@/components/ui/input"
-import { Search, Play, ChevronDown, ChevronUp, ArrowLeft } from "lucide-react"
+import { Search, Play, ArrowLeft } from "lucide-react"
 import { RulesDialog } from "@/components/rules-dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
@@ -25,35 +25,24 @@ import { useLanguage } from "@/contexts/language-context"
 import { Quiz, Question, Answer, GameSettings } from "@/lib/types"
 
 
-// Function to get appropriate image based on quiz title
-const getQuizImage = (title: string): string => {
-  const titleLower = title.toLowerCase()
+// Function to get default image based on category
+const getCategoryDefaultImage = (category: string | undefined): string | null => {
+  if (!category) return null;
   
-  // Mapping quiz titles to appropriate images
-  if (titleLower.includes('angka') || titleLower.includes('berhitung') || titleLower.includes('matematika')) {
-    return '/images/1-buku.png'
-  } else if (titleLower.includes('hewan') || titleLower.includes('binatang') || titleLower.includes('animal')) {
-    return '/images/kucing-lucu.png'
-  } else if (titleLower.includes('buah') || titleLower.includes('fruit')) {
-    return '/images/apel-merah.png'
-  } else if (titleLower.includes('warna') || titleLower.includes('color')) {
-    return '/images/5-bola-warna-warni.png'
-  } else if (titleLower.includes('bentuk') || titleLower.includes('shape') || titleLower.includes('geometri')) {
-    return '/images/persegi-biru.png'
-  } else if (titleLower.includes('huruf') || titleLower.includes('alphabet') || titleLower.includes('kata')) {
-    return '/images/1-buku.png'
-  } else if (titleLower.includes('transportasi') || titleLower.includes('kendaraan') || titleLower.includes('mobil')) {
-    return '/images/1-mobil.png'
-  } else if (titleLower.includes('alam') || titleLower.includes('nature') || titleLower.includes('tumbuhan')) {
-    return '/images/7-bunga.png'
-  } else if (titleLower.includes('makanan') || titleLower.includes('food') || titleLower.includes('sayuran')) {
-    return '/images/wortel-oranye.png'
-  } else if (titleLower.includes('benda') || titleLower.includes('objek') || titleLower.includes('object')) {
-    return '/images/jam-dinding-bulat.png'
-  } else {
-    // Default image for general knowledge or other topics
-    return '/images/gambar-tutor.png'
-  }
+  const categoryImages: Record<string, string> = {
+    general: "https://images.unsplash.com/photo-1707926310424-f7b837508c40?q=80&w=1632&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    science: "https://images.unsplash.com/photo-1532094349884-543bc11b234d?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    math: "https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?q=80&w=1074&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    history: "https://images.unsplash.com/photo-1461360370896-922624d12aa1?w=800&h=600&fit=crop&crop=entropy&auto=format&q=80",
+    geography: "https://images.unsplash.com/photo-1592252032050-34897f779223?q=80&w=764&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    language: "https://images.unsplash.com/photo-1620969427101-7a2bb6d83273?q=80&w=1171&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    technology: "https://plus.unsplash.com/premium_photo-1661963874418-df1110ee39c1?q=80&w=1086&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    sports: "https://images.unsplash.com/photo-1556817411-31ae72fa3ea0?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    entertainment: "https://images.unsplash.com/photo-1470020618177-f49a96241ae7?q=80&w=688&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    business: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&h=600&fit=crop&crop=entropy&auto=format&q=80",
+  };
+  
+  return categoryImages[category.toLowerCase()] || null;
 }
 
 export default function SelectQuizPage() {
@@ -66,7 +55,6 @@ export default function SelectQuizPage() {
   const [isTyping, setIsTyping] = useState(false)
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null)
   const [showRulesDialog, setShowRulesDialog] = useState(false)
-  const [expandedQuizId, setExpandedQuizId] = useState<number | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedLevel, setSelectedLevel] = useState<string>("all")
   const itemsPerPage = 15
@@ -80,6 +68,9 @@ export default function SelectQuizPage() {
   const difficultyLevels = [
     { value: "all", label: t('allCategory') },
     { value: "general", label: "General" },
+    { value: "history", label: "History" },
+    { value: "math", label: "Math" },
+    { value: "science", label: "Science" },
     { value: "technology", label: "Technology" },
   ]
 
@@ -406,70 +397,47 @@ export default function SelectQuizPage() {
                   <Card className="cursor-pointer transition-all duration-300 hover:shadow-purple-100 relative bg-white/10 backdrop-blur-lg border-white/20 text-white overflow-hidden h-full flex flex-col">
                     {/* Quiz Image */}
                     <div className="relative h-24 sm:h-28 md:h-32 w-full overflow-hidden flex-shrink-0">
-                      <Image
-                        src={getQuizImage(quiz.title)}
-                        alt={quiz.title}
-                        fill
-                        className="object-cover transition-transform duration-300 hover:scale-110"
-                        sizes="(max-width: 480px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
-                        onError={() => {
-                          // Fallback handled in the getQuizImage function
-                        }}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent z-10" />
+                      {(quiz.cover_image || quiz.image_url || getCategoryDefaultImage(quiz.category)) ? (
+                        <>
+                          <Image
+                            src={quiz.cover_image || quiz.image_url || getCategoryDefaultImage(quiz.category) || ''}
+                            alt={quiz.title}
+                            fill
+                            className="object-cover transition-transform duration-300 hover:scale-110"
+                            sizes="(max-width: 480px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
+                            onError={(e) => {
+                              // If image fails to load, hide it and show black background
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent z-10" />
+                        </>
+                      ) : (
+                        // Black background if no image and no category match
+                        <div className="absolute inset-0 bg-black" />
+                      )}
                     </div>
                     <CardHeader className="pb-2 sm:pb-3 relative -mt-2 sm:-mt-4 z-20 flex-shrink-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <CardTitle
-                                className={`text-sm sm:text-base md:text-lg hover:text-purple-300 transition-colors duration-200 leading-tight ${expandedQuizId === parseInt(quiz.id) ? "" : "truncate"}`}
-                              >
-                                {quiz.title}
-                              </CardTitle>
-                            </TooltipTrigger>
-                            <TooltipContent className="bg-purple-600 text-white border-none shadow-lg rounded-md p-2 max-w-xs">
-                              <p>{quiz.title}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                          <span className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs flex-shrink-0">
-                            {quiz.category || "Unknown"} Level
-                          </span>
-                        </div>
-
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setExpandedQuizId(expandedQuizId === parseInt(quiz.id) ? null : parseInt(quiz.id))
-                          }}
-                          className="text-gray-300 hover:text-purple-300 transition-colors flex-shrink-0 p-1"
-                        >
-                          {expandedQuizId === parseInt(quiz.id) ? (
-                            <ChevronUp className="h-4 w-4 sm:h-5 sm:w-5" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4 sm:h-5 sm:w-5" />
-                          )}
-                        </button>
-                      </div>
-
-                      <AnimatePresence>
-                        {expandedQuizId === parseInt(quiz.id) && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="overflow-hidden"
-                          >
-                            <CardDescription className="text-xs sm:text-sm mt-1 sm:mt-2 text-gray-300 leading-relaxed">{quiz.description}</CardDescription>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <CardTitle className="text-sm sm:text-base md:text-lg hover:text-purple-300 transition-colors duration-200 leading-tight truncate">
+                            {quiz.title}
+                          </CardTitle>
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-purple-600 text-white border-none shadow-lg rounded-md p-2 max-w-xs">
+                          <p>{quiz.title}</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </CardHeader>
                     <CardContent className="pb-3 sm:pb-4 flex-1 flex flex-col justify-end">
                       <div className="flex items-center justify-between gap-2 sm:gap-3">
-                        <span className="text-xs sm:text-sm text-gray-300">{quiz.questions?.length || 0} {t('questions')}</span>
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <span className="text-xs sm:text-sm text-gray-300">{quiz.questions?.length || 0} {t('questions')}</span>
+                          <span className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs flex-shrink-0 capitalize">
+                            {quiz.category || "Unknown"}
+                          </span>
+                        </div>
                         <div className="flex gap-1.5 sm:gap-2">
                           {/* Show Tryout button only when mode is not "host" */}
                           {gameMode !== "host" && (

@@ -782,6 +782,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
   const debouncedUpdateProgress = useRef<NodeJS.Timeout>()
   const updateQueue = useRef<Set<string>>(new Set())
   const isUpdating = useRef(false)
+  const hasFinishedGame = useRef(false) // Track if game has been finished to prevent loop
   // Pagination states
   const [currentPlayerPage, setCurrentPlayerPage] = useState(0)
   const [currentProgressPage, setCurrentProgressPage] = useState(0)
@@ -1233,17 +1234,20 @@ export default function HostContent({ gameCode }: HostContentProps) {
         (payload) => {
           console.log("[HOST] 📡 Game status update:", payload.new)
           
-          if (payload.new.status === 'finished') {
+          if (payload.new.status === 'finished' && !hasFinishedGame.current) {
+            hasFinishedGame.current = true
             setQuizStarted(false)
             setShowLeaderboard(true)
           }
           
           if (payload.new.status === 'playing') {
+            hasFinishedGame.current = false // Reset flag when game starts
             setQuizStarted(true)
             setShowLeaderboard(false)
           }
           
           if (payload.new.countdown_started_at) {
+            hasFinishedGame.current = false // Reset flag when countdown starts
             setQuizStarted(true)
             setShowLeaderboard(false)
           }
@@ -1446,11 +1450,39 @@ export default function HostContent({ gameCode }: HostContentProps) {
       const start = new Date(data.started_at).getTime()
       const limitMs = data.total_time_minutes * 60 * 1000 // Convert minutes to milliseconds
 
-      const tick = () => {
+      const tick = async () => {
         const now = Date.now() + clientOffset
         const remain = Math.max(0, start + limitMs - now)
         setQuizTimeLeft(Math.floor(remain / 1000))
-        if (remain <= 0) setIsTimerActive(false)
+        
+        if (remain <= 0 && !hasFinishedGame.current) {
+          hasFinishedGame.current = true
+          setIsTimerActive(false)
+          
+          console.log("[HOST] ⏰ Timer expired! Ending quiz...")
+          
+          // Update game status to finished
+          try {
+            const { error } = await supabase
+              .from("game_sessions")
+              .update({
+                status: 'finished',
+                ended_at: new Date().toISOString()
+              })
+              .eq("id", gameId)
+            
+            if (error) {
+              console.error("[HOST] Error updating game status:", error)
+            } else {
+              console.log("[HOST] Game status updated to finished")
+              // Show leaderboard on host page (no navigation)
+              setQuizStarted(false)
+              setShowLeaderboard(true)
+            }
+          } catch (err) {
+            console.error("[HOST] Exception updating game status:", err)
+          }
+        }
       }
 
       tick()
@@ -1525,6 +1557,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
       return
     }
     setIsStarting(true)
+    hasFinishedGame.current = false // Reset flag when starting new game
     try {
       const startAt = new Date().toISOString()
       await supabase
@@ -1587,7 +1620,13 @@ export default function HostContent({ gameCode }: HostContentProps) {
   }
 
   const endQuiz = async () => {
+    if (hasFinishedGame.current) {
+      console.log("[HOST] ⚠️ Game already finished, skipping duplicate end")
+      return
+    }
+    
     try {
+      hasFinishedGame.current = true // Set flag to prevent loops
       await supabase
         .from("game_sessions")
         .update({
@@ -1595,7 +1634,6 @@ export default function HostContent({ gameCode }: HostContentProps) {
           ended_at: new Date().toISOString(),
         })
         .eq("id", gameId)
-
 
       setQuizStarted(false)
       setShowLeaderboard(true)
