@@ -175,6 +175,7 @@ const PlayerList = React.memo(({
               className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-blue-400 border-t-transparent rounded-full"
             />
           )}
+          //
         </h3>
       </div>
       {/* Players Grid */}
