@@ -27,7 +27,7 @@ export interface GameState {
   gameCode: string
   gameId: string
   quizId: string
-  gameStatus: "waiting" | "playing" | "finished"
+  gameStatus: "waiting" | "active" | "finished"
 
   // Player info
   playerId: string
@@ -58,7 +58,7 @@ export interface GameState {
   setGameCode: (code: string) => void
   setGameId: (id: string) => void
   setQuizId: (id: string) => void
-  setGameStatus: (status: "waiting" | "playing" | "finished") => void
+  setGameStatus: (status: "waiting" | "active" | "finished") => void
   setPlayer: (id: string, name: string, avatar: string) => void
   setIsHost: (isHost: boolean) => void
   setCurrentQuestion: (question: number) => void

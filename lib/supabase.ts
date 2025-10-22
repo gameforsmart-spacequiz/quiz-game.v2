@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js"
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 
 // Get environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -57,6 +58,9 @@ if (!isBuildTime) {
 
 export const supabase = createClient(finalUrl, finalKey)
 
+// Auth helper for client components
+export const createSupabaseClient = () => createClientComponentClient()
+
 export type Database = {
   public: {
     Tables: {
@@ -66,7 +70,7 @@ export type Database = {
           quiz_id: string
           host_id: string
           game_pin: string
-          status: "waiting" | "playing" | "finished"
+          status: "waiting" | "active" | "finished"
           total_time_minutes: number
           question_limit: string
           game_end_mode: string
@@ -86,7 +90,7 @@ export type Database = {
           quiz_id: string
           host_id: string
           game_pin: string
-          status?: "waiting" | "playing" | "finished"
+          status?: "waiting" | "active" | "finished"
           total_time_minutes?: number
           question_limit?: string
           game_end_mode?: string
@@ -106,7 +110,7 @@ export type Database = {
           quiz_id?: string
           host_id?: string
           game_pin?: string
-          status?: "waiting" | "playing" | "finished"
+          status?: "waiting" | "active" | "finished"
           total_time_minutes?: number
           question_limit?: string
           game_end_mode?: string

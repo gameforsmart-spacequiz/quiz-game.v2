@@ -8,7 +8,10 @@ import { Button } from "@/components/ui/button"
 import { JoinGameDialog } from "@/components/join-game-dialog"
 import { TutorialModal } from "@/components/tutorial-modal"
 import { LanguageSelector } from "@/components/language-selector"
+import { UserProfile } from "@/components/auth/user-profile"
+import { AuthGuard } from "@/components/auth/auth-guard"
 import { useLanguage } from "@/contexts/language-context"
+import { useAuth } from "@/contexts/auth-context"
 import { useGameStore } from "@/lib/store"
 
 function GameCodeHandler({ onGameCodeDetected }: { onGameCodeDetected: (code: string) => void }) {
@@ -29,8 +32,9 @@ function GameCodeHandler({ onGameCodeDetected }: { onGameCodeDetected: (code: st
   return null
 }
 
-export default function HomePage() {
+function HomePageContent() {
   const { t } = useLanguage()
+  const { user, profile } = useAuth()
   const { resetGame, setGameMode } = useGameStore()
   const [showJoinGame, setShowJoinGame] = useState(false)
   const [gameCodeFromUrl, setGameCodeFromUrl] = useState("")
@@ -156,6 +160,9 @@ export default function HomePage() {
       </Suspense>
 
       <LanguageSelector />
+      
+      {/* Auth Components - User is guaranteed to be logged in here */}
+      <UserProfile />
 
       <div className="fixed inset-0 z-0 overflow-hidden">
         <div
@@ -384,5 +391,13 @@ export default function HomePage() {
         />
       )}
     </>
+  )
+}
+
+export default function HomePage() {
+  return (
+    <AuthGuard requireAuth={true}>
+      <HomePageContent />
+    </AuthGuard>
   )
 }

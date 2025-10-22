@@ -300,10 +300,10 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
         quizId: gameData.quiz_id,
         questionCount: gameData.question_limit === 'all' ? 999 : parseInt(gameData.question_limit),
         questionsLoaded: shuffled.length,
-        isStarted: gameData.status === 'playing'
+        isStarted: gameData.status === 'active'
       });
 
-      if (gameData.status === 'playing') {
+      if (gameData.status === 'active') {
         setIsQuizStarted(true);
       } else {
         setIsQuizStarted(false);
@@ -510,7 +510,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "game_sessions", filter: `game_pin=eq.${gameCode.toUpperCase()}` },
         (payload) => {
-          if (payload.new.status === 'playing' && !isQuizStarted) {
+          if (payload.new.status === 'active' && !isQuizStarted) {
             setIsQuizStarted(true);
           }
         },
@@ -533,7 +533,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
           .select("status, started_at")
           .eq("game_pin", gameCode.toUpperCase())
           .single();
-        if (!cancelled && data?.status === 'playing' && data?.started_at) {
+        if (!cancelled && data?.status === 'active' && data?.started_at) {
           setIsQuizStarted(true);
         }
       } catch {}

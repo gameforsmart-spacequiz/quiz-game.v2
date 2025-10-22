@@ -277,7 +277,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
         return
       }
 
-      if (data.status === 'playing' && !data.countdown_started_at) {
+      if (data.status === 'active' && !data.countdown_started_at) {
         console.log("[WAIT] Game already started, redirecting to play")
         router.replace(`/play/${gameCode}`)
         return
@@ -581,7 +581,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
             setIsRedirecting(true)
             router.replace(`/play/${gameCode}`)
           }
-        } else if (data.status === 'playing') {
+        } else if (data.status === 'active') {
           console.log("[v0] Game already started, redirecting")
           setIsRedirecting(true)
           router.replace(`/play/${gameCode}`)
@@ -596,7 +596,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
             .eq("id", gameId)
             .single()
 
-          if (data?.status === 'playing') {
+          if (data?.status === 'active') {
             console.log("[v0] Fallback: game started, redirecting")
             setIsRedirecting(true)
             router.replace(`/play/${gameCode}`)

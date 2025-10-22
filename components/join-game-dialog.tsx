@@ -1,5 +1,7 @@
-/* eslint-disable @next/next/no-img-element */
 "use client"
+
+/* eslint-disable @next/next/no-img-element */
+import Image from 'next/image'
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
@@ -17,6 +19,7 @@ import { useGameStore } from "@/lib/store"
 import { supabase } from "@/lib/supabase"
 import { generateXID } from "@/lib/id-generator"
 import { useLanguage } from "@/contexts/language-context"
+import { useAuth } from "@/contexts/auth-context"
 // penanda
 // penanda
 const ANIMAL_AVATARS = [
@@ -45,8 +48,59 @@ interface JoinGameDialogProps {
 
 export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: JoinGameDialogProps) {
   const { t } = useLanguage()
-  const [selectedAvatar, setSelectedAvatar] = useState<string>(ANIMAL_AVATARS[0])
+  const { user, profile } = useAuth()
+  const [selectedAvatar, setSelectedAvatar] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
+  
+  // Get Google avatar URL - prioritize profile data, then user metadata
+  const rawGoogleAvatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture
+  const googleAvatarUrl = rawGoogleAvatarUrl ? `https://images.weserv.nl/?url=${encodeURIComponent(rawGoogleAvatarUrl)}&w=64&h=64&fit=cover&output=png` : null
+  
+  // Debug logging for avatar URL
+  useEffect(() => {
+    if (user && profile) {
+      console.log('🔍 JoinGameDialog Avatar Debug:', {
+        profileAvatarUrl: profile?.avatar_url,
+        userAvatarUrl: user?.user_metadata?.avatar_url,
+        userPicture: user?.user_metadata?.picture,
+        rawGoogleAvatarUrl: rawGoogleAvatarUrl,
+        proxyGoogleAvatarUrl: googleAvatarUrl,
+        hasProfile: !!profile,
+        hasUser: !!user,
+        profileUsername: profile?.username,
+        profileFullname: profile?.fullname,
+        profileEmail: profile?.email
+      })
+      
+      // Test if the URL is valid
+      if (googleAvatarUrl) {
+        console.log('🧪 Testing Google avatar URL:', googleAvatarUrl)
+        const testImg = document.createElement('img')
+        testImg.onload = () => {
+          console.log('✅ Test image loaded successfully')
+        }
+        testImg.onerror = () => {
+          console.error('❌ Test image failed to load')
+        }
+        testImg.src = googleAvatarUrl
+      }
+    }
+  }, [user, profile, googleAvatarUrl])
+
+  // Initialize selectedAvatar when component mounts or profile changes
+  useEffect(() => {
+    if (googleAvatarUrl && !selectedAvatar) {
+      console.log('🎯 Initializing with Google avatar:', googleAvatarUrl)
+      
+      // Set Google avatar directly - let the Image component handle loading
+      console.log('🎯 Setting Google avatar:', googleAvatarUrl)
+      setSelectedAvatar(googleAvatarUrl)
+      
+    } else if (!googleAvatarUrl && !selectedAvatar) {
+      console.log('🎯 Initializing with first animal avatar')
+      setSelectedAvatar(ANIMAL_AVATARS[0])
+    }
+  }, [googleAvatarUrl, selectedAvatar])
 
   const router = useRouter()
   const { setPlayer, setGameCode, setGameId, setQuizId, setIsHost } = useGameStore()
@@ -54,7 +108,7 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
   const form = useForm<JoinGameForm>({
     resolver: zodResolver(joinGameSchema),
     defaultValues: {
-      name: "",
+      name: profile?.fullname || profile?.username || "",
       gameCode: initialGameCode,
     },
   })
@@ -64,6 +118,23 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
       form.setValue("gameCode", initialGameCode)
     }
   }, [initialGameCode, form])
+
+  // Update name and avatar when profile changes
+  useEffect(() => {
+    if (profile) {
+      const displayName = profile.fullname || profile.username || ""
+      form.setValue("name", displayName)
+      
+      // Set Google avatar as default if available
+      if (googleAvatarUrl) {
+        console.log('🎯 Setting Google avatar as default:', googleAvatarUrl)
+        setSelectedAvatar(googleAvatarUrl)
+      } else {
+        console.log('⚠️ No Google avatar URL available, using first animal avatar')
+        setSelectedAvatar(ANIMAL_AVATARS[0])
+      }
+    }
+  }, [profile, form, googleAvatarUrl])
 
   const extractGameCodeFromUrl = (input: string): string => {
     try {
@@ -255,12 +326,14 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-cyan-100 font-mono">{t('name', 'Name')}</FormLabel>
+                    <FormLabel className="text-cyan-100 font-mono">
+                      {t('username', 'Username')}
+                    </FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder={t('name', 'Enter your name')} 
+                        placeholder={t('enterUsername', 'Choose a username')} 
                         {...field} 
-                        className="bg-black/30 border-cyan-400/30 text-white placeholder:text-cyan-200/60 backdrop-blur-sm focus:border-cyan-400 focus:ring-cyan-400/20 font-mono" 
+                        className="bg-black/30 border-cyan-400/30 text-white placeholder:text-cyan-200/60 backdrop-blur-sm focus:border-cyan-400 focus:ring-cyan-400/20 font-mono"
                       />
                     </FormControl>
                     <FormMessage className="text-red-300" />
@@ -294,8 +367,68 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
               />
 
               <div>
-                <Label className="text-sm font-medium mb-3 block text-cyan-100 font-mono">{t('chooseAvatar', 'Choose Your Avatar')}</Label>
+                <Label className="text-sm font-medium mb-3 block text-cyan-100 font-mono">
+                  {t('chooseAvatar', 'Choose Your Avatar')}
+                  {user && profile && (
+                    <span className="text-xs text-green-400 ml-2">
+                      ({t('googleAvatar', 'Google avatar selected')})
+                    </span>
+                  )}
+                </Label>
                 <div className="grid grid-cols-4 gap-3 mb-3">
+                  {/* Google Avatar (if logged in) */}
+                  {user && profile && (
+                    <motion.button
+                      key="google-avatar"
+                      type="button"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => setSelectedAvatar(googleAvatarUrl || ANIMAL_AVATARS[0])}
+                      className={`relative w-16 h-16 rounded-full overflow-hidden border-2 transition-all backdrop-blur-sm ${
+                        selectedAvatar === googleAvatarUrl
+                          ? "border-green-400 ring-2 ring-green-400/30 shadow-lg shadow-green-400/20"
+                          : "border-green-400/30 hover:border-green-400/60 hover:shadow-lg hover:shadow-green-400/10"
+                      }`}
+                    >
+                      {googleAvatarUrl ? (
+                        <img
+                          src={googleAvatarUrl}
+                          alt="Google Avatar"
+                          className="w-full h-full object-cover"
+                          crossOrigin="anonymous"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            console.error('❌ Google avatar failed to load:', googleAvatarUrl)
+                            console.error('❌ Error event:', e)
+                            const img = e.target as HTMLImageElement
+                            console.error('❌ Image element:', img)
+                            console.error('❌ Image src:', img.src)
+                          }}
+                          onLoad={(e) => {
+                            console.log('✅ Google avatar loaded successfully:', googleAvatarUrl)
+                            const img = e.target as HTMLImageElement
+                            console.log('✅ Image dimensions:', img.naturalWidth, 'x', img.naturalHeight)
+                            console.log('✅ Image src:', img.src)
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
+                          <span className="text-white text-lg font-bold">
+                            {profile?.fullname?.charAt(0).toUpperCase() || profile?.username?.charAt(0).toUpperCase() || 'G'}
+                          </span>
+                        </div>
+                      )}
+                      {selectedAvatar === googleAvatarUrl && (
+                        <div className="absolute inset-0 bg-green-400/20 animate-pulse"></div>
+                      )}
+                      {/* Google icon indicator */}
+                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">G</span>
+                      </div>
+                    </motion.button>
+                  )}
+                  
+                  {/* Animal Avatars */}
                   {ANIMAL_AVATARS.map((avatarUrl, index) => (
                     <motion.button
                       key={index}

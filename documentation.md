@@ -16,7 +16,7 @@ Enhanced the game code validation system to prevent players from joining games t
 - **`handleExitGame`**: Updated to set `status: "finished"` when host exits from lobby
 - **`endQuiz`**: Updated to set `status: "finished"` when quiz is manually ended
 - **Auto-finish Logic**: Updated to set `status: "finished"` when all players complete quiz
-- **`startQuiz`**: Updated to set `status: "playing"` when quiz begins
+- **`startQuiz`**: Updated to set `status: "active"` when quiz begins
 
 #### 3. Player-Side Validation
 - **Join Dialog**: Added validation for `finished` and `status` fields
@@ -31,7 +31,7 @@ Enhanced the game code validation system to prevent players from joining games t
 ### How It Works
 
 1. **Game Creation**: New games start with `status: "waiting"`
-2. **Quiz Start**: Status changes to `status: "playing"`
+2. **Quiz Start**: Status changes to `status: "active"`
 3. **Game End**: Status changes to `status: "finished"` and `finished: true`
 4. **Validation**: Players cannot join games with `status: "finished"` or `finished: true`
 

@@ -41,6 +41,14 @@ export type TranslationKey =
   | 'quizStarting'
   // Host actions
   | 'endQuiz'
+  // Auth related
+  | 'login' | 'signInWithGoogle' | 'signingIn' | 'signOut' | 'signingOut' | 'profile' | 'settings'
+  | 'welcome' | 'welcomeBack' | 'joinSpaceQuiz' | 'loginSubtitle' | 'benefit1' | 'benefit2' | 'benefit3' | 'signInError' | 'signOutError'
+  | 'authInitError' | 'profileError' | 'loggedInAs' | 'usingProfile' | 'googleAvatar'
+  | 'errorDescription' | 'errorDetails' | 'retry' | 'backToHome' | 'or' | 'alreadyHaveAccount' | 'signIn'
+  | 'fullName' | 'username' | 'email' | 'password' | 'confirmPassword' | 'enterFullName' | 'enterUsername' | 'enterEmail' | 'enterPassword' | 'enterPasswordLogin' | 'confirmPasswordPlaceholder'
+  | 'usernameRequired' | 'usernameMinLength' | 'emailRequired' | 'emailInvalid' | 'passwordRequired' | 'passwordMinLength' | 'passwordMismatch' | 'fullnameRequired'
+  | 'checkingAuth'
 
 export const translations: Record<string, Record<TranslationKey, string>> = {
   en: {
@@ -56,7 +64,6 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     chinese: 'Chinese',
 
     // General UI
-    welcome: 'Welcome',
     name: 'Name',
     startGame: 'Start Game',
     joinGame: 'Join Game',
@@ -219,7 +226,57 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     // Host countdown
     quizStarting: 'Quiz Starting!',
     // Host actions
-    endQuiz: 'End Quiz'
+    endQuiz: 'End Quiz',
+    
+    // Auth related
+    login: 'Login',
+    signInWithGoogle: 'Sign in with Google',
+    signingIn: 'Signing in...',
+    signOut: 'Sign out',
+    signingOut: 'Signing out...',
+    profile: 'Profile',
+    settings: 'Settings',
+    welcome: 'Welcome to Space Quiz',
+    welcomeBack: 'Welcome Back',
+    joinSpaceQuiz: 'Join Space Quiz',
+    loginSubtitle: 'Sign in to continue your space adventure',
+    benefit1: 'Save your game progress',
+    benefit2: 'Play with friends easily',
+    benefit3: 'Access your profile anywhere',
+    signInError: 'Failed to sign in',
+    signOutError: 'Failed to sign out',
+    authInitError: 'Failed to initialize authentication',
+    profileError: 'Failed to create user profile',
+    loggedInAs: 'Logged in as',
+    usingProfile: 'Using your profile information',
+    googleAvatar: 'Google avatar selected',
+    errorDescription: 'The space quiz encountered an unexpected error. Don\'t worry, your progress is safe!',
+    errorDetails: 'Error Details (Development)',
+    retry: 'Try Again',
+    backToHome: 'Back to Home',
+    or: 'or',
+    alreadyHaveAccount: 'Already have an account?',
+    signIn: 'Sign In',
+    fullName: 'Full Name',
+    username: 'Username',
+    email: 'Email',
+    password: 'Password',
+    confirmPassword: 'Confirm Password',
+    enterFullName: 'Enter your full name',
+    enterUsername: 'Choose a username',
+    enterEmail: 'Enter your email',
+    enterPassword: 'Create a password',
+    enterPasswordLogin: 'Enter your password',
+    confirmPasswordPlaceholder: 'Confirm your password',
+    usernameRequired: 'Username is required',
+    usernameMinLength: 'Username must be at least 3 characters',
+    emailRequired: 'Email is required',
+    emailInvalid: 'Please enter a valid email',
+    passwordRequired: 'Password is required',
+    passwordMinLength: 'Password must be at least 6 characters',
+    passwordMismatch: 'Passwords do not match',
+    fullnameRequired: 'Full name is required',
+    checkingAuth: 'Checking Authentication...'
   },
   id: {
     // Main page
@@ -234,7 +291,6 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     chinese: 'Bahasa Mandarin',
 
     // General UI
-    welcome: 'Selamat Datang',
     name: 'Nama',
     startGame: 'Mulai Permainan',
     joinGame: 'Gabung Permainan',
@@ -397,7 +453,57 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     // Host countdown
     quizStarting: 'Kuis Dimulai!',
     // Host actions
-    endQuiz: 'Akhiri Kuis'
+    endQuiz: 'Akhiri Kuis',
+    
+    // Auth related
+    login: 'Masuk',
+    signInWithGoogle: 'Masuk dengan Google',
+    signingIn: 'Sedang masuk...',
+    signOut: 'Keluar',
+    signingOut: 'Sedang keluar...',
+    profile: 'Profil',
+    settings: 'Pengaturan',
+    welcome: 'Selamat Datang di Kuis Antariksa',
+    welcomeBack: 'Selamat Datang Kembali',
+    joinSpaceQuiz: 'Bergabung dengan Kuis Antariksa',
+    loginSubtitle: 'Masuk untuk melanjutkan petualangan antariksa Anda',
+    benefit1: 'Simpan progress permainan',
+    benefit2: 'Bermain dengan teman dengan mudah',
+    benefit3: 'Akses profil Anda di mana saja',
+    signInError: 'Gagal masuk',
+    signOutError: 'Gagal keluar',
+    authInitError: 'Gagal menginisialisasi autentikasi',
+    profileError: 'Gagal membuat profil pengguna',
+    loggedInAs: 'Masuk sebagai',
+    usingProfile: 'Menggunakan informasi profil Anda',
+    googleAvatar: 'Avatar Google dipilih',
+    errorDescription: 'Kuis antariksa mengalami error yang tidak terduga. Jangan khawatir, progress Anda aman!',
+    errorDetails: 'Detail Error (Development)',
+    retry: 'Coba Lagi',
+    backToHome: 'Kembali ke Beranda',
+    or: 'atau',
+    alreadyHaveAccount: 'Sudah punya akun?',
+    signIn: 'Masuk',
+    fullName: 'Nama Lengkap',
+    username: 'Nama Pengguna',
+    email: 'Email',
+    password: 'Kata Sandi',
+    confirmPassword: 'Konfirmasi Kata Sandi',
+    enterFullName: 'Masukkan nama lengkap Anda',
+    enterUsername: 'Pilih nama pengguna',
+    enterEmail: 'Masukkan email Anda',
+    enterPassword: 'Buat kata sandi',
+    enterPasswordLogin: 'Masukkan kata sandi Anda',
+    confirmPasswordPlaceholder: 'Konfirmasi kata sandi Anda',
+    usernameRequired: 'Nama pengguna wajib diisi',
+    usernameMinLength: 'Nama pengguna minimal 3 karakter',
+    emailRequired: 'Email wajib diisi',
+    emailInvalid: 'Masukkan email yang valid',
+    passwordRequired: 'Kata sandi wajib diisi',
+    passwordMinLength: 'Kata sandi minimal 6 karakter',
+    passwordMismatch: 'Kata sandi tidak cocok',
+    fullnameRequired: 'Nama lengkap wajib diisi',
+    checkingAuth: 'Memeriksa Autentikasi...'
   },
   zh: {
     // Main page
@@ -412,7 +518,6 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     chinese: '中文',
 
     // General UI
-    welcome: '欢迎',
     name: '姓名',
     startGame: '开始游戏',
     joinGame: '加入游戏',
@@ -575,7 +680,57 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     // Host countdown
     quizStarting: '测验开始！',
     // Host actions
-    endQuiz: '结束测验'
+    endQuiz: '结束测验',
+    
+    // Auth related
+    login: '登录',
+    signInWithGoogle: '使用Google登录',
+    signingIn: '正在登录...',
+    signOut: '退出',
+    signingOut: '正在退出...',
+    profile: '个人资料',
+    settings: '设置',
+    welcome: '欢迎来到太空问答',
+    welcomeBack: '欢迎回来',
+    joinSpaceQuiz: '加入太空问答',
+    loginSubtitle: '登录以继续您的太空冒险',
+    benefit1: '保存游戏进度',
+    benefit2: '轻松与朋友一起玩',
+    benefit3: '随时随地访问您的个人资料',
+    signInError: '登录失败',
+    signOutError: '退出失败',
+    authInitError: '初始化身份验证失败',
+    profileError: '创建用户个人资料失败',
+    loggedInAs: '已登录为',
+    usingProfile: '使用您的个人资料信息',
+    googleAvatar: '已选择Google头像',
+    errorDescription: '太空问答遇到了意外错误。别担心，您的进度是安全的！',
+    errorDetails: '错误详情（开发环境）',
+    retry: '重试',
+    backToHome: '返回首页',
+    or: '或',
+    alreadyHaveAccount: '已有账户？',
+    signIn: '登录',
+    fullName: '全名',
+    username: '用户名',
+    email: '邮箱',
+    password: '密码',
+    confirmPassword: '确认密码',
+    enterFullName: '输入您的全名',
+    enterUsername: '选择用户名',
+    enterEmail: '输入您的邮箱',
+    enterPassword: '创建密码',
+    enterPasswordLogin: '输入您的密码',
+    confirmPasswordPlaceholder: '确认您的密码',
+    usernameRequired: '用户名是必需的',
+    usernameMinLength: '用户名至少3个字符',
+    emailRequired: '邮箱是必需的',
+    emailInvalid: '请输入有效的邮箱',
+    passwordRequired: '密码是必需的',
+    passwordMinLength: '密码至少6个字符',
+    passwordMismatch: '密码不匹配',
+    fullnameRequired: '全名是必需的',
+    checkingAuth: '正在检查身份验证...'
   }
 }
 

@@ -116,7 +116,7 @@ export default function TryoutSettingsPage() {
           id: gameId,
           code: gameCode,
           quiz_id: quiz.id,
-          status: "playing", // Use valid status value for tryout
+          status: "active", // Use valid status value for tryout
           time_limit: timeLimit,
           question_count: questionCount,
         })

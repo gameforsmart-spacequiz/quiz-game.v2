@@ -40,7 +40,7 @@ This enhancement ensures that game codes become invalid when the host exits the 
 
 ### Game Lifecycle
 1. **Created**: `status: "waiting"`, `finished: false`, `is_started: false`
-2. **Started**: `status: "playing"`, `finished: false`, `is_started: true`
+2. **Started**: `status: "active"`, `finished: false`, `is_started: true`
 3. **Finished**: `status: "finished"`, `finished: true`, `is_started: false`
 
 ### Validation Flow

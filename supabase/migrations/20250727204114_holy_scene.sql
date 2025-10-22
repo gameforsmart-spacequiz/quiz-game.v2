@@ -6,7 +6,7 @@
       - `id` (uuid, primary key)
       - `code` (text, unique game code)
       - `quiz_id` (integer, quiz identifier)
-      - `status` (text, game status: waiting/playing/finished)
+      - `status` (text, game status: waiting/active/finished)
       - `created_at` (timestamp)
       - `host_id` (uuid, optional host identifier)
     
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS games (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   code text UNIQUE NOT NULL,
   quiz_id integer NOT NULL,
-  status text NOT NULL DEFAULT 'waiting' CHECK (status IN ('waiting', 'playing', 'finished')),
+  status text NOT NULL DEFAULT 'waiting' CHECK (status IN ('waiting', 'active', 'finished')),
   created_at timestamptz DEFAULT now(),
   host_id uuid
 );
