@@ -23,12 +23,18 @@ export async function GET(request: NextRequest) {
   // Determine the correct redirect URL based on environment
   const isProduction = requestUrl.hostname === 'spacequiz.gameforsmart.com'
   const isLocalhost = requestUrl.hostname === 'localhost'
+  const isVercel = requestUrl.hostname.includes('vercel.app')
+  const isCoolify = requestUrl.hostname.includes('coolify.io') || requestUrl.hostname.includes('coolify.app')
   
   let quizHomepage: string
   
   if (isProduction) {
     quizHomepage = CROSS_DOMAIN_CONFIG.QUIZ_DOMAIN
   } else if (isLocalhost) {
+    quizHomepage = `${requestUrl.origin}/`
+  } else if (isVercel) {
+    quizHomepage = `${requestUrl.origin}/`
+  } else if (isCoolify) {
     quizHomepage = `${requestUrl.origin}/`
   } else {
     // Fallback for other environments
@@ -38,6 +44,8 @@ export async function GET(request: NextRequest) {
   console.log('🚀 Redirecting to quiz homepage:', quizHomepage)
   console.log('🚀 Is production:', isProduction)
   console.log('🚀 Is localhost:', isLocalhost)
+  console.log('🚀 Is Vercel:', isVercel)
+  console.log('🚀 Is Coolify:', isCoolify)
   console.log('🚀 Hostname:', requestUrl.hostname)
   
   return NextResponse.redirect(quizHomepage)

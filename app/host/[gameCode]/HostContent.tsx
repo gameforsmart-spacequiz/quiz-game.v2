@@ -957,7 +957,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
         questionCount: gameData.question_limit === 'all' ? 999 : parseInt(gameData.question_limit)
       })
       setIsHost(true)
-      setQuizStarted(gameData.status === 'playing')
+      setQuizStarted(gameData.status === 'active')
       setShowLeaderboard(gameData.status === 'finished')
 
       const quizzes = await fetchQuizzes()
@@ -1240,7 +1240,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
             setShowLeaderboard(true)
           }
           
-          if (payload.new.status === 'playing') {
+          if (payload.new.status === 'active') {
             hasFinishedGame.current = false // Reset flag when game starts
             setQuizStarted(true)
             setShowLeaderboard(false)
@@ -1525,7 +1525,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
           const startedAt = new Date(serverTime).toISOString()
           await supabase
             .from("game_sessions")
-            .update({ started_at: startedAt, status: 'playing' })
+            .update({ started_at: startedAt, status: 'active' })
             .eq("id", gameId)
         }
       } catch (error) {
@@ -1563,7 +1563,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
       await supabase
         .from("game_sessions")
         .update({
-          status: 'playing',
+          status: 'active',
           countdown_started_at: startAt,
           // started_at will be set after countdown finishes
         })

@@ -6,7 +6,8 @@
 export const CROSS_DOMAIN_CONFIG = {
   MAIN_DOMAIN: 'https://www.gameforsmart.com',
   QUIZ_DOMAIN: 'https://spacequiz.gameforsmart.com',
-  LOCALHOST: 'http://localhost:3000'
+  LOCALHOST: 'http://localhost:3000',
+  VERCEL: process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://your-app-name.vercel.app'
 } as const
 
 /**
@@ -34,6 +35,23 @@ export function isLocalhost(): boolean {
 }
 
 /**
+ * Check if current domain is Vercel
+ */
+export function isVercel(): boolean {
+  if (typeof window === 'undefined') return false
+  return window.location.hostname.includes('vercel.app')
+}
+
+/**
+ * Check if current domain is Coolify
+ */
+export function isCoolify(): boolean {
+  if (typeof window === 'undefined') return false
+  return window.location.hostname.includes('coolify.io') || 
+         window.location.hostname.includes('coolify.app')
+}
+
+/**
  * Get the correct redirect URL for OAuth based on current environment
  */
 export function getOAuthRedirectUrl(): string {
@@ -41,6 +59,14 @@ export function getOAuthRedirectUrl(): string {
   
   if (isQuizProduction()) {
     return `${CROSS_DOMAIN_CONFIG.QUIZ_DOMAIN}/auth/callback`
+  }
+  
+  if (isVercel()) {
+    return `${window.location.origin}/auth/callback`
+  }
+  
+  if (isCoolify()) {
+    return `${window.location.origin}/auth/callback`
   }
   
   // For localhost, use the current origin
@@ -55,6 +81,14 @@ export function getHomepageUrl(): string {
   
   if (isQuizProduction()) {
     return CROSS_DOMAIN_CONFIG.QUIZ_DOMAIN
+  }
+  
+  if (isVercel()) {
+    return window.location.origin
+  }
+  
+  if (isCoolify()) {
+    return window.location.origin
   }
   
   return window.location.origin
@@ -96,6 +130,8 @@ export function logAuthContext(): void {
     isQuizProduction: isQuizProduction(),
     isMainProduction: isMainProduction(),
     isLocalhost: isLocalhost(),
+    isVercel: isVercel(),
+    isCoolify: isCoolify(),
     isFromMainDomain: isFromMainDomain(),
     oauthRedirectUrl: getOAuthRedirectUrl(),
     homepageUrl: getHomepageUrl(),

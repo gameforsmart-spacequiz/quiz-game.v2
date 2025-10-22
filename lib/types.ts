@@ -48,7 +48,7 @@ export interface Game {
   quiz_id: string
   host_id: string
   game_pin: string
-  status: "waiting" | "playing" | "finished"
+  status: "waiting" | "active" | "finished"
   total_time_minutes: number
   question_limit: string
   game_end_mode: string

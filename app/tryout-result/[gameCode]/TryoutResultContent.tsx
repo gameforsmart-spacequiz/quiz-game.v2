@@ -114,7 +114,7 @@ export default function TryoutResultContent({ gameCode }: TryoutResultContentPro
         .insert({
           game_pin: newGameCode,
           quiz_id: currentGame.quiz_id,
-          status: "playing",
+          status: "active",
           total_time_minutes: currentGame.total_time_minutes,
           question_limit: currentGame.question_limit,
           started_at: new Date().toISOString(),
