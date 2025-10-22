@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { User, Session, AuthError } from '@supabase/supabase-js'
 import { createSupabaseClient } from '@/lib/supabase'
 import { useLanguage } from './language-context'
-import { getOAuthRedirectUrl, logAuthContext, isFromMainDomain, isQuizProduction } from '@/lib/cross-domain-auth'
+import { getOAuthRedirectUrl, getHomepageUrl, logAuthContext, isFromMainDomain, isQuizProduction } from '@/lib/cross-domain-auth'
 
 interface Profile {
   id: string
@@ -195,14 +195,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (data.user) {
         // Profile will be created/updated automatically via auth state change listener
+        // Loading state will be handled by onAuthStateChange listener
+        console.log('✅ Email sign in successful, waiting for auth state change...')
+        
+        // Immediate redirect attempt
+        setTimeout(() => {
+          if (typeof window !== 'undefined' && window.location.pathname.includes('/auth/login')) {
+            console.log('🚀 Immediate redirect attempt')
+            const homepageUrl = getHomepageUrl()
+            console.log('🚀 Redirecting to:', homepageUrl)
+            window.location.href = homepageUrl
+          }
+        }, 500) // Immediate redirect after 500ms
+        
+        // Fallback redirect if onAuthStateChange doesn't trigger
+        setTimeout(() => {
+          if (typeof window !== 'undefined' && window.location.pathname.includes('/auth/login')) {
+            console.log('🔄 Fallback redirect triggered - onAuthStateChange may not have fired')
+            const homepageUrl = getHomepageUrl()
+            console.log('🔄 Fallback redirect to:', homepageUrl)
+            window.location.href = homepageUrl
+          }
+        }, 2000) // 2 second fallback
       }
     } catch (error) {
       console.error('Email sign in error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       setError(t('signInError', `Failed to sign in: ${errorMessage}`))
-    } finally {
-      setLoading(false)
+      setLoading(false) // Only set loading false on error
     }
+    // Don't set loading false here - let onAuthStateChange handle it
   }
 
   // Sign out
@@ -282,8 +304,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (mounted) {
         console.log('⚠️ Auth initialization timeout, setting loading to false')
         setLoading(false)
+        
+        // If we're still on login page after timeout, try to redirect
+        if (typeof window !== 'undefined' && window.location.pathname.includes('/auth/login')) {
+          console.log('🔄 Auth timeout - attempting redirect to homepage')
+          const homepageUrl = getHomepageUrl()
+          window.location.href = homepageUrl
+        }
       }
-    }, 10000) // 10 seconds timeout
+    }, 5000) // Reduced to 5 seconds timeout
 
     initializeAuth()
 
@@ -312,6 +341,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
           } finally {
             // Always set loading to false, even if profile creation fails
             setLoading(false)
+            
+            // Redirect to homepage after successful login (both OAuth and manual)
+            if (typeof window !== 'undefined') {
+              console.log('🚀 Redirecting to homepage after successful login')
+              const homepageUrl = getHomepageUrl()
+              console.log('🚀 Homepage URL:', homepageUrl)
+              
+              // Use setTimeout to ensure redirect happens after state updates
+              setTimeout(() => {
+                window.location.href = homepageUrl
+              }, 100)
+            }
           }
         } else if (event === 'SIGNED_OUT') {
           console.log('❌ User signed out')
