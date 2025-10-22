@@ -28,6 +28,8 @@ export type TranslationKey =
   | 'exitConfirmation' | 'areYouSureExitQuiz' | 'currentProgress' | 'timeRemaining' | 'progressWillBeSaved' | 'exit'
   // Quiz completion dialog
   | 'quizComplete' | 'allQuestionsAnswered' | 'areYouSureFinishQuiz' | 'cannotChangeAnswers' | 'continue' | 'finish'
+  // Logout confirmation
+  | 'confirmLogout' | 'logoutWarning' | 'loggingOut' | 'logout'
   // Tryout results page
   | 'tryoutComplete' | 'player' | 'totalScore' | 'correctAnswersLabel' | 'loadingResults' | 'restarting' | 'restart' | 'backToQuizzes'
   | 'excellent' | 'greatJob' | 'goodWork' | 'notBad' | 'keepPracticing'
@@ -234,6 +236,10 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     signingIn: 'Signing in...',
     signOut: 'Sign out',
     signingOut: 'Signing out...',
+    confirmLogout: 'Confirm Logout',
+    logoutWarning: 'Are you sure you want to logout? You\'ll need to sign in again to continue your space adventure.',
+    loggingOut: 'Logging out...',
+    logout: 'Logout',
     profile: 'Profile',
     settings: 'Settings',
     welcome: 'Welcome to Space Quiz',
@@ -461,6 +467,10 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     signingIn: 'Sedang masuk...',
     signOut: 'Keluar',
     signingOut: 'Sedang keluar...',
+    confirmLogout: 'Konfirmasi Logout',
+    logoutWarning: 'Apakah Anda yakin ingin logout? Anda perlu masuk kembali untuk melanjutkan petualangan luar angkasa Anda.',
+    loggingOut: 'Sedang logout...',
+    logout: 'Logout',
     profile: 'Profil',
     settings: 'Pengaturan',
     welcome: 'Selamat Datang di Kuis Antariksa',
@@ -688,6 +698,10 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     signingIn: '正在登录...',
     signOut: '退出',
     signingOut: '正在退出...',
+    confirmLogout: '确认退出',
+    logoutWarning: '您确定要退出吗？您需要重新登录才能继续您的太空冒险。',
+    loggingOut: '正在退出...',
+    logout: '退出',
     profile: '个人资料',
     settings: '设置',
     welcome: '欢迎来到太空问答',

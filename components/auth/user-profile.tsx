@@ -13,11 +13,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Image from "next/image"
 import { useAuth } from "@/contexts/auth-context"
 import { useLanguage } from "@/contexts/language-context"
+import { LogoutConfirmationModal } from "./logout-confirmation-modal"
 
 export function UserProfile() {
   const { t } = useLanguage()
   const { user, profile, signOut, loading } = useAuth()
   const [isSigningOut, setIsSigningOut] = useState(false)
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
 
   if (!user || !profile) {
     return null
@@ -27,11 +29,16 @@ export function UserProfile() {
     try {
       setIsSigningOut(true)
       await signOut()
+      setShowLogoutModal(false)
     } catch (error) {
       console.error('Sign out error:', error)
     } finally {
       setIsSigningOut(false)
     }
+  }
+
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true)
   }
 
   const getInitials = (name: string) => {
@@ -140,7 +147,7 @@ export function UserProfile() {
           align="start"
         >
           <DropdownMenuItem 
-            onClick={handleSignOut}
+            onClick={handleLogoutClick}
             disabled={loading || isSigningOut}
             className="text-red-300 hover:bg-red-500/20 cursor-pointer font-mono focus:bg-red-500/20 rounded-md"
           >
@@ -151,6 +158,13 @@ export function UserProfile() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmationModal
+        open={showLogoutModal}
+        onConfirm={handleSignOut}
+        onCancel={() => setShowLogoutModal(false)}
+      />
     </div>
   )
 }

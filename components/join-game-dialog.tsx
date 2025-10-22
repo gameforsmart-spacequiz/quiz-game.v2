@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 import Image from 'next/image'
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
@@ -51,14 +51,35 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
   const { user, profile } = useAuth()
   const [selectedAvatar, setSelectedAvatar] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [avatarLoaded, setAvatarLoaded] = useState(false)
+  const [debouncedGameCode, setDebouncedGameCode] = useState("")
   
   // Get Google avatar URL - prioritize profile data, then user metadata
   const rawGoogleAvatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture
   const googleAvatarUrl = rawGoogleAvatarUrl ? `https://images.weserv.nl/?url=${encodeURIComponent(rawGoogleAvatarUrl)}&w=64&h=64&fit=cover&output=png` : null
   
-  // Debug logging for avatar URL
+  // Detect mobile device
   useEffect(() => {
-    if (user && profile) {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Optimized avatar loading with lazy loading
+  useEffect(() => {
+    if (open && user && profile) {
+      // Only load avatars when dialog is open
+      setAvatarLoaded(true)
+    }
+  }, [open, user, profile])
+
+  // Debug logging for avatar URL (only in development)
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && user && profile) {
       console.log('🔍 JoinGameDialog Avatar Debug:', {
         profileAvatarUrl: profile?.avatar_url,
         userAvatarUrl: user?.user_metadata?.avatar_url,
@@ -71,19 +92,6 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
         profileFullname: profile?.fullname,
         profileEmail: profile?.email
       })
-      
-      // Test if the URL is valid
-      if (googleAvatarUrl) {
-        console.log('🧪 Testing Google avatar URL:', googleAvatarUrl)
-        const testImg = document.createElement('img')
-        testImg.onload = () => {
-          console.log('✅ Test image loaded successfully')
-        }
-        testImg.onerror = () => {
-          console.error('❌ Test image failed to load')
-        }
-        testImg.src = googleAvatarUrl
-      }
     }
   }, [user, profile, googleAvatarUrl])
 
@@ -118,6 +126,14 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
       form.setValue("gameCode", initialGameCode)
     }
   }, [initialGameCode, form])
+
+  // Debounce game code input for better performance
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedGameCode(form.getValues("gameCode"))
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [form.watch("gameCode")])
 
   // Update name and avatar when profile changes
   useEffect(() => {
@@ -241,17 +257,29 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md p-0 border-0 bg-transparent">
-        {/* Space Background */}
+        {/* Mobile optimization styles */}
+        <style jsx>{`
+          @media (max-width: 768px) {
+            .orbit-inner, .orbit-middle, .orbit-outer {
+              animation: none !important;
+            }
+            .cosmic-ring-slow, .cosmic-ring-orbit {
+              animation: none !important;
+            }
+          }
+        `}</style>
+        {/* Optimized Background */}
         <div className="fixed inset-0 z-0 overflow-hidden">
+          {/* Lightweight CSS gradient background */}
           <div
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+            className="absolute inset-0"
             style={{
-              backgroundImage: "url('/images/galaxy.webp')",
+              background: "linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)"
             }}
           />
           
-          {/* Animated space elements */}
-          <div className="absolute inset-0 flex items-center justify-center">
+          {/* Simplified animated elements - only on desktop */}
+          <div className="absolute inset-0 flex items-center justify-center hidden md:block">
             <div className="absolute orbit-inner">
               <div className="w-2 h-2 bg-gradient-to-br from-orange-400 to-red-500 rounded-full shadow-lg shadow-orange-400/60 border border-orange-300/30">
                 <div className="w-full h-full rounded-full bg-gradient-to-tl from-transparent to-white/20"></div>
@@ -270,11 +298,11 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
             </div>
           </div>
 
-          {/* Cosmic rings */}
-          <div className="absolute inset-0 flex items-center justify-center cosmic-ring-slow">
+          {/* Simplified cosmic rings - only on desktop */}
+          <div className="absolute inset-0 flex items-center justify-center cosmic-ring-slow hidden md:block">
             <div className="w-80 h-80 border border-purple-300/10 rounded-full"></div>
           </div>
-          <div className="absolute inset-0 flex items-center justify-center" style={{ animation: "cosmic-ring-orbit 120s linear infinite" }}>
+          <div className="absolute inset-0 flex items-center justify-center hidden md:block" style={{ animation: "cosmic-ring-orbit 120s linear infinite" }}>
             <div className="w-96 h-96 border border-blue-300/8 rounded-full"></div>
           </div>
 
@@ -296,14 +324,18 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: "spring", stiffness: 150 }}
+              transition={{ 
+                delay: isMobile ? 0 : 0.2, 
+                type: "spring", 
+                stiffness: isMobile ? 200 : 150 
+              }}
               className="mb-4 flex justify-center"
             >
               <div className="w-16 h-16 bg-gradient-to-br from-purple-500/30 to-cyan-500/30 backdrop-blur-xl rounded-2xl flex items-center justify-center border-2 border-white/40 shadow-lg shadow-purple-500/20 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-400/10 to-cyan-400/10 animate-pulse"></div>
+                <div className={`absolute inset-0 bg-gradient-to-br from-purple-400/10 to-cyan-400/10 ${isMobile ? '' : 'animate-pulse'}`}></div>
                 <Users className="w-8 h-8 text-white relative z-10" />
-                <Sparkles className="absolute top-1 right-1 w-3 h-3 text-cyan-300 animate-pulse" />
-                <Star className="absolute bottom-1 left-1 w-2 h-2 text-purple-300 animate-pulse" style={{ animationDelay: "1s" }} />
+                <Sparkles className={`absolute top-1 right-1 w-3 h-3 text-cyan-300 ${isMobile ? '' : 'animate-pulse'}`} />
+                <Star className={`absolute bottom-1 left-1 w-2 h-2 text-purple-300 ${isMobile ? '' : 'animate-pulse'}`} style={isMobile ? {} : { animationDelay: "1s" }} />
               </div>
             </motion.div>
             
@@ -376,13 +408,13 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
                   )}
                 </Label>
                 <div className="grid grid-cols-4 gap-3 mb-3">
-                  {/* Google Avatar (if logged in) */}
-                  {user && profile && (
+                  {/* Google Avatar (if logged in) - Only load when dialog is open */}
+                  {user && profile && avatarLoaded && (
                     <motion.button
                       key="google-avatar"
                       type="button"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
+                      whileHover={isMobile ? {} : { scale: 1.1 }}
+                      whileTap={isMobile ? {} : { scale: 0.9 }}
                       onClick={() => setSelectedAvatar(googleAvatarUrl || ANIMAL_AVATARS[0])}
                       className={`relative w-16 h-16 rounded-full overflow-hidden border-2 transition-all backdrop-blur-sm ${
                         selectedAvatar === googleAvatarUrl
@@ -419,7 +451,7 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
                         </div>
                       )}
                       {selectedAvatar === googleAvatarUrl && (
-                        <div className="absolute inset-0 bg-green-400/20 animate-pulse"></div>
+                        <div className={`absolute inset-0 bg-green-400/20 ${isMobile ? '' : 'animate-pulse'}`}></div>
                       )}
                       {/* Google icon indicator */}
                       <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
@@ -428,13 +460,13 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
                     </motion.button>
                   )}
                   
-                  {/* Animal Avatars */}
-                  {ANIMAL_AVATARS.map((avatarUrl, index) => (
+                  {/* Animal Avatars - Only load when dialog is open */}
+                  {avatarLoaded && ANIMAL_AVATARS.map((avatarUrl, index) => (
                     <motion.button
                       key={index}
                       type="button"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
+                      whileHover={isMobile ? {} : { scale: 1.1 }}
+                      whileTap={isMobile ? {} : { scale: 0.9 }}
                       onClick={() => setSelectedAvatar(avatarUrl)}
                       className={`relative w-16 h-16 rounded-full overflow-hidden border-2 transition-all backdrop-blur-sm ${
                         selectedAvatar === avatarUrl
@@ -448,7 +480,7 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
                         className="w-full h-full object-cover"
                       />
                       {selectedAvatar === avatarUrl && (
-                        <div className="absolute inset-0 bg-cyan-400/20 animate-pulse"></div>
+                        <div className={`absolute inset-0 bg-cyan-400/20 ${isMobile ? '' : 'animate-pulse'}`}></div>
                       )}
                     </motion.button>
                   ))}
