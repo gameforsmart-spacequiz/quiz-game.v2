@@ -55,7 +55,6 @@ export interface Game {
   allow_join_after_start: boolean
   participants: Player[]
   responses: any[]
-  chat_messages: any[]
   created_at: string
   countdown_started_at?: string
   started_at?: string
