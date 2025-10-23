@@ -120,7 +120,6 @@ export default function TryoutResultContent({ gameCode }: TryoutResultContentPro
           started_at: new Date().toISOString(),
           participants: [],
           responses: [],
-          chat_messages: [],
           current_questions: [],
           application: 'space-quiz'
         })

@@ -169,7 +169,6 @@ export default function SelectQuizPage() {
           question_limit: settings.questionCount.toString(),
           participants: [],
           responses: [],
-          chat_messages: [],
           current_questions: [],
           application: "space-quiz"
         })
