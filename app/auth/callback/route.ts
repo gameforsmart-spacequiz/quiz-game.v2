@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   let quizHomepage: string
   
   if (isProduction) {
-    quizHomepage = CROSS_DOMAIN_CONFIG.QUIZ_DOMAIN
+    quizHomepage = `${requestUrl.origin}/`
   } else if (isLocalhost) {
     quizHomepage = `${requestUrl.origin}/`
   } else if (isVercel) {
