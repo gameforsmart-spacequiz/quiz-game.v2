@@ -58,7 +58,7 @@ export function getOAuthRedirectUrl(): string {
   if (typeof window === 'undefined') return '/auth/callback'
   
   if (isQuizProduction()) {
-    return `${CROSS_DOMAIN_CONFIG.QUIZ_DOMAIN}/auth/callback`
+    return `${window.location.origin}/auth/callback`
   }
   
   if (isVercel()) {
@@ -80,7 +80,7 @@ export function getHomepageUrl(): string {
   if (typeof window === 'undefined') return '/'
   
   if (isQuizProduction()) {
-    return CROSS_DOMAIN_CONFIG.QUIZ_DOMAIN
+    return window.location.origin
   }
   
   if (isVercel()) {
