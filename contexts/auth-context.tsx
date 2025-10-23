@@ -305,12 +305,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         console.log('⚠️ Auth initialization timeout, setting loading to false')
         setLoading(false)
         
-        // If we're still on login page after timeout, try to redirect
-        if (typeof window !== 'undefined' && window.location.pathname.includes('/auth/login')) {
-          console.log('🔄 Auth timeout - attempting redirect to homepage')
-          const homepageUrl = getHomepageUrl()
-          window.location.href = homepageUrl
-        }
+        // Don't auto-redirect from login page to prevent animation restart
+        // User should manually navigate or complete login process
       }
     }, 5000) // Reduced to 5 seconds timeout
 
