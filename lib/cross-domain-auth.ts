@@ -42,14 +42,6 @@ export function isVercel(): boolean {
   return window.location.hostname.includes('vercel.app')
 }
 
-/**
- * Check if current domain is Coolify
- */
-export function isCoolify(): boolean {
-  if (typeof window === 'undefined') return false
-  return window.location.hostname.includes('coolify.io') || 
-         window.location.hostname.includes('coolify.app')
-}
 
 /**
  * Get the correct redirect URL for OAuth based on current environment
@@ -65,11 +57,7 @@ export function getOAuthRedirectUrl(): string {
     return `${window.location.origin}/auth/callback`
   }
   
-  if (isCoolify()) {
-    return `${window.location.origin}/auth/callback`
-  }
-  
-  // For localhost, use the current origin
+  // For localhost and other environments, use the current origin
   return `${window.location.origin}/auth/callback`
 }
 
@@ -87,10 +75,7 @@ export function getHomepageUrl(): string {
     return window.location.origin
   }
   
-  if (isCoolify()) {
-    return window.location.origin
-  }
-  
+  // For localhost and other environments, use the current origin
   return window.location.origin
 }
 
@@ -131,7 +116,6 @@ export function logAuthContext(): void {
     isMainProduction: isMainProduction(),
     isLocalhost: isLocalhost(),
     isVercel: isVercel(),
-    isCoolify: isCoolify(),
     isFromMainDomain: isFromMainDomain(),
     oauthRedirectUrl: getOAuthRedirectUrl(),
     homepageUrl: getHomepageUrl(),
