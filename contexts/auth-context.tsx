@@ -344,9 +344,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
               const homepageUrl = getHomepageUrl()
               console.log('🚀 Homepage URL:', homepageUrl)
               
+              // Check if there's a pending game code to preserve
+              const pendingCode = localStorage.getItem('pending-game-code')
+              let finalUrl = homepageUrl
+              
+              if (pendingCode) {
+                // Add game code to URL so it gets detected by GameCodeHandler
+                const url = new URL(homepageUrl)
+                url.searchParams.set('code', pendingCode)
+                finalUrl = url.toString()
+                console.log('🎯 Adding pending game code to redirect URL:', pendingCode)
+              }
+              
               // Use setTimeout to ensure redirect happens after state updates
               setTimeout(() => {
-                window.location.href = homepageUrl
+                window.location.href = finalUrl
               }, 100)
             }
           }

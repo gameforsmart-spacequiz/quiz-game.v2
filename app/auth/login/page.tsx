@@ -22,6 +22,20 @@ function LoginPageContent() {
   })
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
+  // Save game code from URL when user lands on login page
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const gameCode = urlParams.get('code')
+      
+      // Validate game code (6 characters, alphanumeric) - ignore OAuth codes
+      if (gameCode && gameCode.length === 6 && /^[A-Z0-9]{6}$/i.test(gameCode)) {
+        console.log('💾 Saving game code from login page URL:', gameCode.toUpperCase())
+        localStorage.setItem('pending-game-code', gameCode.toUpperCase())
+      }
+    }
+  }, [])
+
   // Reset redirecting state ketika komponen mount atau user kembali ke halaman
   useEffect(() => {
     setIsRedirecting(false)

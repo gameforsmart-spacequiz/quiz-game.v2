@@ -65,6 +65,28 @@ function HomePageContent() {
     localStorage.removeItem('current-game-id')
   }, [resetGame])
 
+  // Auto trigger join dialog with pending game code after login
+  useEffect(() => {
+    if (user && typeof window !== 'undefined') {
+      const pendingCode = localStorage.getItem('pending-game-code')
+      
+      if (pendingCode) {
+        console.log('🎯 Found pending game code after login:', pendingCode)
+        localStorage.removeItem('pending-game-code')
+        
+        // Set game code and trigger join dialog
+        setGameCodeFromUrl(pendingCode)
+        setShowJoinGame(true)
+        setShowTutorial(false)
+        
+        // Clear URL parameter if exists
+        const url = new URL(window.location.href)
+        url.searchParams.delete('code')
+        window.history.replaceState(null, '', url.toString())
+      }
+    }
+  }, [user])
+
   const handleGameCodeDetected = (code: string) => {
     console.log("🎯 Game code detected:", code)
     console.log("🎯 Current state - showTutorial:", showTutorial, "hasShownTutorial:", hasShownTutorial)
