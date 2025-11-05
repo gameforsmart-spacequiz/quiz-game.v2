@@ -20,12 +20,27 @@ function GameCodeHandler({ onGameCodeDetected }: { onGameCodeDetected: (code: st
   useEffect(() => {
     const codeParam = searchParams.get("code")
     if (codeParam) {
-      console.log("Game code detected from URL:", codeParam) // Debug log
-      onGameCodeDetected(codeParam.toUpperCase())
+      // Validasi ketat: hanya terima kode yang panjangnya persis 6 digit (game code)
+      // Abaikan kode OAuth yang biasanya lebih panjang (biasanya 40+ karakter)
+      const trimmedCode = codeParam.trim().toUpperCase()
+      
+      // Validasi: hanya terima jika panjangnya persis 6 karakter dan alphanumeric
+      const isValidGameCode = trimmedCode.length === 6 && /^[A-Z0-9]{6}$/.test(trimmedCode)
+      
+      if (isValidGameCode) {
+        console.log("✅ Game code detected from URL:", trimmedCode) // Debug log
+        onGameCodeDetected(trimmedCode)
 
-      // Hapus parameter code dari URL agar tidak terdeteksi lagi
-      const newUrl = window.location.pathname
-      window.history.replaceState(null, "", newUrl)
+        // Hapus parameter code dari URL agar tidak terdeteksi lagi
+        const newUrl = window.location.pathname
+        window.history.replaceState(null, "", newUrl)
+      } else {
+        // Jika bukan kode 6 digit, abaikan (kemungkinan kode OAuth atau invalid)
+        console.log("⚠️ Ignoring non-game code from URL (length:", trimmedCode.length, ", code:", trimmedCode.substring(0, 10) + "...)") // Debug log
+        // Hapus parameter code dari URL meskipun tidak valid untuk mencegah masalah
+        const newUrl = window.location.pathname
+        window.history.replaceState(null, "", newUrl)
+      }
     }
   }, [searchParams, onGameCodeDetected])
 

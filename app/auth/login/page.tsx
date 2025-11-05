@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,8 +13,8 @@ import { AuthGuard } from "@/components/auth/auth-guard"
 function LoginPageContent() {
   const { t } = useLanguage()
   const { signInWithGoogle, signInWithEmail, loading, error, clearError } = useAuth()
-  const router = useRouter()
   const [isSigningIn, setIsSigningIn] = useState(false)
+  const [isRedirecting, setIsRedirecting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
     email: "",
@@ -23,14 +22,57 @@ function LoginPageContent() {
   })
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
+  // Reset redirecting state ketika komponen mount atau user kembali ke halaman
+  useEffect(() => {
+    setIsRedirecting(false)
+    setIsSigningIn(false)
+    
+    // Reset juga ketika page visibility berubah (user kembali ke tab)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        setIsRedirecting(false)
+        setIsSigningIn(false)
+      }
+    }
+    
+    // Reset ketika user tekan tombol back browser
+    const handlePopState = () => {
+      setIsRedirecting(false)
+      setIsSigningIn(false)
+    }
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('popstate', handlePopState)
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [])
+
   const handleGoogleSignIn = async () => {
     try {
+      setIsRedirecting(true)
       setIsSigningIn(true)
       clearError()
+      
+      // Double requestAnimationFrame untuk memastikan overlay ter-render sebelum redirect
+      // RAF pertama: React commit state ke DOM
+      // RAF kedua: Browser paint frame
+      await new Promise<void>(resolve => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            // Extra timeout kecil untuk memastikan overlay sudah di-paint
+            setTimeout(resolve, 50)
+          })
+        })
+      })
+      
       await signInWithGoogle()
       // AuthGuard will handle redirect automatically
     } catch (error) {
       console.error('Sign in error:', error)
+      setIsRedirecting(false)
     } finally {
       setIsSigningIn(false)
     }
@@ -340,6 +382,26 @@ function LoginPageContent() {
           </div>
         </motion.div>
       </div>
+
+      {/* Redirecting Overlay */}
+      {isRedirecting && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+        >
+          <div className="text-center">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+              className="w-12 h-12 mx-auto mb-4 border-4 border-cyan-400/30 border-t-cyan-400 rounded-full"
+            />
+            <h2 className="text-2xl font-bold text-cyan-300 font-mono">
+              {t('redirecting')}
+            </h2>
+          </div>
+        </motion.div>
+      )}
     </div>
   )
 }

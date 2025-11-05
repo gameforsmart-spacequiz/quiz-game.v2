@@ -13,7 +13,7 @@ import { supabase } from "@/lib/supabase"
 import { generateXID } from "@/lib/id-generator"
 import { syncServerTime } from "@/lib/server-time"
 import type { Quiz, Question } from "@/lib/types"
-import Image from "next/image"
+import Image, { type StaticImageData } from "next/image"
 import { toast } from "sonner"
 import { useLanguage } from "@/contexts/language-context"
 

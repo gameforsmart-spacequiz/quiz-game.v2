@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Trophy, Medal, Crown, Star } from "lucide-react";
 import { getFirstName, formatDisplayName } from "@/lib/utils";
 import React from "react";
-import Image from "next/image";
+import Image, { type StaticImageData } from "next/image";
 import { useLanguage } from "@/contexts/language-context";
 
 interface PlayerResult {
