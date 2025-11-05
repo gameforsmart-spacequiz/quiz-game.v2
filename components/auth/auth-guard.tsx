@@ -54,6 +54,19 @@ export function AuthGuard({
     // If user is not logged in and we require auth, redirect to login
     if (requireAuth && !user) {
       console.log('❌ AuthGuard: User not logged in, redirecting to login')
+      
+      // Save game code from URL to localStorage before redirecting
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search)
+        const gameCode = urlParams.get('code')
+        
+        // Validate game code (6 characters, alphanumeric) - ignore OAuth codes
+        if (gameCode && gameCode.length === 6 && /^[A-Z0-9]{6}$/i.test(gameCode)) {
+          console.log('💾 Saving pending game code before login:', gameCode.toUpperCase())
+          localStorage.setItem('pending-game-code', gameCode.toUpperCase())
+        }
+      }
+      
       router.push(redirectTo)
       return
     }
