@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import Image from "next/image"
+import Image, { type StaticImageData } from "next/image"
 import { useAuth } from "@/contexts/auth-context"
 import { useLanguage } from "@/contexts/language-context"
 import { LogoutConfirmationModal } from "./logout-confirmation-modal"

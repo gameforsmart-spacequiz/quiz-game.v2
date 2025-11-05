@@ -44,6 +44,11 @@ export async function GET(request: NextRequest) {
   console.log('🚀 Is Vercel:', isVercel)
   console.log('🚀 Hostname:', requestUrl.hostname)
   
-  return NextResponse.redirect(quizHomepage)
+  // Pastikan redirect ke homepage tanpa parameter code (OAuth code)
+  // untuk mencegah kode OAuth terdeteksi sebagai game code
+  const cleanHomepage = new URL(quizHomepage)
+  cleanHomepage.searchParams.delete('code')
+  
+  return NextResponse.redirect(cleanHomepage.toString())
 }
 

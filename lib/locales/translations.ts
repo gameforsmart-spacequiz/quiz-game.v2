@@ -46,6 +46,7 @@ export type TranslationKey =
   // Auth related
   | 'login' | 'signInWithGoogle' | 'signingIn' | 'signOut' | 'signingOut' | 'profile' | 'settings'
   | 'welcome' | 'welcomeBack' | 'joinSpaceQuiz' | 'loginSubtitle' | 'benefit1' | 'benefit2' | 'benefit3' | 'signInError' | 'signOutError'
+  | 'redirecting'
   | 'authInitError' | 'profileError' | 'loggedInAs' | 'usingProfile' | 'googleAvatar'
   | 'errorDescription' | 'errorDetails' | 'retry' | 'backToHome' | 'or' | 'alreadyHaveAccount' | 'signIn'
   | 'fullName' | 'username' | 'email' | 'password' | 'confirmPassword' | 'enterFullName' | 'enterUsername' | 'enterEmail' | 'enterPassword' | 'enterPasswordLogin' | 'confirmPasswordPlaceholder'
@@ -234,6 +235,7 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     login: 'Login',
     signInWithGoogle: 'Sign in with Google',
     signingIn: 'Signing in...',
+    redirecting: 'Redirecting...',
     signOut: 'Sign out',
     signingOut: 'Signing out...',
     confirmLogout: 'Confirm Logout',
@@ -465,6 +467,7 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     login: 'Masuk',
     signInWithGoogle: 'Masuk dengan Google',
     signingIn: 'Sedang masuk...',
+    redirecting: 'Mengalihkan...',
     signOut: 'Keluar',
     signingOut: 'Sedang keluar...',
     confirmLogout: 'Konfirmasi Logout',
@@ -696,6 +699,7 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     login: '登录',
     signInWithGoogle: '使用Google登录',
     signingIn: '正在登录...',
+    redirecting: '正在重定向...',
     signOut: '退出',
     signingOut: '正在退出...',
     confirmLogout: '确认退出',

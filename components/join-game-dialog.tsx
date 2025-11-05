@@ -123,7 +123,24 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
 
   useEffect(() => {
     if (initialGameCode) {
-      form.setValue("gameCode", initialGameCode)
+      // Validasi ketat: hanya set game code jika panjangnya persis 6 digit
+      // Abaikan kode OAuth yang biasanya lebih panjang
+      const trimmedCode = initialGameCode.trim().toUpperCase()
+      
+      // Validasi: panjang persis 6 karakter dan hanya alphanumeric
+      const isValidGameCode = trimmedCode.length === 6 && /^[A-Z0-9]{6}$/.test(trimmedCode)
+      
+      if (isValidGameCode) {
+        console.log("✅ Setting valid game code:", trimmedCode)
+        form.setValue("gameCode", trimmedCode)
+      } else {
+        // Jika bukan kode 6 digit, abaikan (kemungkinan kode OAuth atau invalid)
+        console.log("⚠️ Invalid game code ignored (length:", trimmedCode.length, ", code:", trimmedCode.substring(0, 10) + (trimmedCode.length > 10 ? "..." : ""), ")")
+        form.setValue("gameCode", "")
+      }
+    } else {
+      // Jika initialGameCode kosong, pastikan field juga kosong
+      form.setValue("gameCode", "")
     }
   }, [initialGameCode, form])
 

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { motion, type Transition } from "framer-motion"
 import { useRouter } from "next/navigation"
-import Image from "next/image"
+import Image, { type StaticImageData } from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useGameStore } from "@/lib/store"
