@@ -231,6 +231,7 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
       // Add player to participants array
       const newParticipant = {
         id: playerId,
+        user_id: profile?.id || null, // Link to profile.id if user is logged in
         name: data.name,
         avatar: selectedAvatar,
         score: 0,
