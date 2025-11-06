@@ -1,5 +1,6 @@
 export interface Player {
   id: string
+  user_id?: string | null // Link to profiles.id (XID) if user is logged in
   name: string
   avatar: string
   score: number
