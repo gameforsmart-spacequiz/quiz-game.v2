@@ -521,12 +521,17 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
     let finalScore = 0;
     let finalCorrect = 0;
     
+    // Calculate points per question to ensure max 100 points total
+    // 5 questions = 20pts/question, 10 = 10pts/question, 20 = 5pts/question
+    const totalQuestions = allQuestions.length;
+    const pointsPerQuestion = Math.round(100 / totalQuestions);
+    
     allQuestions.forEach((question, index) => {
       const userAnswer = answers[index];
       if (userAnswer) {
         const correctChoice = question.answers?.find(c => c.id === question.correct);
         if (correctChoice && correctChoice.answer === userAnswer) {
-          finalScore += 10;
+          finalScore += pointsPerQuestion;
           finalCorrect += 1;
         }
       }
@@ -991,12 +996,17 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                     let finalScore = 0;
                     let finalCorrect = 0;
                     
+                    // Calculate points per question to ensure max 100 points total
+                    // 5 questions = 20pts/question, 10 = 10pts/question, 20 = 5pts/question
+                    const totalQuestions = allQuestions.length;
+                    const pointsPerQuestion = Math.round(100 / totalQuestions);
+                    
                     allQuestions.forEach((question, index) => {
                       const userAnswer = answers[index];
                       if (userAnswer) {
                         const correctChoice = question.answers?.find(c => c.id === question.correct);
                         if (correctChoice && correctChoice.answer === userAnswer) {
-                          finalScore += 10;
+                          finalScore += pointsPerQuestion;
                           finalCorrect += 1;
                         }
                       }

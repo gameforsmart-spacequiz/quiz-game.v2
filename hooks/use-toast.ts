@@ -54,6 +54,7 @@ interface State {
 }
 
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+const toastDismissTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 
 const addToRemoveQueue = (toastId: string) => {
   if (toastTimeouts.has(toastId)) {
@@ -139,7 +140,7 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, 'id'>;
 
-function toast({ ...props }: Toast) {
+function toast({ duration, ...props }: Toast & { duration?: number }) {
   const id = genId();
 
   const update = (props: ToasterToast) =>
@@ -147,7 +148,34 @@ function toast({ ...props }: Toast) {
       type: 'UPDATE_TOAST',
       toast: { ...props, id },
     });
-  const dismiss = () => dispatch({ type: 'DISMISS_TOAST', toastId: id });
+  const dismiss = () => {
+    // Clear dismiss timeout if exists
+    const dismissTimeout = toastDismissTimeouts.get(id);
+    if (dismissTimeout) {
+      clearTimeout(dismissTimeout);
+      toastDismissTimeouts.delete(id);
+    }
+    dispatch({ type: 'DISMISS_TOAST', toastId: id });
+  };
+
+  // Auto dismiss after duration if provided (default 3 seconds)
+  const dismissDelay = duration !== undefined ? duration : 3000;
+  const timeoutId = setTimeout(() => {
+    toastDismissTimeouts.delete(id);
+    dismiss();
+  }, dismissDelay);
+  toastDismissTimeouts.set(id, timeoutId);
+
+  // Clear timeout if toast is manually dismissed
+  const originalOnOpenChange = props.onOpenChange;
+  const enhancedOnOpenChange = (open: boolean) => {
+    if (!open) {
+      dismiss();
+    }
+    if (originalOnOpenChange) {
+      originalOnOpenChange(open);
+    }
+  };
 
   dispatch({
     type: 'ADD_TOAST',
@@ -155,9 +183,8 @@ function toast({ ...props }: Toast) {
       ...props,
       id,
       open: true,
-      onOpenChange: (open) => {
-        if (!open) dismiss();
-      },
+      duration: dismissDelay,
+      onOpenChange: enhancedOnOpenChange,
     },
   });
 

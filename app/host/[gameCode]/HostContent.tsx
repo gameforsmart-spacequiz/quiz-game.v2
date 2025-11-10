@@ -22,6 +22,8 @@ import {
   ChevronRight,
   Maximize2,
   UserX,
+  Home,
+  RotateCw,
 } from "lucide-react"
 import { useGameStore } from "@/lib/store"
 import { supabase } from "@/lib/supabase"
@@ -35,6 +37,7 @@ import { syncServerTime } from "@/lib/server-time"
 import { getFirstName, formatDisplayName } from "@/lib/utils"
 import { useLanguage } from "@/contexts/language-context"
 import { translations } from "@/lib/locales/translations"
+import { generateXID } from "@/lib/id-generator"
 
 // Fallback translator for non-hook helpers in this module
 const tStatic = (key: keyof typeof translations['en']) => {
@@ -155,7 +158,12 @@ StableScoreDisplay.displayName = "StableScoreDisplay"
 
 // === MAGNIFICENT PODIUM LEADERBOARD ===
 const PodiumLeaderboard = React.memo(
-  ({ players, onAnimationComplete }: { players: PlayerProgress[]; onAnimationComplete: () => void }) => {
+  ({ players, onAnimationComplete, onRestart, onHome }: { 
+    players: PlayerProgress[]; 
+    onAnimationComplete: () => void;
+    onRestart?: () => void;
+    onHome?: () => void;
+  }) => {
     const router = useRouter()
     const [hasAnimated, setHasAnimated] = useState(false)
     const [showFireworks, setShowFireworks] = useState(false)
@@ -239,7 +247,29 @@ const PodiumLeaderboard = React.memo(
             transition={{ duration: 1.2 }}
             className="min-h-screen flex flex-col items-center justify-center p-2 sm:p-4 lg:p-8 font-mono text-white relative z-10"
           >
+            {/* Home button - Left center */}
+            <motion.button
+              initial={{ opacity: 0, x: -50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 2 }}
+              onClick={onHome || (() => router.push("/"))}
+              className="fixed left-4 sm:left-6 lg:left-8 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-[0_0_20px_rgba(59,130,246,0.5)] transition-all duration-300 hover:scale-110"
+              aria-label="Back to Dashboard"
+            >
+              <Home className="w-6 h-6 sm:w-7 sm:h-7" />
+            </motion.button>
 
+            {/* Restart button - Right center */}
+            <motion.button
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 2 }}
+              onClick={onRestart}
+              className="fixed right-4 sm:right-6 lg:right-8 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-[0_0_20px_rgba(34,197,94,0.5)] transition-all duration-300 hover:scale-110"
+              aria-label="Restart Game"
+            >
+              <RotateCw className="w-6 h-6 sm:w-7 sm:h-7" />
+            </motion.button>
 
             <motion.div 
               initial={{ opacity: 0, y: -20 }}
@@ -322,20 +352,6 @@ const PodiumLeaderboard = React.memo(
               <div className="bg-gradient-to-b from-yellow-700 to-yellow-800 h-4 sm:h-6 w-[110%] -ml-[5%] rounded-b-lg shadow-lg" />
               <div className="bg-gradient-to-b from-yellow-800 to-yellow-900 h-3 sm:h-4 w-[120%] -ml-[10%] rounded-b-lg shadow-lg" />
             </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 2 }}
-            >
-              <PixelButton 
-                color="blue" 
-                className="mt-8 sm:mt-12 text-sm sm:text-lg px-4 sm:px-8 py-2 sm:py-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-[0_0_20px_rgba(59,130,246,0.5)]" 
-                onClick={() => router.push("/")}
-              >
-                🏠 Back to Dashboard
-              </PixelButton>
-            </motion.div>
           </motion.div>
         </div>
       )
@@ -347,6 +363,30 @@ const PodiumLeaderboard = React.memo(
       return (
         <div className="min-h-screen relative overflow-hidden">
           {showFireworks && <Fireworks />}
+          
+          {/* Home button - Left center */}
+          <motion.button
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 1.8 }}
+            onClick={onHome || (() => router.push("/"))}
+            className="fixed left-4 sm:left-6 lg:left-8 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-[0_0_20px_rgba(59,130,246,0.5)] transition-all duration-300 hover:scale-110"
+            aria-label="Back to Dashboard"
+          >
+            <Home className="w-6 h-6 sm:w-7 sm:h-7" />
+          </motion.button>
+
+          {/* Restart button - Right center */}
+          <motion.button
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 1.8 }}
+            onClick={onRestart}
+            className="fixed right-4 sm:right-6 lg:right-8 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-[0_0_20px_rgba(34,197,94,0.5)] transition-all duration-300 hover:scale-110"
+            aria-label="Restart Game"
+          >
+            <RotateCw className="w-6 h-6 sm:w-7 sm:h-7" />
+          </motion.button>
           
           <motion.div
             initial={{ opacity: 0 }}
@@ -471,19 +511,6 @@ const PodiumLeaderboard = React.memo(
               </motion.div>
             </div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 1.8 }}
-            >
-              <PixelButton 
-                color="blue" 
-                className="mt-12 text-lg px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-[0_0_20px_rgba(59,130,246,0.5)]" 
-                onClick={() => router.push("/")}
-              >
-                🏠 Back to Dashboard
-              </PixelButton>
-            </motion.div>
           </motion.div>
         </div>
       )
@@ -506,6 +533,30 @@ const PodiumLeaderboard = React.memo(
           <div className="absolute inset-0 bg-gradient-radial from-purple-900/30 via-blue-900/20 to-black/60" />
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-gradient-to-b from-yellow-400/10 via-transparent to-transparent" />
         </div>
+
+        {/* Home button - Left center */}
+        <motion.button
+          initial={{ opacity: 0, x: -50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, delay: 2.5 }}
+          onClick={onHome || (() => router.push("/"))}
+          className="fixed left-4 sm:left-6 lg:left-8 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-[0_0_20px_rgba(59,130,246,0.5)] transition-all duration-300 hover:scale-110"
+          aria-label="Back to Dashboard"
+        >
+          <Home className="w-6 h-6 sm:w-7 sm:h-7" />
+        </motion.button>
+
+        {/* Restart button - Right center */}
+        <motion.button
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, delay: 2.5 }}
+          onClick={onRestart}
+          className="fixed right-4 sm:right-6 lg:right-8 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-[0_0_20px_rgba(34,197,94,0.5)] transition-all duration-300 hover:scale-110"
+          aria-label="Restart Game"
+        >
+          <RotateCw className="w-6 h-6 sm:w-7 sm:h-7" />
+        </motion.button>
 
         <motion.div
           initial={{ opacity: 0 }}
@@ -730,19 +781,6 @@ const PodiumLeaderboard = React.memo(
               </motion.div>
             )}
 
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 2.5 }}
-            >
-              <PixelButton 
-                color="blue" 
-                className="mt-6 sm:mt-8 lg:mt-12 text-sm sm:text-lg px-4 sm:px-10 py-2 sm:py-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-[0_0_20px_rgba(59,130,246,0.6)] sm:shadow-[0_0_30px_rgba(59,130,246,0.6)] border-2 border-blue-400" 
-                onClick={() => router.push("/")}
-              >
-                Return
-              </PixelButton>
-            </motion.div>
           </div>
         </motion.div>
       </div>
@@ -794,6 +832,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
   const { setGameCode, setQuizId, setIsHost, gameSettings, setGameSettings } = useGameStore()
   const [joinUrl, setJoinUrl] = useState("")
+  const [hostId, setHostId] = useState<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -938,7 +977,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
       const { data: gameData, error: gameErr } = await supabase
         .from("game_sessions")
         .select(
-          "id, quiz_id, total_time_minutes, question_limit, status, countdown_started_at, participants, responses",
+          "id, quiz_id, total_time_minutes, question_limit, status, countdown_started_at, participants, responses, host_id",
         )
         .eq("game_pin", gameCode.toUpperCase())
         .single()
@@ -952,6 +991,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
       setGameId(gameData.id)
       setGameCode(gameCode)
       setQuizId(gameData.quiz_id)
+      setHostId(gameData.host_id || "01mdpz2b00100000000p") // Use existing host_id or default
       setGameSettings({ 
         timeLimit: gameData.total_time_minutes > 100 ? Math.round(gameData.total_time_minutes / 60) : gameData.total_time_minutes, // Handle legacy data
         questionCount: gameData.question_limit === 'all' ? 999 : parseInt(gameData.question_limit)
@@ -972,6 +1012,66 @@ export default function HostContent({ gameCode }: HostContentProps) {
     }
     fetchData()
   }, [gameCode, router, setGameCode, setGameId, setQuizId, setGameSettings, setIsHost])
+
+  const handleRestart = useCallback(async () => {
+    if (!quiz || !gameSettings) {
+      toast.error("Cannot restart: Quiz or settings not available")
+      return
+    }
+
+    try {
+      // Generate new game code and ID
+      const newGameCode = Math.random().toString(36).substring(2, 8).toUpperCase()
+      const newGameId = generateXID()
+
+      // Create new game session with same settings
+      const { data, error } = await supabase
+        .from("game_sessions")
+        .insert({
+          id: newGameId,
+          game_pin: newGameCode,
+          quiz_id: quiz.id,
+          host_id: hostId || "01mdpz2b00100000000p",
+          status: "waiting",
+          total_time_minutes: gameSettings.timeLimit,
+          question_limit: gameSettings.questionCount.toString(),
+          participants: [],
+          responses: [],
+          current_questions: [],
+          application: "space-quiz"
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error("Error creating new game session:", error)
+        toast.error(`Failed to create new game: ${error.message}`)
+        return
+      }
+
+      if (!data) {
+        toast.error("Failed to create new game session")
+        return
+      }
+
+      // Update store with new game code
+      setGameCode(newGameCode)
+      setGameId(newGameId)
+      setQuizId(quiz.id)
+
+      // Navigate to new game host page
+      router.push(`/host/${newGameCode}`)
+      toast.success("New game session created!")
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
+      console.error("Error restarting game:", errorMessage)
+      toast.error(`Failed to restart game: ${errorMessage}`)
+    }
+  }, [quiz, gameSettings, hostId, router, setGameCode, setGameId, setQuizId])
+
+  const handleHome = useCallback(() => {
+    router.push("/")
+  }, [router])
 
   const updatePlayerProgress = useCallback(async () => {
     if (!gameId || !quiz || isUpdating.current) return
@@ -2076,7 +2176,12 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
       <div className="relative z-10 container mx-auto px-2 sm:px-4 py-4 sm:py-8 min-h-screen font-mono text-white">
         {showLeaderboard ? (
-          <PodiumLeaderboard players={playerProgress} onAnimationComplete={() => {}} />
+          <PodiumLeaderboard 
+            players={playerProgress} 
+            onAnimationComplete={() => {}} 
+            onRestart={handleRestart}
+            onHome={handleHome}
+          />
         ) : !quizStarted ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8">
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>

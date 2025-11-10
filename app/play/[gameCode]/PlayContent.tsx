@@ -671,7 +671,10 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
 
     let earnedPoints = 0;
     if (correct) {
-      earnedPoints = 10;
+      // Calculate points per question to ensure max 100 points total
+      // 5 questions = 20pts/question, 10 = 10pts/question, 20 = 5pts/question
+      const totalQuestions = gameSettings?.questionCount || 10;
+      earnedPoints = Math.round(100 / totalQuestions);
       addScore(earnedPoints);
       incrementCorrectAnswers();
     }
