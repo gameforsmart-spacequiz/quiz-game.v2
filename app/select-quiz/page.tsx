@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { motion, type Transition } from "framer-motion"
 import { useRouter } from "next/navigation"
 import Image, { type StaticImageData } from "next/image"
@@ -67,6 +67,7 @@ export default function SelectQuizPage() {
   const [favoriteQuizIds, setFavoriteQuizIds] = useState<string[]>([])
   const [loadingFavorites, setLoadingFavorites] = useState(false)
   const itemsPerPage = 15
+  const skipNextFetchRef = useRef(false)
 
   const router = useRouter()
   const { setQuizId, setGameCode, setGameId, setIsHost, gameMode } = useGameStore()
@@ -198,6 +199,11 @@ export default function SelectQuizPage() {
 
   // Fetch quizzes when dependencies change
   useEffect(() => {
+    // Skip fetch if we manually updated the state (e.g., when unfavoriting in favorite tab)
+    if (skipNextFetchRef.current) {
+      skipNextFetchRef.current = false
+      return
+    }
     fetchQuizzes()
   }, [selectedLevel, activeTab, profile?.id, fetchQuizzes])
 
@@ -244,6 +250,13 @@ export default function SelectQuizPage() {
         return
       }
 
+      // If we're on the favorite tab and removing a favorite, immediately remove it from the list
+      // and skip the next fetchQuizzes call to prevent race condition
+      if (activeTab === "favorite" && isFavorite) {
+        skipNextFetchRef.current = true
+        setQuizzes((prevQuizzes) => prevQuizzes.filter((quiz) => quiz.id !== quizId))
+      }
+
       // Update local state
       setFavoriteQuizIds(newFavorites)
 
@@ -251,20 +264,21 @@ export default function SelectQuizPage() {
       if (!isFavorite) {
         toast({
           title: "Added to Favorites",
-          description: "Quiz has been added to your favorites",
+          duration: 3000, // Auto dismiss after 3 seconds
         })
       } else {
         toast({
           title: "Removed from Favorites",
-          description: "Quiz has been removed from your favorites",
+          duration: 3000, // Auto dismiss after 3 seconds
         })
       }
 
-      // Refresh quizzes to reflect favorite changes
-      // Use setTimeout to ensure state is updated first
-      setTimeout(() => {
-        fetchQuizzes()
-      }, 100)
+      // Refresh quizzes to reflect favorite changes (only if not on favorite tab, or if adding to favorites)
+      if (activeTab !== "favorite" || !isFavorite) {
+        setTimeout(() => {
+          fetchQuizzes()
+        }, 100)
+      }
     } catch (err) {
       console.error("Unexpected error toggling favorite:", err)
       toast({

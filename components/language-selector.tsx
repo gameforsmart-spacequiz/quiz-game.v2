@@ -1,8 +1,8 @@
 "use client"
 
 import { useLanguage } from '@/contexts/language-context'
-import { Globe, ChevronDown } from 'lucide-react'
-import React, { useState } from 'react'
+import { Globe, ChevronDown, Maximize, Minimize } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import {
   Select,
@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Button } from '@/components/ui/button'
 
 // Flag component using actual flag images
 function FlagDisplay({ flagImage, fallback, className = "" }: { flagImage: string, fallback: string, className?: string }) {
@@ -46,6 +47,7 @@ function FlagDisplay({ flagImage, fallback, className = "" }: { flagImage: strin
 export function LanguageSelector() {
   const { t, changeLanguage, currentLanguage, isClient } = useLanguage()
   const [isOpen, setIsOpen] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   const languages = [
     { 
@@ -81,13 +83,76 @@ export function LanguageSelector() {
     setIsOpen(open)
   }
 
+  // Check if fullscreen is active
+  useEffect(() => {
+    const checkFullscreen = () => {
+      const isFullscreenActive = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      )
+      setIsFullscreen(isFullscreenActive)
+    }
+
+    // Check on mount
+    checkFullscreen()
+
+    // Listen for fullscreen changes
+    document.addEventListener('fullscreenchange', checkFullscreen)
+    document.addEventListener('webkitfullscreenchange', checkFullscreen)
+    document.addEventListener('mozfullscreenchange', checkFullscreen)
+    document.addEventListener('MSFullscreenChange', checkFullscreen)
+
+    return () => {
+      document.removeEventListener('fullscreenchange', checkFullscreen)
+      document.removeEventListener('webkitfullscreenchange', checkFullscreen)
+      document.removeEventListener('mozfullscreenchange', checkFullscreen)
+      document.removeEventListener('MSFullscreenChange', checkFullscreen)
+    }
+  }, [])
+
+  const toggleFullscreen = () => {
+    const isFullscreenActive = !!(
+      document.fullscreenElement ||
+      (document as any).webkitFullscreenElement ||
+      (document as any).mozFullScreenElement ||
+      (document as any).msFullscreenElement
+    )
+
+    if (!isFullscreenActive) {
+      // Enter fullscreen
+      const docEl = document.documentElement
+      if (docEl.requestFullscreen) {
+        docEl.requestFullscreen()
+      } else if ((docEl as any).webkitRequestFullscreen) {
+        (docEl as any).webkitRequestFullscreen()
+      } else if ((docEl as any).mozRequestFullScreen) {
+        (docEl as any).mozRequestFullScreen()
+      } else if ((docEl as any).msRequestFullscreen) {
+        (docEl as any).msRequestFullscreen()
+      }
+    } else {
+      // Exit fullscreen
+      if (document.exitFullscreen) {
+        document.exitFullscreen()
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen()
+      } else if ((document as any).mozCancelFullScreen) {
+        (document as any).mozCancelFullScreen()
+      } else if ((document as any).msExitFullscreen) {
+        (document as any).msExitFullscreen()
+      }
+    }
+  }
+
   // Don't render until client-side
   if (!isClient) {
     return null
   }
 
   return (
-    <div className="fixed top-4 right-4 z-50">
+    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2">
       <Select value={currentLanguage} onValueChange={handleLanguageChange} onOpenChange={handleOpenChange}>
         <SelectTrigger className="w-[80px] h-10 bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20 transition-all duration-300 shadow-lg [&>svg]:hidden">
           <div className="flex items-center space-x-2">
@@ -128,6 +193,19 @@ export function LanguageSelector() {
           ))}
         </SelectContent>
       </Select>
+
+      {/* Fullscreen Button */}
+      <Button
+        onClick={toggleFullscreen}
+        className="w-[80px] h-10 bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20 transition-all duration-300 shadow-lg flex items-center justify-center"
+        aria-label={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+      >
+        {isFullscreen ? (
+          <Minimize className="w-4 h-4 text-cyan-300" />
+        ) : (
+          <Maximize className="w-4 h-4 text-cyan-300" />
+        )}
+      </Button>
     </div>
   )
 }
