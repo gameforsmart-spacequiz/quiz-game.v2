@@ -10,7 +10,7 @@ import { useGameStore } from "@/lib/store"
 import { supabase } from "@/lib/supabase"
 import { generateXID } from "@/lib/id-generator"
 import { Input } from "@/components/ui/input"
-import { Search, Play, ArrowLeft } from "lucide-react"
+import { Search, Play, ArrowLeft, Heart } from "lucide-react"
 import { RulesDialog } from "@/components/rules-dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
@@ -22,6 +22,8 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import { useLanguage } from "@/contexts/language-context"
+import { useAuth } from "@/contexts/auth-context"
+import { useToast } from "@/hooks/use-toast"
 import { Quiz, Question, Answer, GameSettings } from "@/lib/types"
 
 
@@ -45,8 +47,12 @@ const getCategoryDefaultImage = (category: string | undefined): string | null =>
   return categoryImages[category.toLowerCase()] || null;
 }
 
+type QuizTab = "public" | "my" | "favorite"
+
 export default function SelectQuizPage() {
   const { t } = useLanguage()
+  const { profile } = useAuth()
+  const { toast } = useToast()
   const [isLoading, setIsLoading] = useState<number | null>(null)
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [searchQuery, setSearchQuery] = useState("")
@@ -57,6 +63,9 @@ export default function SelectQuizPage() {
   const [showRulesDialog, setShowRulesDialog] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedLevel, setSelectedLevel] = useState<string>("all")
+  const [activeTab, setActiveTab] = useState<QuizTab>("public")
+  const [favoriteQuizIds, setFavoriteQuizIds] = useState<string[]>([])
+  const [loadingFavorites, setLoadingFavorites] = useState(false)
   const itemsPerPage = 15
 
   const router = useRouter()
@@ -74,6 +83,38 @@ export default function SelectQuizPage() {
     { value: "technology", label: "Technology" },
   ]
 
+  // Fetch favorite quiz IDs from profile
+  const fetchFavoriteQuizIds = useCallback(async () => {
+    if (!profile?.id) {
+      setFavoriteQuizIds([])
+      return
+    }
+
+    try {
+      setLoadingFavorites(true)
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("favorite_quiz")
+        .eq("id", profile.id)
+        .single()
+
+      if (error) {
+        console.error("Error fetching favorites:", error)
+        return
+      }
+
+      if (data?.favorite_quiz?.favorites) {
+        setFavoriteQuizIds(data.favorite_quiz.favorites || [])
+      } else {
+        setFavoriteQuizIds([])
+      }
+    } catch (err) {
+      console.error("Unexpected error fetching favorites:", err)
+    } finally {
+      setLoadingFavorites(false)
+    }
+  }, [profile?.id])
+
   const fetchQuizzes = useCallback(async () => {
     try {
       console.log("========================================")
@@ -82,18 +123,43 @@ export default function SelectQuizPage() {
       console.log("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL)
       console.log("Supabase Key exists:", !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
       console.log("Selected Level:", selectedLevel)
+      console.log("Active Tab:", activeTab)
       console.log("Supabase client:", supabase)
       
       let query = supabase
         .from("quizzes")
         .select("*")
       
+      // Apply tab filter
+      if (activeTab === "public") {
+        // Only show public quizzes
+        query = query.eq("is_public", true)
+      } else if (activeTab === "my") {
+        // Show quizzes created by current user
+        if (profile?.id) {
+          query = query.eq("creator_id", profile.id)
+        } else {
+          // If no profile, return empty array
+          setQuizzes([])
+          return
+        }
+      } else if (activeTab === "favorite") {
+        // Show favorite quizzes
+        if (favoriteQuizIds.length > 0) {
+          query = query.in("id", favoriteQuizIds)
+        } else {
+          // If no favorites, return empty array
+          setQuizzes([])
+          return
+        }
+      }
+      
       // Apply level filter only if not "all"
       if (selectedLevel !== "all") {
         query = query.eq("category", selectedLevel)
       }
       
-      console.log("Executing simple SELECT * query...")
+      console.log("Executing query...")
       const { data, error } = await query.order("created_at", { ascending: false })
       
       console.log("Query completed!")
@@ -123,11 +189,91 @@ export default function SelectQuizPage() {
       console.error("Unexpected error fetching quizzes:", err)
       alert("An unexpected error occurred while loading quizzes")
     }
-  }, [selectedLevel])
+  }, [selectedLevel, activeTab, profile?.id, favoriteQuizIds])
 
+  // Fetch favorite quiz IDs when profile changes
+  useEffect(() => {
+    fetchFavoriteQuizIds()
+  }, [profile?.id, fetchFavoriteQuizIds])
+
+  // Fetch quizzes when dependencies change
   useEffect(() => {
     fetchQuizzes()
-  }, [selectedLevel, fetchQuizzes])
+  }, [selectedLevel, activeTab, profile?.id, fetchQuizzes])
+
+  // Toggle favorite quiz
+  const toggleFavorite = async (quizId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    
+    if (!profile?.id) {
+      toast({
+        title: "Login Required",
+        description: "Please login to add quizzes to favorites",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const isFavorite = favoriteQuizIds.includes(quizId)
+      let newFavorites: string[]
+
+      if (isFavorite) {
+        // Remove from favorites
+        newFavorites = favoriteQuizIds.filter((id) => id !== quizId)
+      } else {
+        // Add to favorites
+        newFavorites = [...favoriteQuizIds, quizId]
+      }
+
+      // Update in database
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          favorite_quiz: { favorites: newFavorites },
+        })
+        .eq("id", profile.id)
+
+      if (error) {
+        console.error("Error updating favorites:", error)
+        toast({
+          title: "Error",
+          description: "Failed to update favorites",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Update local state
+      setFavoriteQuizIds(newFavorites)
+
+      // Show toast notification
+      if (!isFavorite) {
+        toast({
+          title: "Added to Favorites",
+          description: "Quiz has been added to your favorites",
+        })
+      } else {
+        toast({
+          title: "Removed from Favorites",
+          description: "Quiz has been removed from your favorites",
+        })
+      }
+
+      // Refresh quizzes to reflect favorite changes
+      // Use setTimeout to ensure state is updated first
+      setTimeout(() => {
+        fetchQuizzes()
+      }, 100)
+    } catch (err) {
+      console.error("Unexpected error toggling favorite:", err)
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      })
+    }
+  }
 
   const handleStartGame = (quiz: Quiz) => {
     setSelectedQuiz(quiz)
@@ -343,6 +489,59 @@ export default function SelectQuizPage() {
           </div>
         </motion.div>
 
+        {/* Tab Buttons */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className="flex gap-2 xs:gap-3 mb-4 xs:mb-6"
+        >
+          <Button
+            onClick={() => {
+              setActiveTab("public")
+              setCurrentPage(1)
+            }}
+            variant={activeTab === "public" ? "default" : "outline"}
+            className={`transition-all duration-300 text-xs xs:text-sm sm:text-base ${
+              activeTab === "public"
+                ? "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0"
+                : "bg-white/10 backdrop-blur-lg border-white/20 text-white hover:bg-white/20"
+            }`}
+          >
+            Public Quizzes
+          </Button>
+          <Button
+            onClick={() => {
+              setActiveTab("my")
+              setCurrentPage(1)
+            }}
+            variant={activeTab === "my" ? "default" : "outline"}
+            disabled={!profile?.id}
+            className={`transition-all duration-300 text-xs xs:text-sm sm:text-base ${
+              activeTab === "my"
+                ? "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0"
+                : "bg-white/10 backdrop-blur-lg border-white/20 text-white hover:bg-white/20"
+            } ${!profile?.id ? "opacity-50 cursor-not-allowed" : ""}`}
+          >
+            My Quizzes
+          </Button>
+          <Button
+            onClick={() => {
+              setActiveTab("favorite")
+              setCurrentPage(1)
+            }}
+            variant={activeTab === "favorite" ? "default" : "outline"}
+            disabled={!profile?.id}
+            className={`transition-all duration-300 text-xs xs:text-sm sm:text-base ${
+              activeTab === "favorite"
+                ? "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0"
+                : "bg-white/10 backdrop-blur-lg border-white/20 text-white hover:bg-white/20"
+            } ${!profile?.id ? "opacity-50 cursor-not-allowed" : ""}`}
+          >
+            Favorite
+          </Button>
+        </motion.div>
+
         {/* Konten utama */}
         <div className="flex-grow">
           {/* Search Results Info */}
@@ -394,6 +593,22 @@ export default function SelectQuizPage() {
                   transition={{ delay: index * 0.05 }}
                 >
                   <Card className="cursor-pointer transition-all duration-300 hover:shadow-purple-100 relative bg-white/10 backdrop-blur-lg border-white/20 text-white overflow-hidden h-full flex flex-col">
+                    {/* Favorite Icon */}
+                    {profile?.id && (
+                      <button
+                        onClick={(e) => toggleFavorite(quiz.id, e)}
+                        className="absolute top-2 right-2 z-30 p-1.5 sm:p-2 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-all duration-200"
+                        aria-label={favoriteQuizIds.includes(quiz.id) ? "Remove from favorites" : "Add to favorites"}
+                      >
+                        <Heart
+                          className={`w-4 h-4 sm:w-5 sm:h-5 transition-all duration-200 ${
+                            favoriteQuizIds.includes(quiz.id)
+                              ? "fill-red-500 text-red-500"
+                              : "text-white hover:text-red-400"
+                          }`}
+                        />
+                      </button>
+                    )}
                     {/* Quiz Image */}
                     <div className="relative h-24 sm:h-28 md:h-32 w-full overflow-hidden flex-shrink-0">
                       {(quiz.cover_image || quiz.image_url || getCategoryDefaultImage(quiz.category)) ? (
@@ -489,6 +704,7 @@ export default function SelectQuizPage() {
            </motion.div>
           )}
 
+          {/* Empty state for search */}
           {filteredQuizzes.length === 0 && appliedSearchQuery && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -509,6 +725,52 @@ export default function SelectQuizPage() {
               >
                 Clear Search
               </Button>
+            </motion.div>
+          )}
+
+          {/* Empty state for tabs */}
+          {!isSearching && !isTyping && filteredQuizzes.length === 0 && !appliedSearchQuery && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="flex justify-center items-center py-12 sm:py-16 md:py-20 px-4"
+            >
+              <div className="max-w-md w-full bg-black/60 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl p-8 sm:p-10 text-center">
+                {activeTab === "public" && (
+                  <div className="space-y-3">
+                    <div className="text-4xl sm:text-5xl mb-4">📚</div>
+                    <p className="text-white text-base sm:text-lg md:text-xl font-semibold">
+                      No Public Quizzes Available
+                    </p>
+                    <p className="text-gray-300 text-sm sm:text-base">
+                      There are no public quizzes available at the moment.
+                    </p>
+                  </div>
+                )}
+                {activeTab === "my" && (
+                  <div className="space-y-3">
+                    <div className="text-4xl sm:text-5xl mb-4">📝</div>
+                    <p className="text-white text-base sm:text-lg md:text-xl font-semibold">
+                      No Quizzes Created Yet
+                    </p>
+                    <p className="text-gray-200 text-sm sm:text-base">
+                      Create your first quiz to see it here!
+                    </p>
+                  </div>
+                )}
+                {activeTab === "favorite" && (
+                  <div className="space-y-3">
+                    <div className="text-4xl sm:text-5xl mb-4">❤️</div>
+                    <p className="text-white text-base sm:text-lg md:text-xl font-semibold">
+                      No Favorite Quizzes Yet
+                    </p>
+                    <p className="text-gray-200 text-sm sm:text-base">
+                      Click the heart icon on any quiz to add it to your favorites!
+                    </p>
+                  </div>
+                )}
+              </div>
             </motion.div>
           )}
         </div>
