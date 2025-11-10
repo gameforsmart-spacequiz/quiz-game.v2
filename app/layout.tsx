@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google';
 import { LanguageProvider } from '@/contexts/language-context';
 import { AuthProvider } from '@/contexts/auth-context';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { Toaster } from '@/components/ui/toaster';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -24,6 +25,7 @@ export default function RootLayout({
           <LanguageProvider>
             <AuthProvider>
               {children}
+              <Toaster />
             </AuthProvider>
           </LanguageProvider>
         </ErrorBoundary>

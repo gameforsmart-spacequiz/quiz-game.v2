@@ -34,13 +34,13 @@ export function RulesDialog({ open, onOpenChange, quiz, onStartGame }: RulesDial
   const { t } = useLanguage()
   const [timeLimitMinutes, setTimeLimitMinutes] = useState(5) // 5 minutes
   const timeLimit = timeLimitMinutes // Already in minutes for database
-  const [questionCount, setQuestionCount] = useState(9)
+  const [questionCount, setQuestionCount] = useState(5) // Default 5 questions
 
   // Reset to default values when dialog opens
   useEffect(() => {
     if (open) {
       setTimeLimitMinutes(5) // Reset to default 5 minutes
-      setQuestionCount(9) // Reset to default 9 questions
+      setQuestionCount(5) // Reset to default 5 questions
     }
   }, [open])
 
@@ -60,21 +60,46 @@ export function RulesDialog({ open, onOpenChange, quiz, onStartGame }: RulesDial
   }
 
   const minTime = 5 // minimum 5 minutes
-  const maxTime = 60 // maximum 60 minutes
+  const maxTime = 30 // maximum 30 minutes
 
   const getQuestionOptions = () => {
     const maxQuestions = quiz?.questions?.length || 0
     const options: number[] = []
-    for (let i = 3; i <= maxQuestions; i += 3) options.push(i)
-    if (maxQuestions > 0 && maxQuestions % 3 !== 0) options.push(maxQuestions)
+    
+    // Default options: 5, 10, 20 (maksimal 20)
+    // Only show options that are available in the quiz (max 20)
+    const maxAllowed = Math.min(maxQuestions, 20)
+    
+    if (maxAllowed >= 5) {
+      options.push(5)
+    }
+    if (maxAllowed >= 10) {
+      options.push(10)
+    }
+    if (maxAllowed >= 20) {
+      options.push(20)
+    }
+    
+    // If quiz has less than 5 questions, show only what's available
+    if (maxQuestions > 0 && maxQuestions < 5) {
+      return [maxQuestions]
+    }
+    
+    // If no questions, return default options
+    if (options.length === 0) {
+      return [5, 10, 20]
+    }
+    
     return options
   }
 
   const getTimeLimitOptions = () => {
     const options: number[] = []
-    // Add common time intervals: 5, 10, 15, 20, 30, 45, 60 minutes
-    const commonTimes = [5, 10, 15, 20, 30, 45, 60]
-    return commonTimes.filter(time => time >= minTime && time <= maxTime)
+    // Time limit options: 5, 10, 15, 20, 25, 30 minutes (kelipatan 5, maksimal 30)
+    for (let i = 5; i <= maxTime; i += 5) {
+      options.push(i)
+    }
+    return options
   }
 
   if (!quiz) return null
