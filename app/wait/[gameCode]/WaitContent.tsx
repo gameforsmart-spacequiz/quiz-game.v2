@@ -10,6 +10,7 @@ import { cleanupPresence } from "@/lib/presence"
 import { syncServerTime } from "@/lib/server-time"
 import { toast } from "sonner"
 import { getFirstName, formatDisplayName } from "@/lib/utils"
+import { getDisplayName } from "@/lib/player-name"
 import { LogOut } from "lucide-react"
 import React from "react"
 import { useLanguage } from "@/contexts/language-context"
@@ -267,8 +268,8 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
       console.log("[WAIT] Game found:", data)
       setGameId(data.id)
 
-      // Check if player still exists in the game
-      const playerExists = data.participants?.find((p: any) => p.name === name)
+      // Check if player still exists in the game (use nickname if available)
+      const playerExists = data.participants?.find((p: any) => (getDisplayName(p) === name))
 
       if (!playerExists) {
         console.log("[WAIT] Player not found in game, redirecting to home")
@@ -291,7 +292,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
         // Convert participants to the expected format
         const playersData = participants.map((participant: any, index: number) => ({
           id: participant.id || `player-${index}`,
-          name: participant.name || 'Anonymous',
+          name: getDisplayName(participant),
           avatar: participant.avatar || '',
           created_at: participant.created_at || new Date().toISOString()
         }))
@@ -321,7 +322,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
           const participants = gameData.participants || []
           const playersData = participants.map((participant: any, index: number) => ({
             id: participant.id || `player-${index}`,
-            name: participant.name || 'Anonymous',
+            name: getDisplayName(participant),
             avatar: participant.avatar || '',
             created_at: participant.created_at || new Date().toISOString()
           }))
@@ -412,7 +413,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
           const deletedPlayer = payload.old
           
           // If current player is exiting voluntarily, don't process their own deletion
-          if (isExiting && deletedPlayer.name === playerName) {
+          if (isExiting && (deletedPlayer.name === playerName || deletedPlayer.nickname === playerName)) {
             console.log("[PLAYER] ℹ️ Current player is exiting voluntarily, ignoring their own deletion")
             return
           }
@@ -428,7 +429,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
           })
           
           // Check if the deleted player is the current player
-          if (deletedPlayer.name === playerName) {
+          if (deletedPlayer.name === playerName || deletedPlayer.nickname === playerName) {
             console.log("[PLAYER] 🦵 Current player was kicked by host - REDIRECTING")
             toast.error("You have been kicked from the game by the host")
             
@@ -460,7 +461,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
                 const participants = gameData.participants || []
                 const playersData = participants.map((participant: any, index: number) => ({
                   id: participant.id || `player-${index}`,
-                  name: participant.name || 'Anonymous',
+                  name: getDisplayName(participant),
                   avatar: participant.avatar || '',
                   created_at: participant.created_at || new Date().toISOString()
                 }))
@@ -509,7 +510,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
         // Check if player still exists in participants
         const participants = gameData.participants || []
         const playerExists = participants.some((participant: any) => 
-          participant.name === playerName
+          (getDisplayName(participant) === playerName)
         )
 
         if (!playerExists) {
@@ -667,7 +668,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
         // Remove player from participants array
         const participants = gameData.participants || []
         const updatedParticipants = participants.filter((participant: any) => 
-          participant.name !== playerName
+          getDisplayName(participant) !== playerName
         )
 
         // Update game_sessions with new participants array
@@ -699,14 +700,14 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
         } else if (verifyGameData) {
           const participants = verifyGameData.participants || []
           const playerStillExists = participants.some((participant: any) => 
-            participant.name === playerName
+            getDisplayName(participant) === playerName
           )
           
           if (playerStillExists) {
             console.warn("[v0] Player still exists in participants after deletion")
             // Final cleanup attempt - remove player again
             const finalParticipants = participants.filter((participant: any) => 
-              participant.name !== playerName
+              getDisplayName(participant) !== playerName
             )
             await supabase
               .from("game_sessions")

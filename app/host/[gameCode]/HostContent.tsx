@@ -1113,7 +1113,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
         progressMap.set(player.id, {
           id: player.id,
-          name: player.name,
+          name: player.nickname ?? player.name,
           avatar: player.avatar || "/placeholder.svg?height=40&width=40&text=Player",
           score,
           currentQuestion: answeredQuestions,
