@@ -7,7 +7,7 @@ import { Play, Users, Gamepad2, Sparkles, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { JoinGameDialog } from "@/components/join-game-dialog"
 import { TutorialModal } from "@/components/tutorial-modal"
-import { LanguageSelector } from "@/components/language-selector"
+import { AppMenu } from "@/components/app-menu"
 import { UserProfile } from "@/components/auth/user-profile"
 import { AuthGuard } from "@/components/auth/auth-guard"
 import { useLanguage } from "@/contexts/language-context"
@@ -196,7 +196,7 @@ function HomePageContent() {
         <GameCodeHandler onGameCodeDetected={handleGameCodeDetected} />
       </Suspense>
 
-      <LanguageSelector />
+      <AppMenu />
       
       {/* Auth Components - User is guaranteed to be logged in here */}
       <UserProfile />

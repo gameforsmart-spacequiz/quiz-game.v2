@@ -52,6 +52,7 @@ export type TranslationKey =
   | 'fullName' | 'username' | 'email' | 'password' | 'confirmPassword' | 'enterFullName' | 'enterUsername' | 'enterEmail' | 'enterPassword' | 'enterPasswordLogin' | 'confirmPasswordPlaceholder'
   | 'usernameRequired' | 'usernameMinLength' | 'emailRequired' | 'emailInvalid' | 'passwordRequired' | 'passwordMinLength' | 'passwordMismatch' | 'fullnameRequired'
   | 'checkingAuth'
+  | 'enterFullscreen' | 'exitFullscreen' | 'installApp' | 'install' | 'later' | 'installSpaceQuiz' | 'installDescription'
 
 export const translations: Record<string, Record<TranslationKey, string>> = {
   en: {
@@ -284,7 +285,14 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     passwordMinLength: 'Password must be at least 6 characters',
     passwordMismatch: 'Passwords do not match',
     fullnameRequired: 'Full name is required',
-    checkingAuth: 'Checking Authentication...'
+    checkingAuth: 'Checking Authentication...',
+    enterFullscreen: 'Enter Fullscreen',
+    exitFullscreen: 'Exit Fullscreen',
+    installApp: 'Install App',
+    install: 'Install',
+    later: 'Later',
+    installSpaceQuiz: 'Install Space-Quiz now!',
+    installDescription: 'Get faster access and better experience'
   },
   id: {
     // Main page
@@ -516,7 +524,14 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     passwordMinLength: 'Kata sandi minimal 6 karakter',
     passwordMismatch: 'Kata sandi tidak cocok',
     fullnameRequired: 'Nama lengkap wajib diisi',
-    checkingAuth: 'Memeriksa Autentikasi...'
+    checkingAuth: 'Memeriksa Autentikasi...',
+    enterFullscreen: 'Masuk Layar Penuh',
+    exitFullscreen: 'Keluar Layar Penuh',
+    installApp: 'Install Aplikasi',
+    install: 'Install',
+    later: 'Nanti',
+    installSpaceQuiz: 'Install Space-Quiz sekarang!',
+    installDescription: 'Akses lebih cepat dan pengalaman lebih baik'
   },
   zh: {
     // Main page
@@ -748,7 +763,14 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     passwordMinLength: '密码至少6个字符',
     passwordMismatch: '密码不匹配',
     fullnameRequired: '全名是必需的',
-    checkingAuth: '正在检查身份验证...'
+    checkingAuth: '正在检查身份验证...',
+    enterFullscreen: '进入全屏',
+    exitFullscreen: '退出全屏',
+    installApp: '安装应用',
+    install: '安装',
+    later: '稍后',
+    installSpaceQuiz: '立即安装太空问答！',
+    installDescription: '更快访问，体验更佳'
   }
 }
 

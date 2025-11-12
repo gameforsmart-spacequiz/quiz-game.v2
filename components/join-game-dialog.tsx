@@ -424,8 +424,8 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
         return
       }
 
-      // Check if player name already exists in this game
-      const existingPlayer = game.participants?.find((p: any) => p.name === data.name)
+      // Check if player nickname already exists in this game
+      const existingPlayer = game.participants?.find((p: any) => (p.nickname ?? p.name) === data.name)
 
       if (existingPlayer) {
         form.setError("name", { message: "Nama sudah digunakan oleh player lain. Silakan gunakan nama yang berbeda." })
@@ -435,11 +435,11 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
 
       const playerId = generateXID()
       
-      // Add player to participants array
+      // Add player to participants array (use nickname going forward; keep name for backward compatibility if present)
       const newParticipant = {
         id: playerId,
         user_id: profile?.id || null, // Link to profile.id if user is logged in
-        name: data.name,
+        nickname: data.name,
         avatar: selectedAvatar,
         score: 0,
         // current_question removed - calculate from responses instead

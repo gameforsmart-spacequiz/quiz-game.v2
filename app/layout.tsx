@@ -5,7 +5,7 @@ import { LanguageProvider } from '@/contexts/language-context';
 import { AuthProvider } from '@/contexts/auth-context';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
-import { PWAInstallButton } from '@/components/pwa-install-button';
+import { PWAInstallPrompt } from '@/components/pwa-install-prompt';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -43,7 +43,7 @@ export default function RootLayout({
             <AuthProvider>
               {children}
               <Toaster />
-              <PWAInstallButton />
+              <PWAInstallPrompt />
             </AuthProvider>
           </LanguageProvider>
         </ErrorBoundary>
