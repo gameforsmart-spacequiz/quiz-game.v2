@@ -38,6 +38,7 @@ import { getFirstName, formatDisplayName } from "@/lib/utils"
 import { useLanguage } from "@/contexts/language-context"
 import { translations } from "@/lib/locales/translations"
 import { generateXID } from "@/lib/id-generator"
+import { getDisplayName } from "@/lib/player-name"
 
 // Fallback translator for non-hook helpers in this module
 const tStatic = (key: keyof typeof translations['en']) => {
@@ -2303,32 +2304,43 @@ export default function HostContent({ gameCode }: HostContentProps) {
                               initial={{ opacity: 0, scale: 0.8 }}
                               animate={{ opacity: 1, scale: 1 }}
                               transition={{ delay: index * 0.05 }}
-                              className="bg-white/10 rounded-lg p-2 sm:p-4 flex flex-col items-center gap-2 sm:gap-3 backdrop-blur-sm relative"
+                              className="bg-white/10 rounded-lg p-2 sm:p-3 md:p-4 flex flex-col items-center justify-between backdrop-blur-sm relative min-h-[110px] sm:min-h-[130px]"
                             >
-                              {/* Kick Button */}
+                              {/* Kick Button - Made smaller */}
                               <button
                                 onClick={() => kickPlayer(player.id, player.name)}
-                                className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-colors duration-200 z-10"
+                                className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors duration-200 z-10 flex items-center justify-center"
+                                style={{ width: '24px', height: '24px', padding: '0', minWidth: '24px', minHeight: '24px' }}
                                 title={`Kick ${player.name}`}
                               >
-                                <UserX size={12} />
+                                <UserX size={12} style={{ width: '12px', height: '12px' }} />
                               </button>
                               
-                              <Image
-                                src={player.avatar || "/placeholder.svg?height=48&width=48&text=Player"}
-                                alt={getFirstName(player.name)}
-                                width={48}
-                                height={48}
-                                className="w-8 h-8 sm:w-12 sm:h-12 rounded-full border-2 border-white/30 object-cover"
-                              />
-                              <div className="text-center">
-                                <h3 className="font-bold text-xs sm:text-sm max-w-full">
-                                  <SmartNameDisplay 
-                                    name={player.name} 
-                                    maxLength={7}
-                                    className="text-xs sm:text-sm font-bold"
-                                    multilineClassName="text-xs leading-tight"
-                                  />
+                              <div className="flex-shrink-0 mt-1">
+                                <Image
+                                  src={player.avatar || "/placeholder.svg?height=48&width=48&text=Player"}
+                                  alt={getFirstName(player.name)}
+                                  width={48}
+                                  height={48}
+                                  className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full border-2 border-white/30 object-cover"
+                                />
+                              </div>
+                              
+                              <div className="text-center w-full px-1 mt-2 flex-shrink-0 pb-1">
+                                <h3 className="font-bold text-sm sm:text-base md:text-lg text-white drop-shadow-[0_2px_4px_rgba(0,0,0,1)] leading-tight break-words relative z-0">
+                                  {(() => {
+                                    const displayName = getDisplayName(player as any);
+                                    return displayName ? (
+                                      <SmartNameDisplay 
+                                        name={displayName} 
+                                        maxLength={15}
+                                        className="text-white text-sm sm:text-base md:text-lg font-bold"
+                                        multilineClassName="text-white text-sm sm:text-base leading-tight"
+                                      />
+                                    ) : (
+                                      <span className="text-white text-sm sm:text-base md:text-lg font-bold">Player</span>
+                                    );
+                                  })()}
                                 </h3>
                               </div>
                             </motion.div>
