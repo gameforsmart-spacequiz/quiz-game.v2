@@ -116,11 +116,6 @@ function HomePageContent() {
     router.push("/select-quiz")
   }
 
-  const handleTryoutGame = () => {
-    setGameMode("tryout")
-    router.push("/select-quiz")
-  }
-
   // Handle tutorial close
   const handleTutorialClose = (closedByX: boolean = false) => {
     console.log("🎯 Tutorial closed", closedByX ? "by X button" : "normally")
@@ -351,7 +346,7 @@ function HomePageContent() {
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4, duration: 0.8 }}
-          className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 md:gap-8 w-full max-w-4xl px-4"
+          className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:gap-8 w-full max-w-3xl px-4"
         >
           <motion.div whileHover={{ scale: 1.05, y: -10 }} whileTap={{ scale: 0.95 }} className="group">
             <Button
@@ -368,26 +363,6 @@ function HomePageContent() {
               </div>
               <div className="text-center relative z-10">
                 <h2 className="text-xl sm:text-xl md:text-2xl font-bold mb-1">{t('host', 'HOST')}</h2>
-              </div>
-              <div className="absolute top-2 right-2 w-2 h-2 bg-yellow-300 rounded-full animate-ping"></div>
-            </Button>
-          </motion.div>
-
-          <motion.div whileHover={{ scale: 1.05, y: -10 }} whileTap={{ scale: 0.95 }} className="group">
-            <Button
-              onClick={handleTryoutGame}
-              className="w-full h-32 sm:h-36 md:h-40 bg-gradient-to-br from-green-500 to-emerald-600 border-2 border-green-400/50 hover:from-green-400 hover:to-emerald-500 hover:shadow-xl hover:shadow-green-500/40 transition-all duration-300 flex flex-col items-center justify-center space-y-2 sm:space-y-3 md:space-y-4 text-white font-mono shadow-lg shadow-green-500/30 relative overflow-hidden"
-              style={{ imageRendering: "pixelated" }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-green-400/20 to-emerald-400/20 animate-pulse"></div>
-              <div
-                className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-br from-yellow-400 to-orange-500 border-2 border-yellow-300/60 rounded-md flex items-center justify-center group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-yellow-400/40 relative z-10"
-                style={{ imageRendering: "pixelated" }}
-              >
-                <Gamepad2 className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-green-600" />
-              </div>
-              <div className="text-center relative z-10">
-                <h2 className="text-xl sm:text-xl md:text-2xl font-bold mb-1">{t('tryout', 'TRYOUT')}</h2>
               </div>
               <div className="absolute top-2 right-2 w-2 h-2 bg-yellow-300 rounded-full animate-ping"></div>
             </Button>

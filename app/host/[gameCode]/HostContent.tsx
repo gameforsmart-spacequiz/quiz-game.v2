@@ -1333,26 +1333,21 @@ export default function HostContent({ gameCode }: HostContentProps) {
         { event: "UPDATE", schema: "public", table: "game_sessions", filter: `id=eq.${gameId}` },
         (payload) => {
           console.log("[HOST] 📡 Game status update:", payload.new)
-          
-          if (payload.new.status === 'finished' && !hasFinishedGame.current) {
-            hasFinishedGame.current = true
+          const newStatus = payload.new.status;
+
+          // Use if/else if to ensure state transitions are mutually exclusive.
+          // This prevents a 'finished' status from being immediately overwritten by an 'active' or 'countdown' check.
+          if (newStatus === 'finished') {
             setQuizStarted(false)
             setShowLeaderboard(true)
-          }
-          
-          if (payload.new.status === 'active') {
-            hasFinishedGame.current = false // Reset flag when game starts
+          } else if (newStatus === 'active') {
+            setQuizStarted(true)
+            setShowLeaderboard(false)
+          } else if (payload.new.countdown_started_at) {
+            // This handles the UI change for the pre-start countdown.
             setQuizStarted(true)
             setShowLeaderboard(false)
           }
-          
-          if (payload.new.countdown_started_at) {
-            hasFinishedGame.current = false // Reset flag when countdown starts
-            setQuizStarted(true)
-            setShowLeaderboard(false)
-          }
-          
-          // No need to refresh players on updated_at change - real-time subscriptions handle this
         },
       )
       .subscribe()
