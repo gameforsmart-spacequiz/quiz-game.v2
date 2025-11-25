@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { Download, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -19,6 +19,57 @@ export function PWAInstallPrompt() {
   const [isInstalled, setIsInstalled] = useState(false)
   const [showPrompt, setShowPrompt] = useState(false)
   const [isDevelopment, setIsDevelopment] = useState(false)
+  const [hasDialogOpen, setHasDialogOpen] = useState(false)
+  const promptTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Check if any dialog is open and hide prompt if dialog opens
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const checkForDialogs = () => {
+      // Check for dialog elements (Radix UI Dialog uses [role="dialog"])
+      const dialogs = document.querySelectorAll('[role="dialog"]')
+      const hasOpenDialog = dialogs.length > 0 && Array.from(dialogs).some(dialog => {
+        const element = dialog as HTMLElement
+        // Check if dialog is visible (not hidden)
+        const isVisible = element.offsetParent !== null || 
+                         (element.style.display !== 'none' && 
+                          !element.hasAttribute('aria-hidden'))
+        return isVisible
+      })
+      
+      const wasDialogOpen = hasDialogOpen
+      setHasDialogOpen(hasOpenDialog)
+      
+      // If dialog just opened, hide the prompt immediately
+      if (hasOpenDialog && !wasDialogOpen && showPrompt) {
+        setShowPrompt(false)
+      }
+    }
+
+    // Check initially
+    checkForDialogs()
+
+    // Use MutationObserver to watch for dialog changes
+    const observer = new MutationObserver(checkForDialogs)
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['style', 'aria-hidden', 'data-state']
+    })
+
+    // Also check on any click (user interaction might open dialogs)
+    const handleClick = () => {
+      setTimeout(checkForDialogs, 100)
+    }
+    window.addEventListener('click', handleClick)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('click', handleClick)
+    }
+  }, [hasDialogOpen, showPrompt])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -38,7 +89,30 @@ export function PWAInstallPrompt() {
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault()
       setDeferredPrompt(e as BeforeInstallPromptEvent)
-      setShowPrompt(true)
+      // Add a delay before showing prompt to avoid interfering with user actions
+      // Only show on homepage
+      if (pathname === '/') {
+        // Clear any existing timeout
+        if (promptTimeoutRef.current) {
+          clearTimeout(promptTimeoutRef.current)
+        }
+        
+        promptTimeoutRef.current = setTimeout(() => {
+          // Double check conditions before showing
+          const currentPath = window.location.pathname
+          const dialogs = document.querySelectorAll('[role="dialog"]')
+          const hasOpenDialog = dialogs.length > 0 && Array.from(dialogs).some(dialog => {
+            const element = dialog as HTMLElement
+            return element.offsetParent !== null || 
+                   (element.style.display !== 'none' && 
+                    !element.hasAttribute('aria-hidden'))
+          })
+          
+          if (currentPath === '/' && !hasOpenDialog) {
+            setShowPrompt(true)
+          }
+        }, 2000) // 2 second delay
+      }
     }
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
@@ -52,8 +126,12 @@ export function PWAInstallPrompt() {
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      // Clear timeout on cleanup
+      if (promptTimeoutRef.current) {
+        clearTimeout(promptTimeoutRef.current)
+      }
     }
-  }, [])
+  }, [pathname])
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
@@ -87,10 +165,10 @@ export function PWAInstallPrompt() {
     // Just close the prompt, it can appear again if browser triggers beforeinstallprompt
   }
 
-  // Don't show if already installed, no prompt available, on login page, or not on homepage
+  // Don't show if already installed, no prompt available, on login page, not on homepage, or if dialog is open
   const isLoginPage = pathname?.startsWith('/auth/login')
   const isHomePage = pathname === '/'
-  if (isInstalled || !showPrompt || !deferredPrompt || isLoginPage || !isHomePage) {
+  if (isInstalled || !showPrompt || !deferredPrompt || isLoginPage || !isHomePage || hasDialogOpen) {
     return null
   }
 

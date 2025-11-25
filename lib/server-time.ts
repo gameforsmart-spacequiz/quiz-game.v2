@@ -44,7 +44,7 @@ export async function getServerTime(): Promise<number> {
 export async function syncServerTime(): Promise<number> {
   try {
     // Try to use the server timestamp function
-    const { data, error } = await supabase.rpc("get_server_timestamp")
+    const { data, error } = await supabase.rpc("get_server_time")
 
     if (error || !data) {
       console.warn("[v0] Server timestamp RPC failed, using fallback method:", error)
