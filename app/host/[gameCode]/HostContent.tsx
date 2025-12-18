@@ -68,26 +68,26 @@ interface HostContentProps {
 }
 
 // === STABLE PROGRESS BAR ===
-const StableProgressBar = React.memo(({ 
-  playerId, 
-  currentQuestion, 
-  totalQuestions 
+const StableProgressBar = React.memo(({
+  playerId,
+  currentQuestion,
+  totalQuestions
 }: {
   playerId: string;
   currentQuestion: number;
   totalQuestions: number;
 }) => {
   const [displayProgress, setDisplayProgress] = useState(currentQuestion)
-  
+
   useEffect(() => {
     // Only update if progress actually increased
     if (currentQuestion > displayProgress) {
       setDisplayProgress(currentQuestion)
     }
   }, [currentQuestion, displayProgress])
-  
+
   const percentage = totalQuestions > 0 ? (displayProgress / totalQuestions) * 100 : 0
-  
+
   return (
     <div className="flex-1 h-3 bg-white/30 rounded-full overflow-hidden border border-white/40 select-none pointer-events-none cursor-default">
       <motion.div
@@ -103,8 +103,8 @@ const StableProgressBar = React.memo(({
 StableProgressBar.displayName = "StableProgressBar"
 
 // === SMART NAME DISPLAY ===
-const SmartNameDisplay = React.memo(({ 
-  name, 
+const SmartNameDisplay = React.memo(({
+  name,
   maxLength = 12,
   className = "",
   multilineClassName = ""
@@ -115,7 +115,7 @@ const SmartNameDisplay = React.memo(({
   multilineClassName?: string;
 }) => {
   const { displayName, isBroken } = formatDisplayName(name, maxLength)
-  
+
   if (isBroken) {
     return (
       <span className={`${className} ${multilineClassName} whitespace-pre-line leading-tight`}>
@@ -123,7 +123,7 @@ const SmartNameDisplay = React.memo(({
       </span>
     )
   }
-  
+
   return (
     <span className={className}>
       {displayName}
@@ -133,22 +133,22 @@ const SmartNameDisplay = React.memo(({
 SmartNameDisplay.displayName = "SmartNameDisplay"
 
 // === STABLE SCORE DISPLAY ===
-const StableScoreDisplay = React.memo(({ 
-  score, 
-  playerId 
+const StableScoreDisplay = React.memo(({
+  score,
+  playerId
 }: {
   score: number;
   playerId: string;
 }) => {
   const [displayScore, setDisplayScore] = useState(score)
-  
+
   useEffect(() => {
     // Only update if score actually increased (prevents flickering to 0)
     if (score > displayScore) {
       setDisplayScore(score)
     }
   }, [score, displayScore])
-  
+
   return (
     <span className="font-bold">
       {displayScore}
@@ -159,8 +159,8 @@ StableScoreDisplay.displayName = "StableScoreDisplay"
 
 // === MAGNIFICENT PODIUM LEADERBOARD ===
 const PodiumLeaderboard = React.memo(
-  ({ players, onAnimationComplete, onRestart, onHome }: { 
-    players: PlayerProgress[]; 
+  ({ players, onAnimationComplete, onRestart, onHome }: {
+    players: PlayerProgress[];
     onAnimationComplete: () => void;
     onRestart?: () => void;
     onHome?: () => void;
@@ -238,10 +238,10 @@ const PodiumLeaderboard = React.memo(
       return (
         <div className="min-h-screen relative overflow-hidden">
           {showFireworks && <Fireworks />}
-          
+
           {/* Spotlight effect */}
           <div className="absolute inset-0 bg-gradient-radial from-yellow-400/20 via-transparent to-black/40" />
-          
+
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -272,15 +272,17 @@ const PodiumLeaderboard = React.memo(
               <RotateCw className="w-6 h-6 sm:w-7 sm:h-7" />
             </motion.button>
 
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
               className="flex items-center justify-center gap-3 mb-2 sm:mb-4"
             >
-              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white/80">
-                {tStatic('spaceQuiz')}
-              </h2>
+              <img
+                src="/images/logo/spacequiz.webp"
+                alt="Space Quiz"
+                className="h-8 sm:h-10 md:h-12 lg:h-14 w-auto object-contain"
+              />
               <span className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white/80">-</span>
               <Image
                 src="/images/gameforsmartlogo.png"
@@ -292,7 +294,7 @@ const PodiumLeaderboard = React.memo(
               />
             </motion.div>
 
-            <motion.h1 
+            <motion.h1
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ duration: 0.8, delay: 0.8, type: "spring" }}
@@ -312,7 +314,7 @@ const PodiumLeaderboard = React.memo(
               {/* Pedestal base */}
               <div className="relative bg-gradient-to-b from-yellow-400 via-yellow-500 to-yellow-600 rounded-t-2xl sm:rounded-t-3xl p-1 shadow-[0_0_30px_rgba(255,215,0,0.6)] sm:shadow-[0_0_50px_rgba(255,215,0,0.6)]">
                 <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-t-2xl sm:rounded-t-3xl p-4 sm:p-8 lg:p-12">
-                  
+
                   {/* Glowing ring around avatar */}
                   <div className="relative">
                     <div className="absolute inset-0 rounded-full bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 blur-lg opacity-75 animate-pulse" />
@@ -334,8 +336,8 @@ const PodiumLeaderboard = React.memo(
                     className="text-center mt-6"
                   >
                     <h2 className="font-bold text-lg sm:text-2xl md:text-3xl lg:text-4xl mb-2 text-yellow-300 drop-shadow-lg text-center">
-                      <SmartNameDisplay 
-                        name={onlyPlayer.name} 
+                      <SmartNameDisplay
+                        name={onlyPlayer.name}
                         maxLength={10}
                         className="font-bold text-lg sm:text-2xl md:text-3xl lg:text-4xl text-yellow-300 drop-shadow-lg"
                         multilineClassName="text-base sm:text-xl md:text-2xl lg:text-3xl"
@@ -364,7 +366,7 @@ const PodiumLeaderboard = React.memo(
       return (
         <div className="min-h-screen relative overflow-hidden">
           {showFireworks && <Fireworks />}
-          
+
           {/* Home button - Left center */}
           <motion.button
             initial={{ opacity: 0, x: -50 }}
@@ -388,22 +390,24 @@ const PodiumLeaderboard = React.memo(
           >
             <RotateCw className="w-6 h-6 sm:w-7 sm:h-7" />
           </motion.button>
-          
+
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1 }}
             className="min-h-screen flex flex-col items-center justify-center p-2 sm:p-4 lg:p-8 font-mono text-white relative z-10"
           >
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
               className="flex items-center justify-center gap-3 mb-2 sm:mb-4"
             >
-              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white/80">
-                {tStatic('spaceQuiz')}
-              </h2>
+              <img
+                src="/images/logo/spacequiz.webp"
+                alt="Space Quiz"
+                className="h-8 sm:h-10 md:h-12 lg:h-14 w-auto object-contain"
+              />
               <span className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white/80">-</span>
               <Image
                 src="/images/gameforsmartlogo.png"
@@ -415,7 +419,7 @@ const PodiumLeaderboard = React.memo(
               />
             </motion.div>
 
-            <motion.h1 
+            <motion.h1
               initial={{ y: -50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.8, delay: 0.3 }}
@@ -450,8 +454,8 @@ const PodiumLeaderboard = React.memo(
                       <div className="text-center mt-2 sm:mt-4">
                         <div className="text-lg sm:text-2xl mb-1 sm:mb-2">🥈</div>
                         <h3 className="font-bold text-sm sm:text-lg lg:text-xl text-gray-300 text-center">
-                          <SmartNameDisplay 
-                            name={second.name} 
+                          <SmartNameDisplay
+                            name={second.name}
                             maxLength={7}
                             className="text-sm sm:text-lg lg:text-xl text-gray-300"
                             multilineClassName="text-xs sm:text-base lg:text-lg"
@@ -492,8 +496,8 @@ const PodiumLeaderboard = React.memo(
                       <div className="text-center mt-2 sm:mt-4">
                         <div className="text-2xl sm:text-3xl mb-1 sm:mb-2">🥇</div>
                         <h3 className="font-bold text-base sm:text-xl lg:text-2xl text-yellow-300 text-center">
-                          <SmartNameDisplay 
-                            name={first.name} 
+                          <SmartNameDisplay
+                            name={first.name}
                             maxLength={8}
                             className="text-base sm:text-xl lg:text-2xl text-yellow-300"
                             multilineClassName="text-sm sm:text-lg lg:text-xl"
@@ -528,7 +532,7 @@ const PodiumLeaderboard = React.memo(
     return (
       <div className="min-h-screen relative overflow-hidden">
         {showFireworks && <Fireworks />}
-        
+
         {/* Epic background effects */}
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-gradient-radial from-purple-900/30 via-blue-900/20 to-black/60" />
@@ -566,15 +570,17 @@ const PodiumLeaderboard = React.memo(
           className="min-h-screen flex items-center justify-center p-2 sm:p-4 lg:p-8 relative z-10"
         >
           <div className="text-center w-full max-w-6xl">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
               className="flex items-center justify-center gap-3 mb-2 sm:mb-4"
             >
-              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white/80">
-                {tStatic('spaceQuiz')}
-              </h2>
+              <img
+                src="/images/logo/spacequiz.webp"
+                alt="Space Quiz"
+                className="h-8 sm:h-10 md:h-12 lg:h-14 w-auto object-contain"
+              />
               <span className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white/80">-</span>
               <Image
                 src="/images/gameforsmartlogo.png"
@@ -586,7 +592,7 @@ const PodiumLeaderboard = React.memo(
               />
             </motion.div>
 
-            <motion.h1 
+            <motion.h1
               initial={{ scale: 0, rotate: -10 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ duration: 1, delay: 0.3, type: "spring", bounce: 0.3 }}
@@ -621,8 +627,8 @@ const PodiumLeaderboard = React.memo(
                       <div className="text-center mt-2 sm:mt-3">
                         <div className="text-base sm:text-xl lg:text-2xl mb-1">🥉</div>
                         <h3 className="font-bold text-xs sm:text-sm lg:text-base text-amber-300 text-center">
-                          <SmartNameDisplay 
-                            name={third.name} 
+                          <SmartNameDisplay
+                            name={third.name}
                             maxLength={6}
                             className="text-xs sm:text-sm lg:text-base text-amber-300"
                             multilineClassName="text-xs sm:text-xs lg:text-sm"
@@ -674,8 +680,8 @@ const PodiumLeaderboard = React.memo(
                           🥇
                         </motion.div>
                         <h3 className="font-bold text-sm sm:text-xl lg:text-2xl xl:text-3xl text-yellow-300 mb-1 sm:mb-2 text-center">
-                          <SmartNameDisplay 
-                            name={first.name} 
+                          <SmartNameDisplay
+                            name={first.name}
                             maxLength={8}
                             className="text-sm sm:text-xl lg:text-2xl xl:text-3xl text-yellow-300"
                             multilineClassName="text-xs sm:text-lg lg:text-xl xl:text-2xl"
@@ -716,8 +722,8 @@ const PodiumLeaderboard = React.memo(
                       <div className="text-center mt-2 sm:mt-3">
                         <div className="text-lg sm:text-2xl lg:text-3xl mb-1">🥈</div>
                         <h3 className="font-bold text-xs sm:text-base lg:text-lg text-gray-300 text-center">
-                          <SmartNameDisplay 
-                            name={second.name} 
+                          <SmartNameDisplay
+                            name={second.name}
                             maxLength={7}
                             className="text-xs sm:text-base lg:text-lg text-gray-300"
                             multilineClassName="text-xs sm:text-sm lg:text-base"
@@ -766,8 +772,8 @@ const PodiumLeaderboard = React.memo(
                         />
                         <div className="flex-1 min-w-0">
                           <p className="font-bold text-white text-xs sm:text-sm">
-                            <SmartNameDisplay 
-                              name={p.name} 
+                            <SmartNameDisplay
+                              name={p.name}
                               maxLength={8}
                               className="text-xs sm:text-sm text-white"
                               multilineClassName="text-xs leading-tight"
@@ -802,6 +808,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
   const [playerProgress, setPlayerProgress] = useState<PlayerProgress[]>([])
 
   const [quizStarted, setQuizStarted] = useState(false)
+  const [startedAt, setStartedAt] = useState<string | null>(null)
   const [showLeaderboard, setShowLeaderboard] = useState(false)
   const [quizTimeLeft, setQuizTimeLeft] = useState(0)
   const [isTimerActive, setIsTimerActive] = useState(false)
@@ -811,12 +818,16 @@ export default function HostContent({ gameCode }: HostContentProps) {
   const [linkCopied, setLinkCopied] = useState(false)
 
   const [showExitModal, setShowExitModal] = useState(false)
+  const [showEndQuizModal, setShowEndQuizModal] = useState(false)
+  const [showKickModal, setShowKickModal] = useState(false)
+  const [playerToKick, setPlayerToKick] = useState<{ id: string; name: string } | null>(null)
   const [isStarting, setIsStarting] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const isExitingRef = useRef(false)
 
   const [countdownLeft, setCountdownLeft] = useState<number | null>(null)
   const [showQRModal, setShowQRModal] = useState(false)
-  
+
   // Debounced updatePlayerProgress to prevent flickering
   const debouncedUpdateProgress = useRef<NodeJS.Timeout>()
   const updateQueue = useRef<Set<string>>(new Set())
@@ -827,7 +838,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
   const [currentProgressPage, setCurrentProgressPage] = useState(0)
   const [slideDirection, setSlideDirection] = useState(0) // -1 for left, 1 for right
   const PLAYERS_PER_PAGE = 20 // 4 rows x 5 columns (2xl), 5 rows x 4 columns (xl), etc.
-  
+
   // Store previous progress values to prevent unnecessary resets
   const prevProgressRef = useRef<Map<string, number>>(new Map())
 
@@ -894,14 +905,14 @@ export default function HostContent({ gameCode }: HostContentProps) {
   }
 
   // Pagination component with slide direction tracking
-  const PaginationControls = ({ 
-    currentPage, 
-    totalPages, 
+  const PaginationControls = ({
+    currentPage,
+    totalPages,
     onPageChange,
-    onDirectionChange 
-  }: { 
-    currentPage: number; 
-    totalPages: number; 
+    onDirectionChange
+  }: {
+    currentPage: number;
+    totalPages: number;
     onPageChange: (page: number) => void;
     onDirectionChange: (direction: number) => void;
   }) => {
@@ -939,17 +950,16 @@ export default function HostContent({ gameCode }: HostContentProps) {
         >
           <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
-        
+
         <div className="flex items-center gap-1 sm:gap-2">
           {Array.from({ length: totalPages }, (_, i) => (
             <button
               key={i}
               onClick={() => handlePageClick(i)}
-              className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full text-xs sm:text-sm font-mono transition-colors ${
-                i === currentPage
-                  ? "bg-blue-500 text-white"
-                  : "bg-white/10 border border-white/20 hover:bg-white/20"
-              }`}
+              className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full text-xs sm:text-sm font-mono transition-colors ${i === currentPage
+                ? "bg-blue-500 text-white"
+                : "bg-white/10 border border-white/20 hover:bg-white/20"
+                }`}
             >
               {i + 1}
             </button>
@@ -978,7 +988,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
       const { data: gameData, error: gameErr } = await supabase
         .from("game_sessions")
         .select(
-          "id, quiz_id, total_time_minutes, question_limit, status, countdown_started_at, participants, responses, host_id",
+          "id, quiz_id, total_time_minutes, question_limit, status, countdown_started_at, started_at, participants, responses, host_id",
         )
         .eq("game_pin", gameCode.toUpperCase())
         .single()
@@ -993,12 +1003,13 @@ export default function HostContent({ gameCode }: HostContentProps) {
       setGameCode(gameCode)
       setQuizId(gameData.quiz_id)
       setHostId(gameData.host_id || "01mdpz2b00100000000p") // Use existing host_id or default
-      setGameSettings({ 
+      setGameSettings({
         timeLimit: gameData.total_time_minutes > 100 ? Math.round(gameData.total_time_minutes / 60) : gameData.total_time_minutes, // Handle legacy data
         questionCount: gameData.question_limit === 'all' ? 999 : parseInt(gameData.question_limit)
       })
       setIsHost(true)
       setQuizStarted(gameData.status === 'active')
+      setStartedAt(gameData.started_at)
       setShowLeaderboard(gameData.status === 'finished')
 
       const quizzes = await fetchQuizzes()
@@ -1045,7 +1056,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
         .single()
 
       if (error) {
-        console.error("Error creating new game session:", error)
+
         toast.error(`Failed to create new game: ${error.message}`)
         return
       }
@@ -1065,7 +1076,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
       toast.success("New game session created!")
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
-      console.error("Error restarting game:", errorMessage)
+
       toast.error(`Failed to restart game: ${errorMessage}`)
     }
   }, [quiz, gameSettings, hostId, router, setGameCode, setGameId, setQuizId])
@@ -1088,13 +1099,13 @@ export default function HostContent({ gameCode }: HostContentProps) {
         .single()
 
       if (gameError) {
-        console.error("Error fetching game session:", gameError)
+
         return
       }
 
       const participants = gameSession.participants || []
       const responses = gameSession.responses || []
-      
+
       // Filter out mini-game responses
       const answers = responses.filter((r: any) => r.question_id !== 'mini-game')
       const playersData = participants
@@ -1126,24 +1137,24 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
       const sorted = Array.from(progressMap.values()).sort((a, b) => b.score - a.score)
       const ranked = sorted.map((p, idx) => ({ ...p, rank: idx + 1 }))
-      
+
       // Batch update with better change detection
       setPlayerProgress(prev => {
         // More efficient change detection - only check essential fields
-        const hasChanges = prev.length !== ranked.length || 
+        const hasChanges = prev.length !== ranked.length ||
           prev.some((oldPlayer, index) => {
             const newPlayer = ranked[index]
-            return !newPlayer || 
+            return !newPlayer ||
               oldPlayer.id !== newPlayer.id ||
               oldPlayer.score !== newPlayer.score ||
               oldPlayer.currentQuestion !== newPlayer.currentQuestion ||
               oldPlayer.rank !== newPlayer.rank
           })
-        
+
         if (!hasChanges) {
           return prev
         }
-        
+
         return ranked
       })
 
@@ -1151,15 +1162,15 @@ export default function HostContent({ gameCode }: HostContentProps) {
       if (quizStarted && !showLeaderboard) {
         // Get only players who have actually joined and participated
         const activePlayers = ranked.filter((p) => p.currentQuestion > 0)
-        
+
         // Check if ALL active players have completed their questions
         const allActivePlayersCompleted = activePlayers.length > 0 && activePlayers.every((p) => p.currentQuestion >= p.totalQuestions)
-        
+
         // Check if there are players still actively answering questions
         const hasPlayersStillActive = activePlayers.some((p) => p.currentQuestion < p.totalQuestions)
-        
-        console.log(`[HOST] 🎯 Quiz Status Check: quizStarted=${quizStarted}, activePlayers=${activePlayers.length}, allActiveCompleted=${allActivePlayersCompleted}, hasPlayersStillActive=${hasPlayersStillActive}, totalPlayers=${ranked.length}`)
-        
+
+
+
         // Only finish game if:
         // 1. Quiz is actually started
         // 2. There are active players who have answered questions
@@ -1169,13 +1180,13 @@ export default function HostContent({ gameCode }: HostContentProps) {
         // 6. Quiz has been running for a reasonable time
         // 7. Players have answered a reasonable number of questions (not just 1)
         const minQuestionsRequired = Math.max(3, Math.floor((gameSettings.questionCount || 10) * 0.3)) // At least 30% of questions or 3 questions minimum
-        
+
         if (activePlayers.length > 0 && allActivePlayersCompleted && !hasPlayersStillActive && !quizManuallyEnded) {
           // Additional check: ensure players have answered enough questions
           const allPlayersAnsweredEnough = activePlayers.every((p) => p.currentQuestion >= minQuestionsRequired)
-          
+
           if (!allPlayersAnsweredEnough) {
-            console.log(`[HOST] ⚠️ Players haven't answered enough questions. Required: ${minQuestionsRequired}, Current: ${activePlayers.map(p => `${p.name}:${p.currentQuestion}`).join(', ')}`)
+
             return
           }
           // Additional safety check: ensure quiz has been running for at least 30 seconds
@@ -1184,7 +1195,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
             .select("started_at")
             .eq("id", gameId)
             .single()
-          
+
           if (quizStartTime.data?.started_at) {
             const startTime = new Date(quizStartTime.data.started_at).getTime()
             const currentTime = Date.now()
@@ -1192,28 +1203,28 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
             // Only auto-finish if quiz has been running for at least 30 seconds
             if (quizDuration > 30000) { // 30 seconds
-              console.log("[HOST] 🎉 All players completed quiz - finishing game")
+
               await supabase.from("game_sessions").update({ status: 'finished', ended_at: new Date().toISOString() }).eq("id", gameId)
               setShowLeaderboard(true)
 
             } else {
-              console.log(`[HOST] ⏱️ Quiz too short (${Math.round(quizDuration/1000)}s) - waiting for minimum duration`)
+
             }
           } else {
-            console.log("[HOST] ⚠️ No quiz start time found - skipping auto-finish")
+
           }
         } else if (quizManuallyEnded) {
-          console.log("[HOST] 🚫 Quiz manually ended - skipping auto-finish")
+
         } else if (activePlayers.length === 0) {
-          console.log("[HOST] ⏳ No active players yet - waiting for players to join and answer")
+
         } else if (hasPlayersStillActive) {
-          console.log("[HOST] ⏳ Some players still answering questions - continuing quiz")
+
         } else if (!allActivePlayersCompleted) {
-          console.log("[HOST] ⏳ Not all active players completed - continuing quiz")
+
         }
       }
     } catch (error) {
-      console.error("[HOST] Error updating player progress:", error)
+
     } finally {
       isUpdating.current = false
     }
@@ -1223,7 +1234,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
     if (!gameId) return
 
     try {
-      console.log("[v0] Fetching players for game:", gameId)
+
       // Get game session data with participants and responses
       const { data: gameSession, error: gameError } = await supabase
         .from("game_sessions")
@@ -1232,7 +1243,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
         .single()
 
       if (gameError) {
-        console.error("Error fetching game session:", gameError)
+
         return
       }
 
@@ -1241,8 +1252,8 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
       const playersData = playersResult.data || []
       const answers = answersResult.data || []
-      
-      console.log("[v0] Fetched players:", playersData)
+
+
       setPlayers(playersData || [])
       if (playersData) {
         const progressMap = new Map<string, PlayerProgress>()
@@ -1251,9 +1262,9 @@ export default function HostContent({ gameCode }: HostContentProps) {
           const playerAnswers = answers.filter((a: any) => a.player_id === player.id && a.question_index >= 0)
           const uniqueQuestionIndices = new Set(playerAnswers.map((a: any) => a.question_index))
           const answeredQuestions = uniqueQuestionIndices.size
-          
-          console.log(`[HOST] 📊 Player ${player.name}: score=${player.score}, answers=${playerAnswers.length}, uniqueQuestions=${uniqueQuestionIndices.size}, currentQuestion=${answeredQuestions}`)
-          
+
+
+
           progressMap.set(player.id, {
             id: player.id,
             name: player.name,
@@ -1265,10 +1276,10 @@ export default function HostContent({ gameCode }: HostContentProps) {
             rank: 0,
           })
         })
-        
+
         const sorted = Array.from(progressMap.values()).sort((a, b) => b.score - a.score)
         const ranked = sorted.map((p, idx) => ({ ...p, rank: idx + 1 }))
-        
+
         // Prevent unnecessary updates that could cause flickering
         setPlayerProgress(prev => {
           // Only update if there are actual changes to prevent flickering
@@ -1279,7 +1290,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
         })
       }
     } catch (error) {
-      console.error("[HOST] Error fetching players:", error)
+
     }
   }, [gameId, gameSettings.questionCount])
 
@@ -1297,30 +1308,30 @@ export default function HostContent({ gameCode }: HostContentProps) {
   const lastRefreshTime = useRef(0)
   const refreshDebounceTime = 1000 // 1 second debounce for faster response
   const [forceUpdateKey, setForceUpdateKey] = useState(0)
-  
+
   useEffect(() => {
     if (!gameId || !mounted) return
-    
+
     const now = Date.now()
     const timeSinceLastRefresh = now - lastRefreshTime.current
-    
+
     // Only refresh if enough time has passed (prevents infinite loops)
     // Allow refresh during quiz for real-time progress updates
     if (timeSinceLastRefresh >= refreshDebounceTime) {
-      console.log("[HOST] 🔄 Player state changed, smart refresh triggered")
+
       lastRefreshTime.current = now
-      
+
       // Debounced refresh to ensure we have the latest data
       const refreshTimeout = setTimeout(async () => {
-        console.log("[HOST] 📊 Executing smart refresh...")
+
         await fetchPlayers()
         await updatePlayerProgress()
-        console.log("[HOST] ✅ Smart refresh completed")
+
       }, 500)
-      
+
       return () => clearTimeout(refreshTimeout)
     } else {
-      console.log("[HOST] ⏳ Refresh debounced, waiting for cooldown")
+
     }
   }, [players.length, gameId, mounted, quizStarted, fetchPlayers, updatePlayerProgress])
 
@@ -1333,7 +1344,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "game_sessions", filter: `id=eq.${gameId}` },
         (payload) => {
-          console.log("[HOST] 📡 Game status update:", payload.new)
+
           const newStatus = payload.new.status;
 
           // Use if/else if to ensure state transitions are mutually exclusive.
@@ -1344,6 +1355,9 @@ export default function HostContent({ gameCode }: HostContentProps) {
           } else if (newStatus === 'active') {
             setQuizStarted(true)
             setShowLeaderboard(false)
+            if (payload.new.started_at) {
+              setStartedAt(payload.new.started_at)
+            }
           } else if (payload.new.countdown_started_at) {
             // This handles the UI change for the pre-start countdown.
             setQuizStarted(true)
@@ -1359,13 +1373,13 @@ export default function HostContent({ gameCode }: HostContentProps) {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "game_sessions", filter: `id=eq.${gameId}` },
         async (payload) => {
-          console.log("[HOST] 📡 Game participants update:", payload.new)
-          
+
+
           // Check if participants array has changed
           if (payload.new.participants) {
             const participants = payload.new.participants;
-            console.log("[HOST] 🟢 Participants updated:", participants.length, "players");
-            
+
+
             // Update players state
             setPlayers(participants);
           }
@@ -1375,13 +1389,13 @@ export default function HostContent({ gameCode }: HostContentProps) {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "game_sessions", filter: `id=eq.${gameId}` },
         async (payload) => {
-          console.log("[HOST] 📡 Game participants update (DELETE):", payload.new)
-          
+
+
           // Check if participants array has changed
           if (payload.new.participants) {
             const participants = payload.new.participants;
-            console.log("[HOST] 🔴 Participants updated:", participants.length, "players");
-            
+
+
             // Update players state
             setPlayers(participants);
           }
@@ -1391,22 +1405,22 @@ export default function HostContent({ gameCode }: HostContentProps) {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "game_sessions", filter: `id=eq.${gameId}` },
         async (payload) => {
-          console.log("[HOST] 📡 Game participants update (UPDATE):", payload.new)
-          
+
+
           // Check if participants array has changed
           if (payload.new.participants) {
             const participants = payload.new.participants;
-            console.log("[HOST] 🔄 Participants updated:", participants.length, "players");
-            
+
+
             // Update players state
             setPlayers(participants);
           }
         },
       )
       .subscribe((status) => {
-        console.log("[HOST] 📡 Players subscription status:", status)
+
         if (status === 'SUBSCRIBED') {
-          console.log("[HOST] ✅ Successfully subscribed to player changes")
+
         }
       })
 
@@ -1427,20 +1441,20 @@ export default function HostContent({ gameCode }: HostContentProps) {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "game_sessions", filter: `id=eq.${gameId}` },
         async (payload) => {
-          console.log("[HOST] 📡 Responses update detected:", payload.new)
-          
+
+
           // Check if responses array has changed
           if (payload.new.responses) {
-            console.log("[HOST] 🎯 Responses updated, triggering progress update")
+
             // Trigger debounced progress update
             debouncedUpdatePlayerProgress()
           }
         },
       )
       .subscribe((status) => {
-        console.log("[HOST] 📡 Responses subscription status:", status)
+
         if (status === 'SUBSCRIBED') {
-          console.log("[HOST] ✅ Successfully subscribed to responses changes")
+
         }
       })
 
@@ -1449,62 +1463,13 @@ export default function HostContent({ gameCode }: HostContentProps) {
       await updatePlayerProgress()
     }, 50)
 
-    // Add periodic health check as fallback
-    const healthCheckInterval = setInterval(async () => {
-      if (!gameId) return
-      
-      try {
-        // Check player count from database
-        const { data: gameSession, error } = await supabase
-          .from("game_sessions")
-          .select("participants")
-          .eq("id", gameId)
-          .single()
 
-        const currentPlayers = gameSession?.participants || []
-        
-        if (error) {
-          console.error("[HOST] ❌ Health check error:", error)
-          return
-        }
-        
-        const dbPlayerCount = currentPlayers?.length || 0
-        const statePlayerCount = players.length
-        
-        // If there's a mismatch, update the state
-        if (dbPlayerCount !== statePlayerCount) {
-          console.log(`[HOST] 🔄 Player count mismatch! DB: ${dbPlayerCount}, State: ${statePlayerCount}`)
-          console.log("[HOST] 🔄 Current players in DB:", currentPlayers?.map((p: any) => p.name))
-          console.log("[HOST] 🔄 Current players in state:", players.map(p => p.name))
-          
-          // Special handling when DB shows 0 but state still has players
-          if (dbPlayerCount === 0 && statePlayerCount > 0) {
-            console.log("[HOST] 🚨 DATABASE EMPTY but state has players - Force clearing state")
-            setPlayers([])
-            setPlayerProgress([])
-            setCurrentPlayerPage(0)
-            setCurrentProgressPage(0)
-            // Force component re-render
-            setForceUpdateKey(prev => prev + 1)
-          }
-          
-          // Force refresh
-          setTimeout(async () => {
-            await fetchPlayers()
-            await updatePlayerProgress()
-          }, 100)
-        }
-      } catch (error) {
-        console.error("[HOST] ❌ Health check failed:", error)
-      }
-    }, 1500) // Check every 1.5 seconds for faster detection
 
     return () => {
       supabase.removeChannel(gameSubscription)
       supabase.removeChannel(playersSubscription)
       supabase.removeChannel(responsesSubscription)
-      clearInterval(healthCheckInterval)
-      
+
       // Cleanup debounced update
       if (debouncedUpdateProgress.current) {
         clearTimeout(debouncedUpdateProgress.current)
@@ -1515,48 +1480,29 @@ export default function HostContent({ gameCode }: HostContentProps) {
   useEffect(() => {
     if (!quizStarted || !gameSettings?.timeLimit) return
 
-    let unsub = () => {}
-    let pollInterval: NodeJS.Timeout
+    let unsub = () => { }
 
-    // Poll untuk menunggu started_at di-set setelah countdown selesai
-    const waitForQuizStart = async () => {
-      const { data, error } = await supabase
-        .from("game_sessions")
-        .select("started_at, total_time_minutes")
-        .eq("id", gameId)
-        .single()
-      
-      if (error) {
-        console.error("Host timer fetch error:", error?.message, error?.details)
-        return
-      }
-      
-      // If quiz_start_time is not set yet (countdown still running), wait
-      if (!data?.started_at) {
-        console.log("[HOST] Waiting for countdown to finish before starting timer...")
-        return
-      }
-
-      console.log("[HOST] Quiz timer starting now!")
+    // Start timer logic when startedAt is available
+    const startTimer = async () => {
+      if (!startedAt) return
 
       // Get server time offset to sync with player timer
       const serverNow = await syncServerTime()
       const clientOffset = serverNow - Date.now()
 
-      const start = new Date(data.started_at).getTime()
-      const limitMs = data.total_time_minutes * 60 * 1000 // Convert minutes to milliseconds
+      const start = new Date(startedAt).getTime()
+      const limitMs = gameSettings.timeLimit * 60 * 1000 // Convert minutes to milliseconds
 
       const tick = async () => {
         const now = Date.now() + clientOffset
         const remain = Math.max(0, start + limitMs - now)
         setQuizTimeLeft(Math.floor(remain / 1000))
-        
+
         if (remain <= 0 && !hasFinishedGame.current) {
           hasFinishedGame.current = true
           setIsTimerActive(false)
-          
-          console.log("[HOST] ⏰ Timer expired! Ending quiz...")
-          
+
+
           // Update game status to finished
           try {
             const { error } = await supabase
@@ -1566,17 +1512,17 @@ export default function HostContent({ gameCode }: HostContentProps) {
                 ended_at: new Date().toISOString()
               })
               .eq("id", gameId)
-            
+
             if (error) {
-              console.error("[HOST] Error updating game status:", error)
+
             } else {
-              console.log("[HOST] Game status updated to finished")
+
               // Show leaderboard on host page (no navigation)
               setQuizStarted(false)
               setShowLeaderboard(true)
             }
           } catch (err) {
-            console.error("[HOST] Exception updating game status:", err)
+
           }
         }
       }
@@ -1585,16 +1531,13 @@ export default function HostContent({ gameCode }: HostContentProps) {
       const iv = setInterval(tick, 1000)
       unsub = () => {
         clearInterval(iv)
-        if (pollInterval) clearInterval(pollInterval)
       }
     }
 
-    // Mulai polling untuk menunggu quiz_start_time
-    waitForQuizStart()
-    pollInterval = setInterval(waitForQuizStart, 500) // Poll setiap 500ms
+    startTimer()
 
     return unsub
-  }, [quizStarted, gameSettings?.timeLimit, gameId])
+  }, [quizStarted, gameSettings?.timeLimit, gameId, startedAt])
 
   useEffect(() => {
     if (!quizStarted || !gameId) return
@@ -1617,7 +1560,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
         // Set started_at when countdown finishes (left === 0) and it hasn't been set yet
         if (left === 0 && !data.started_at) {
-          console.log("[HOST] Countdown finished, setting started_at")
+
           const startedAt = new Date(serverTime).toISOString()
           await supabase
             .from("game_sessions")
@@ -1672,10 +1615,17 @@ export default function HostContent({ gameCode }: HostContentProps) {
     }
   }
 
-  const kickPlayer = async (playerId: string, playerName: string) => {
+  // Show kick confirmation modal
+  const confirmKickPlayer = (playerId: string, playerName: string) => {
+    setPlayerToKick({ id: playerId, name: playerName })
+    setShowKickModal(true)
+  }
+
+  // Execute kick after confirmation
+  const executeKickPlayer = async () => {
+    if (!playerToKick) return
+
     try {
-      console.log("[HOST] 🦵 Kicking player:", playerName, "ID:", playerId, "Game ID:", gameId)
-      
       // Remove player from participants array
       const { data: gameSession, error: gameError } = await supabase
         .from("game_sessions")
@@ -1688,8 +1638,8 @@ export default function HostContent({ gameCode }: HostContentProps) {
         return
       }
 
-      const updatedParticipants = gameSession.participants.filter((p: any) => p.id !== playerId)
-      
+      const updatedParticipants = gameSession.participants.filter((p: any) => p.id !== playerToKick.id)
+
       const { data, error } = await supabase
         .from("game_sessions")
         .update({ participants: updatedParticipants })
@@ -1698,29 +1648,26 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
       if (error) {
         console.error("[HOST] ❌ Error kicking player:", error)
-        toast.error(`Failed to kick ${playerName}`)
         return
       }
 
-      console.log("[HOST] ✅ Player kicked successfully:", playerName)
-      console.log("[HOST] 📊 Updated data:", data)
-      toast.success(`Kicked ${playerName} from the game`)
-      
       // The real-time listener will automatically handle removing the player from state
       // and the player's page will automatically detect the deletion and redirect
-      
+
     } catch (error) {
       console.error("[HOST] ❌ Error in kickPlayer:", error)
-      toast.error(`Failed to kick ${playerName}`)
+    } finally {
+      setShowKickModal(false)
+      setPlayerToKick(null)
     }
   }
 
   const endQuiz = async () => {
     if (hasFinishedGame.current) {
-      console.log("[HOST] ⚠️ Game already finished, skipping duplicate end")
+
       return
     }
-    
+
     try {
       hasFinishedGame.current = true // Set flag to prevent loops
       await supabase
@@ -1740,6 +1687,9 @@ export default function HostContent({ gameCode }: HostContentProps) {
   }
 
   const handleExitGame = async () => {
+    isExitingRef.current = true // Set flag to prevent leaderboard flash
+    router.push("/select-quiz") // Navigate to select quiz page
+
     if (gameId) {
       try {
         await supabase
@@ -1755,18 +1705,21 @@ export default function HostContent({ gameCode }: HostContentProps) {
           .from("game_sessions")
           .update({ participants: [] })
           .eq("id", gameId)
-        toast.success("🚪 Game session ended")
       } catch {
-        toast.error("❌ Failed to end session properly")
+        // Silent fail - we're already navigating away
       }
     }
-    router.push("/")
   }
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
+  }
+
+  const formatTimeMinutes = (minutes: number) => {
+    // Convert minutes to MM:SS format (e.g., 5 minutes -> "05:00")
+    return `${minutes.toString().padStart(2, "0")}:00`
   }
 
   const formatTimeText = (seconds: number) => {
@@ -1858,7 +1811,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
           },
         }}
       />
-      <RulesDialog open={false} onOpenChange={() => {}} quiz={quiz} onStartGame={() => {}} />
+      <RulesDialog open={false} onOpenChange={() => { }} quiz={quiz} onStartGame={() => { }} />
       <QRCodeModal open={showQRModal} onOpenChange={setShowQRModal} joinUrl={joinUrl} />
 
       <div className="fixed inset-0 z-0 overflow-hidden bg-black">
@@ -1908,7 +1861,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
           const size = (seed % 12) / 10 + 0.3;
           const colorIndex = seed % 6;
           const opacity = (seed % 40) / 100 + 0.1;
-          
+
           return (
             <div
               key={`distant-star-${i}`}
@@ -1934,7 +1887,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
           const colorIndex = seed % 8;
           const starColor = ['#ffffff', '#fbbf24', '#8b5cf6', '#ec4899', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'][colorIndex];
           const opacity = (seed % 40) / 100 + 0.4;
-          
+
           return (
             <div
               key={`bright-star-${i}`}
@@ -1961,7 +1914,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
           const colorIndex = seed % 5;
           const trailColor = ['#ffffff', '#fbbf24', '#8b5cf6', '#ec4899', '#06b6d4'][colorIndex];
           const rotation = seed % 360;
-          
+
           return (
             <div
               key={`shooting-star-${i}`}
@@ -1987,7 +1940,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
           const size = (seed % 30) / 10 + 1;
           const colorIndex = seed % 4;
           const opacity = (seed % 40) / 100 + 0.2;
-          
+
           return (
             <div
               key={`cosmic-particle-${i}`}
@@ -2013,7 +1966,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
           const width = (seed % 200) + 100;
           const height = (seed % 150) + 80;
           const colorIndex = seed % 4;
-          
+
           return (
             <div
               key={`nebula-cloud-${i}`}
@@ -2057,7 +2010,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
           const colorIndex1 = seed % 5;
           const colorIndex2 = seed % 4;
           const opacity = (seed % 40) / 100 + 0.1;
-          
+
           return (
             <div
               key={`nebula-swirl-${i}`}
@@ -2083,7 +2036,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
           const size = (seed % 80) + 40;
           const colorIndex = seed % 6;
           const opacity = (seed % 30) / 100 + 0.1;
-          
+
           return (
             <div
               key={`cosmic-orb-${i}`}
@@ -2110,7 +2063,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
           const colorIndex = seed % 3;
           const opacity = (seed % 50) / 100 + 0.2;
           const rotation = seed % 360;
-          
+
           return (
             <div
               key={`space-debris-${i}`}
@@ -2137,7 +2090,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
           const size = (seed % 8) / 10 + 0.2;
           const colorIndex = seed % 5;
           const opacity = (seed % 30) / 100 + 0.1;
-          
+
           return (
             <div
               key={`cosmic-dust-${i}`}
@@ -2171,10 +2124,10 @@ export default function HostContent({ gameCode }: HostContentProps) {
       </div>
 
       <div className="relative z-10 container mx-auto px-2 sm:px-4 py-4 sm:py-8 min-h-screen font-mono text-white">
-        {showLeaderboard ? (
-          <PodiumLeaderboard 
-            players={playerProgress} 
-            onAnimationComplete={() => {}} 
+        {showLeaderboard && !isExitingRef.current ? (
+          <PodiumLeaderboard
+            players={playerProgress}
+            onAnimationComplete={() => { }}
             onRestart={handleRestart}
             onHome={handleHome}
           />
@@ -2183,9 +2136,11 @@ export default function HostContent({ gameCode }: HostContentProps) {
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
               <div className="bg-white/10 border-2 border-white/20 p-4 sm:p-6 rounded-lg backdrop-blur-sm">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-base sm:text-2xl font-bold flex items-center gap-2">
-                    {t('spaceQuiz')}
-                  </h2>
+                  <img
+                    src="/images/logo/spacequiz.webp"
+                    alt="Space Quiz"
+                    className="h-16 sm:h-20 md:h-24 w-auto object-contain"
+                  />
                   {/* GameForSmart Logo */}
                   <Image
                     src="/images/gameforsmartlogo.png"
@@ -2200,7 +2155,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
                 <div className="flex flex-wrap gap-2 sm:gap-4 justify-center mb-4">
                   <div className="flex items-center gap-1 sm:gap-2 bg-blue-100 text-blue-800 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
                     <Timer className="w-3 h-3 sm:w-4 sm:h-4" />
-                    {formatTime(gameSettings.timeLimit)}
+                    {formatTimeMinutes(gameSettings.timeLimit)}
                   </div>
                   <div className="flex items-center gap-1 sm:gap-2 bg-green-100 text-green-800 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
                     <HelpCircle className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -2236,12 +2191,12 @@ export default function HostContent({ gameCode }: HostContentProps) {
                       >
                         <Maximize2 className="w-5 h-5 text-gray-600" />
                       </button>
-                      
+
                       <div className="mb-4 py-1">
                         <QRCodeSVG value={joinUrl} size={120} className="sm:w-[140px] sm:h-[140px] lg:w-[335px] lg:h-[335px]" />
                       </div>
                       <div className="w-full">
-                      
+
                         <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-2 sm:p-3">
                           <span className="text-xs sm:text-sm font-mono break-all flex-1 text-gray-900">{joinUrl}</span>
                           <button
@@ -2279,12 +2234,12 @@ export default function HostContent({ gameCode }: HostContentProps) {
                   </div>
                 </div>
 
-{players.length === 0 ? (
+                {players.length === 0 ? (
                   <div className="text-center py-12 text-white/60">
                     <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
                     <p className="text-lg">{t('waitingForPlayersToJoin')}</p>
                   </div>
-) : (
+                ) : (
                   <>
                     <div className="relative overflow-hidden">
                       <AnimatePresence initial={false} custom={slideDirection} mode="wait">
@@ -2308,14 +2263,14 @@ export default function HostContent({ gameCode }: HostContentProps) {
                             >
                               {/* Kick Button - Made smaller */}
                               <button
-                                onClick={() => kickPlayer(player.id, player.name)}
+                                onClick={() => confirmKickPlayer(player.id, player.name)}
                                 className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors duration-200 z-10 flex items-center justify-center"
                                 style={{ width: '24px', height: '24px', padding: '0', minWidth: '24px', minHeight: '24px' }}
                                 title={`Kick ${player.name}`}
                               >
                                 <UserX size={12} style={{ width: '12px', height: '12px' }} />
                               </button>
-                              
+
                               <div className="flex-shrink-0 mt-1">
                                 <Image
                                   src={player.avatar || "/placeholder.svg?height=48&width=48&text=Player"}
@@ -2325,14 +2280,14 @@ export default function HostContent({ gameCode }: HostContentProps) {
                                   className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full border-2 border-white/30 object-cover"
                                 />
                               </div>
-                              
+
                               <div className="text-center w-full px-1 mt-2 flex-shrink-0 pb-1">
                                 <h3 className="font-bold text-sm sm:text-base md:text-lg text-white drop-shadow-[0_2px_4px_rgba(0,0,0,1)] leading-tight break-words relative z-0">
                                   {(() => {
                                     const displayName = getDisplayName(player as any);
                                     return displayName ? (
-                                      <SmartNameDisplay 
-                                        name={displayName} 
+                                      <SmartNameDisplay
+                                        name={displayName}
                                         maxLength={15}
                                         className="text-white text-sm sm:text-base md:text-lg font-bold"
                                         multilineClassName="text-white text-sm sm:text-base leading-tight"
@@ -2348,7 +2303,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
                         </motion.div>
                       </AnimatePresence>
                     </div>
-                    
+
                     <PaginationControls
                       currentPage={currentPlayerPage}
                       totalPages={getTotalPages(players.length)}
@@ -2368,7 +2323,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span className="text-sm sm:text-lg">{t('spaceQuiz')}</span>
+                      <img src="/images/logo/spacequiz.webp" alt="Space Quiz" className="h-6 sm:h-8 w-auto object-contain" />
                       <span className="text-sm sm:text-lg">-</span>
                       <Image
                         src="/images/gameforsmartlogo.png"
@@ -2382,7 +2337,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
                     <div className="flex flex-wrap gap-2 sm:gap-3">
                       <div className="flex items-center gap-1 sm:gap-2 bg-blue-100 text-blue-800 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
                         <Timer className="w-3 h-3 sm:w-4 sm:h-4" />
-                        {formatTime(gameSettings.timeLimit)}
+                        {formatTimeMinutes(gameSettings.timeLimit)}
                       </div>
                       <div className="flex items-center gap-1 sm:gap-2 bg-green-100 text-green-800 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
                         <HelpCircle className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -2395,7 +2350,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
                       <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
                       <span className="text-base sm:text-lg font-mono">{formatTimeText(quizTimeLeft)}</span>
                     </div>
-                    <PixelButton color="red" onClick={endQuiz} className="w-full sm:w-auto text-xs sm:text-sm">
+                    <PixelButton color="red" onClick={() => setShowEndQuizModal(true)} className="w-full sm:w-auto text-xs sm:text-sm">
                       ⏹ {t('endQuiz')}
                     </PixelButton>
                   </div>
@@ -2412,7 +2367,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
                 <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400" /> Players
               </h2>
 
-{playerProgress.length === 0 ? (
+              {playerProgress.length === 0 ? (
                 <div className="text-center py-8 text-white/60">
                   <UsersRound className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>No players found.</p>
@@ -2422,187 +2377,181 @@ export default function HostContent({ gameCode }: HostContentProps) {
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
                     {getPaginatedProgress(playerProgress, currentProgressPage).sort((a, b) => a.rank - b.rank)
                       .map((player, index) => (
-                       <motion.div
-                         key={player.id}
-                         initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                         animate={{ 
-                           opacity: 1, 
-                           y: 0, 
-                           scale: 1
-                         }}
-                         exit={{ opacity: 0, y: -20, scale: 0.9 }}
-                         transition={{
-                           duration: 0.6,
-                           delay: Math.min(index * 0.05, 1.0),
-                           ease: [0.25, 0.46, 0.45, 0.94]
-                         }}
-                         whileHover={{ 
-                           scale: 1.02,
-                           transition: { duration: 0.2 }
-                         }}
-                         className={`relative overflow-hidden rounded-lg p-3 sm:p-4 border-2 transition-all duration-500 ${
-                          player.rank === 1
+                        <motion.div
+                          key={player.id}
+                          initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                          animate={{
+                            opacity: 1,
+                            y: 0,
+                            scale: 1
+                          }}
+                          exit={{ opacity: 0, y: -20, scale: 0.9 }}
+                          transition={{
+                            duration: 0.6,
+                            delay: Math.min(index * 0.05, 1.0),
+                            ease: [0.25, 0.46, 0.45, 0.94]
+                          }}
+                          whileHover={{
+                            scale: 1.02,
+                            transition: { duration: 0.2 }
+                          }}
+                          className={`relative overflow-hidden rounded-lg p-3 sm:p-4 border-2 transition-all duration-500 ${player.rank === 1
                             ? "border-yellow-400/70 shadow-lg shadow-yellow-400/20"
                             : player.rank === 2
                               ? "border-gray-300/70 shadow-lg shadow-gray-300/20"
                               : player.rank === 3
                                 ? "border-amber-600/70 shadow-lg shadow-amber-600/20"
-                              : "border-white/30 shadow-md shadow-white/10"
-                        }`}
-                      >
-                        {/* Galaxy background with stars */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/30 via-blue-900/20 to-indigo-900/25 rounded-lg" />
-                        
-                        {/* Animated stars background - only for top 3 players to reduce performance impact */}
-                        {player.rank <= 3 && (
-                          <div className="absolute inset-0 overflow-hidden rounded-lg">
-                            <div className="absolute top-1 left-2 w-0.5 h-0.5 bg-white/60 rounded-full animate-pulse" />
-                            <div className="absolute top-3 right-2 w-0.5 h-0.5 bg-blue-300/70 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
-                            <div className="absolute bottom-2 left-3 w-0.5 h-0.5 bg-purple-300/60 rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
-                            <div className="absolute bottom-3 right-1 w-0.5 h-0.5 bg-cyan-300/50 rounded-full animate-pulse" style={{ animationDelay: '1.5s' }} />
-                          </div>
-                        )}
-                        
-                        {/* Nebula effect */}
-                        <div className={`absolute inset-0 rounded-lg opacity-20 ${
-                          player.rank === 1
+                                : "border-white/30 shadow-md shadow-white/10"
+                            }`}
+                        >
+                          {/* Galaxy background with stars */}
+                          <div className="absolute inset-0 bg-gradient-to-br from-purple-900/30 via-blue-900/20 to-indigo-900/25 rounded-lg" />
+
+                          {/* Animated stars background - only for top 3 players to reduce performance impact */}
+                          {player.rank <= 3 && (
+                            <div className="absolute inset-0 overflow-hidden rounded-lg">
+                              <div className="absolute top-1 left-2 w-0.5 h-0.5 bg-white/60 rounded-full animate-pulse" />
+                              <div className="absolute top-3 right-2 w-0.5 h-0.5 bg-blue-300/70 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
+                              <div className="absolute bottom-2 left-3 w-0.5 h-0.5 bg-purple-300/60 rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
+                              <div className="absolute bottom-3 right-1 w-0.5 h-0.5 bg-cyan-300/50 rounded-full animate-pulse" style={{ animationDelay: '1.5s' }} />
+                            </div>
+                          )}
+
+                          {/* Nebula effect */}
+                          <div className={`absolute inset-0 rounded-lg opacity-20 ${player.rank === 1
                             ? "bg-gradient-to-br from-yellow-400/20 via-orange-500/15 to-red-500/10"
                             : player.rank === 2
                               ? "bg-gradient-to-br from-gray-300/20 via-blue-400/15 to-purple-500/10"
                               : player.rank === 3
                                 ? "bg-gradient-to-br from-amber-600/20 via-orange-500/15 to-red-600/10"
-                              : "bg-gradient-to-br from-blue-400/15 via-purple-500/10 to-indigo-600/10"
-                        }`} />
-                        
-                        {/* Ranking change indicator */}
-                        {player.rank <= 3 && (
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0 }}
-                            transition={{ duration: 0.5, delay: 0.2 }}
-                            className="absolute top-2 right-2 z-20"
-                          >
-                            <div className={`w-3 h-3 rounded-full ${
-                              player.rank === 1 ? 'bg-yellow-400' : 
-                              player.rank === 2 ? 'bg-gray-300' : 
-                              'bg-amber-600'
-                            } animate-pulse`} />
-                          </motion.div>
-                        )}
+                                : "bg-gradient-to-br from-blue-400/15 via-purple-500/10 to-indigo-600/10"
+                            }`} />
 
-                        {/* Content wrapper with backdrop blur */}
-                        <div className="relative z-10 bg-black/20 backdrop-blur-sm rounded-lg p-2 -m-2">
-                          {/* Header with rank and avatar */}
-                          <div className="flex items-center gap-2 sm:gap-3 mb-3">
-                            {/* Rank number */}
-                            <motion.div 
-                              key={`${player.id}-rank-${player.rank}`}
-                              initial={{ scale: 0.8, rotate: -10 }}
-                              animate={{ 
-                                scale: 1, 
-                                rotate: 0,
-                                boxShadow: player.rank <= 3 ? "0 0 20px rgba(255, 215, 0, 0.5)" : "0 0 10px rgba(255, 255, 255, 0.2)"
-                              }}
-                              transition={{ 
-                                duration: 0.6, 
-                                ease: "easeOut",
-                                boxShadow: { duration: 0.3 }
-                              }}
-                              className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-sm sm:text-base font-bold ${
-                                player.rank === 1
+                          {/* Ranking change indicator */}
+                          {player.rank <= 3 && (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0 }}
+                              transition={{ duration: 0.5, delay: 0.2 }}
+                              className="absolute top-2 right-2 z-20"
+                            >
+                              <div className={`w-3 h-3 rounded-full ${player.rank === 1 ? 'bg-yellow-400' :
+                                player.rank === 2 ? 'bg-gray-300' :
+                                  'bg-amber-600'
+                                } animate-pulse`} />
+                            </motion.div>
+                          )}
+
+                          {/* Content wrapper with backdrop blur */}
+                          <div className="relative z-10 bg-black/20 backdrop-blur-sm rounded-lg p-2 -m-2">
+                            {/* Header with rank and avatar */}
+                            <div className="flex items-center gap-2 sm:gap-3 mb-3">
+                              {/* Rank number */}
+                              <motion.div
+                                key={`${player.id}-rank-${player.rank}`}
+                                initial={{ scale: 0.8, rotate: -10 }}
+                                animate={{
+                                  scale: 1,
+                                  rotate: 0,
+                                  boxShadow: player.rank <= 3 ? "0 0 20px rgba(255, 215, 0, 0.5)" : "0 0 10px rgba(255, 255, 255, 0.2)"
+                                }}
+                                transition={{
+                                  duration: 0.6,
+                                  ease: "easeOut",
+                                  boxShadow: { duration: 0.3 }
+                                }}
+                                className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-sm sm:text-base font-bold ${player.rank === 1
                                   ? "bg-yellow-400 text-black"
                                   : player.rank === 2
                                     ? "bg-gray-300 text-black"
                                     : player.rank === 3
                                       ? "bg-amber-600 text-white"
                                       : "bg-white/20 text-white"
-                              }`}
-                            >
-                              {player.rank}
-                            </motion.div>
+                                  }`}
+                              >
+                                {player.rank}
+                              </motion.div>
 
-                            {/* Avatar */}
-                            <Image
-                              src={player.avatar || "/placeholder.svg"}
-                              alt={getFirstName(player.name)}
-                              width={32}
-                              height={32}
-                              className="w-6 h-6 sm:w-8 sm:h-8 rounded-full object-cover border-2 border-white/30"
-                            />
+                              {/* Avatar */}
+                              <Image
+                                src={player.avatar || "/placeholder.svg"}
+                                alt={getFirstName(player.name)}
+                                width={32}
+                                height={32}
+                                className="w-6 h-6 sm:w-8 sm:h-8 rounded-full object-cover border-2 border-white/30"
+                              />
 
-                            {/* Player name and score */}
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-bold text-white text-xs sm:text-sm truncate">
-                                <SmartNameDisplay 
-                                  name={player.name} 
-                                  maxLength={6}
-                                  className="text-xs sm:text-sm font-bold text-white"
-                                  multilineClassName="text-xs leading-tight"
-                                />
-                              </h3>
-                              <motion.p 
-                                key={`${player.id}-${player.score}`}
-                                initial={{ scale: 1.3, opacity: 0.8 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                transition={{ duration: 0.5, ease: "easeOut" }}
-                                className={`text-xs font-medium ${
-                                  player.rank === 1
+                              {/* Player name and score */}
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-bold text-white text-xs sm:text-sm truncate">
+                                  <SmartNameDisplay
+                                    name={player.name}
+                                    maxLength={6}
+                                    className="text-xs sm:text-sm font-bold text-white"
+                                    multilineClassName="text-xs leading-tight"
+                                  />
+                                </h3>
+                                <motion.p
+                                  key={`${player.id}-${player.score}`}
+                                  initial={{ scale: 1.3, opacity: 0.8 }}
+                                  animate={{ scale: 1, opacity: 1 }}
+                                  transition={{ duration: 0.5, ease: "easeOut" }}
+                                  className={`text-xs font-medium ${player.rank === 1
                                     ? "text-yellow-300"
                                     : player.rank === 2
                                       ? "text-gray-200"
                                       : player.rank === 3
                                         ? "text-amber-400"
                                         : "text-yellow-300"
-                                }`}
-                              >
-                                {player.score} points
-                              </motion.p>
+                                    }`}
+                                >
+                                  {player.score} points
+                                </motion.p>
+                              </div>
+
+                              {/* Rank icon */}
+                              <div className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/10">
+                                {getRankIcon(player.rank)}
+                              </div>
                             </div>
 
-                            {/* Rank icon */}
-                            <div className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/10">
-                              {getRankIcon(player.rank)}
-                            </div>
-                          </div>
-
-                          {/* Progress section */}
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between text-xs text-white/70">
-                              <span>{player.currentQuestion}/{player.totalQuestions}</span>
-                              <motion.span 
-                                key={`${player.id}-progress-${player.currentQuestion}`}
-                                initial={{ scale: 1.2, opacity: 0.7 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                transition={{ duration: 0.4, ease: "easeOut" }}
-                                className={`font-bold font-mono ${
-                                  player.totalQuestions > 0
+                            {/* Progress section */}
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between text-xs text-white/70">
+                                <span>{player.currentQuestion}/{player.totalQuestions}</span>
+                                <motion.span
+                                  key={`${player.id}-progress-${player.currentQuestion}`}
+                                  initial={{ scale: 1.2, opacity: 0.7 }}
+                                  animate={{ scale: 1, opacity: 1 }}
+                                  transition={{ duration: 0.4, ease: "easeOut" }}
+                                  className={`font-bold font-mono ${player.totalQuestions > 0
                                     ? Math.round((player.currentQuestion / player.totalQuestions) * 100) >= 80
                                       ? "text-green-400"
                                       : Math.round((player.currentQuestion / player.totalQuestions) * 100) >= 50
                                         ? "text-yellow-400"
                                         : "text-orange-400"
                                     : "text-orange-400"
-                                }`}
-                              >
-                                {player.totalQuestions > 0
-                                  ? Math.round((player.currentQuestion / player.totalQuestions) * 100)
-                                  : 0}%
-                              </motion.span>
-                            </div>
-                            <div className="w-full">
-                              <StableProgressBar
-                                playerId={player.id}
-                                currentQuestion={player.currentQuestion}
-                                totalQuestions={player.totalQuestions}
-                              />
+                                    }`}
+                                >
+                                  {player.totalQuestions > 0
+                                    ? Math.round((player.currentQuestion / player.totalQuestions) * 100)
+                                    : 0}%
+                                </motion.span>
+                              </div>
+                              <div className="w-full">
+                                <StableProgressBar
+                                  playerId={player.id}
+                                  currentQuestion={player.currentQuestion}
+                                  totalQuestions={player.totalQuestions}
+                                />
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </motion.div>
+                        </motion.div>
                       ))}
                   </div>
-                  
+
                   <PaginationControls
                     currentPage={currentProgressPage}
                     totalPages={getTotalPages(playerProgress.length)}
@@ -2644,6 +2593,113 @@ export default function HostContent({ gameCode }: HostContentProps) {
                     </PixelButton>
                     <PixelButton color="red" onClick={handleExitGame} className="text-xs sm:text-sm">
                       {tStatic('endSession')}
+                    </PixelButton>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* End Quiz Confirmation Modal */}
+        <AnimatePresence>
+          {showEndQuizModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+              onClick={() => setShowEndQuizModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.8, opacity: 0, y: 20 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                className="bg-white/10 border-2 border-white/20 font-mono text-white p-4 sm:p-8 rounded-lg backdrop-blur-sm max-w-sm sm:max-w-md w-full mx-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="text-center">
+                  <h2 className="text-lg sm:text-2xl mb-3 font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
+                    {t('endQuizQuestion')}
+                  </h2>
+
+                  <p className="text-sm sm:text-base mb-6 text-white/80">
+                    Yakin ingin meninggalkan halaman?
+                  </p>
+
+                  {/* Decorative divider */}
+                  <div className="flex items-center justify-center gap-2 mb-6">
+                    <div className="h-px w-12 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
+                    <div className="w-2 h-2 rounded-full bg-purple-400/60" />
+                    <div className="h-px w-12 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
+                    <PixelButton
+                      color="gray"
+                      onClick={() => setShowEndQuizModal(false)}
+                      className="text-xs sm:text-sm"
+                    >
+                      {tStatic('cancel')}
+                    </PixelButton>
+                    <PixelButton
+                      color="red"
+                      onClick={() => {
+                        setShowEndQuizModal(false)
+                        endQuiz()
+                      }}
+                      className="text-xs sm:text-sm"
+                    >
+                      ⏹ {tStatic('confirmEndQuiz')}
+                    </PixelButton>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Kick Player Confirmation Modal */}
+        <AnimatePresence>
+          {showKickModal && playerToKick && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+              onClick={() => {
+                setShowKickModal(false)
+                setPlayerToKick(null)
+              }}
+            >
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.8, opacity: 0, y: 20 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                className="bg-[#1a1a2e] border-4 border-white font-mono text-white p-4 sm:p-8 rounded-lg shadow-[8px_8px_0px_#000] max-w-sm sm:max-w-md w-full mx-4 backdrop-blur-sm"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="text-center">
+                  <div className="text-2xl sm:text-4xl mb-4">🚫</div>
+                  <h2 className="text-lg sm:text-xl mb-4 font-bold">Kick Player?</h2>
+                  <p className="text-xs sm:text-sm mb-6 text-white/80">
+                    Are you sure you want to kick <span className="font-bold text-red-400">{playerToKick.name}</span> from the game?
+                  </p>
+                  <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-4">
+                    <PixelButton
+                      color="gray"
+                      onClick={() => {
+                        setShowKickModal(false)
+                        setPlayerToKick(null)
+                      }}
+                      className="text-xs sm:text-sm"
+                    >
+                      {tStatic('cancel')}
+                    </PixelButton>
+                    <PixelButton color="red" onClick={executeKickPlayer} className="text-xs sm:text-sm">
+                      🚫 Kick Player
                     </PixelButton>
                   </div>
                 </div>
@@ -2749,6 +2805,7 @@ function PixelButton({
   size = "md",
   className,
   children,
+  disabled,
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
   color?: string
@@ -2768,7 +2825,8 @@ function PixelButton({
   }
   return (
     <button
-      className={`border-2 font-mono uppercase tracking-wide shadow-[4px_4px_0px_rgba(0,0,0,0.8)] active:shadow-[2px_2px_0px_rgba(0,0,0,0.8)] active:translate-x-[2px] active:translate-y-[2px] transition-all ${colorStyles[color]} ${sizeStyles[size]} ${className}`}
+      className={`border-2 font-mono uppercase tracking-wide shadow-[4px_4px_0px_rgba(0,0,0,0.8)] active:shadow-[2px_2px_0px_rgba(0,0,0,0.8)] active:translate-x-[2px] active:translate-y-[2px] transition-all ${colorStyles[color]} ${sizeStyles[size]} ${disabled ? "opacity-50 cursor-not-allowed hover:bg-opacity-100" : ""} ${className}`}
+      disabled={disabled}
       {...props}
     >
       {children}

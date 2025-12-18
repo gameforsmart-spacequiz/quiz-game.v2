@@ -13,10 +13,10 @@ interface AuthGuardProps {
   redirectTo?: string
 }
 
-export function AuthGuard({ 
-  children, 
-  requireAuth = true, 
-  redirectTo = "/auth/login" 
+export function AuthGuard({
+  children,
+  requireAuth = true,
+  redirectTo = "/auth/login"
 }: AuthGuardProps) {
   const { user, loading } = useAuth()
   const router = useRouter()
@@ -27,7 +27,7 @@ export function AuthGuard({
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (isChecking) {
-        console.log('⚠️ AuthGuard: Timeout reached, forcing content display')
+
         setIsChecking(false)
       }
     }, 5000) // 5 second timeout
@@ -36,51 +36,51 @@ export function AuthGuard({
   }, [isChecking])
 
   useEffect(() => {
-    console.log('🔍 AuthGuard state:', { loading, user: user?.email, requireAuth, isChecking })
-    
+
+
     // If still loading, wait
     if (loading) {
-      console.log('⏳ AuthGuard: Still loading...')
+
       return
     }
 
     // If user is logged in and we require auth, show content
     if (requireAuth && user) {
-      console.log('✅ AuthGuard: User logged in, showing content')
+
       setIsChecking(false)
       return
     }
 
     // If user is not logged in and we require auth, redirect to login
     if (requireAuth && !user) {
-      console.log('❌ AuthGuard: User not logged in, redirecting to login')
-      
+
+
       // Save game code from URL to localStorage before redirecting
       if (typeof window !== 'undefined') {
         const urlParams = new URLSearchParams(window.location.search)
         const gameCode = urlParams.get('code')
-        
+
         // Validate game code (6 characters, alphanumeric) - ignore OAuth codes
         if (gameCode && gameCode.length === 6 && /^[A-Z0-9]{6}$/i.test(gameCode)) {
-          console.log('💾 Saving pending game code before login:', gameCode.toUpperCase())
+
           localStorage.setItem('pending-game-code', gameCode.toUpperCase())
         }
       }
-      
+
       router.push(redirectTo)
       return
     }
 
     // If user is logged in but we don't require auth, redirect to homepage
     if (!requireAuth && user) {
-      console.log('🔄 AuthGuard: User already logged in, redirecting to homepage')
+
       router.push("/")
       return
     }
 
     // If no auth required and no user, show content
     if (!requireAuth && !user) {
-      console.log('✅ AuthGuard: No auth required, showing content')
+
       setIsChecking(false)
     }
   }, [user, loading, requireAuth, redirectTo, router])
@@ -210,7 +210,7 @@ function AuthLoadingScreen() {
           >
             {t('checkingAuth', 'Checking Authentication...')}
           </h1>
-          
+
           <div className="flex items-center justify-center space-x-2">
             <div className="w-2 h-2 bg-cyan-300 rounded-full animate-bounce"></div>
             <div className="w-2 h-2 bg-purple-300 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>

@@ -27,10 +27,10 @@ function LoginPageContent() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search)
       const gameCode = urlParams.get('code')
-      
+
       // Validate game code (6 characters, alphanumeric) - ignore OAuth codes
       if (gameCode && gameCode.length === 6 && /^[A-Z0-9]{6}$/i.test(gameCode)) {
-        console.log('💾 Saving game code from login page URL:', gameCode.toUpperCase())
+
         localStorage.setItem('pending-game-code', gameCode.toUpperCase())
       }
     }
@@ -40,7 +40,7 @@ function LoginPageContent() {
   useEffect(() => {
     setIsRedirecting(false)
     setIsSigningIn(false)
-    
+
     // Reset juga ketika page visibility berubah (user kembali ke tab)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -48,16 +48,16 @@ function LoginPageContent() {
         setIsSigningIn(false)
       }
     }
-    
+
     // Reset ketika user tekan tombol back browser
     const handlePopState = () => {
       setIsRedirecting(false)
       setIsSigningIn(false)
     }
-    
+
     document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('popstate', handlePopState)
-    
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('popstate', handlePopState)
@@ -69,7 +69,7 @@ function LoginPageContent() {
       setIsRedirecting(true)
       setIsSigningIn(true)
       clearError()
-      
+
       // Double requestAnimationFrame untuk memastikan overlay ter-render sebelum redirect
       // RAF pertama: React commit state ke DOM
       // RAF kedua: Browser paint frame
@@ -81,7 +81,7 @@ function LoginPageContent() {
           })
         })
       })
-      
+
       await signInWithGoogle()
       // AuthGuard will handle redirect automatically
     } catch (error) {
@@ -96,7 +96,7 @@ function LoginPageContent() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
-    
+
     // Clear error when user starts typing
     if (formErrors[name]) {
       setFormErrors(prev => ({ ...prev, [name]: "" }))
@@ -122,7 +122,7 @@ function LoginPageContent() {
 
   const handleEmailPasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validateForm()) {
       return
     }
@@ -130,9 +130,9 @@ function LoginPageContent() {
     try {
       setIsSigningIn(true)
       clearError()
-      
+
       await signInWithEmail(formData.email, formData.password)
-      
+
       // AuthGuard will handle redirect automatically
     } catch (error) {
       console.error('Login error:', error)
@@ -247,7 +247,7 @@ function LoginPageContent() {
                   style={{ animationDelay: "1s" }}
                 />
               </div>
-              
+
               <h1
                 className="text-3xl font-bold text-transparent bg-gradient-to-r from-cyan-300 via-purple-300 to-pink-300 bg-clip-text mb-2"
                 style={{

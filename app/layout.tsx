@@ -13,12 +13,6 @@ export const metadata: Metadata = {
   title: 'Space-Quiz',
   description: 'Play a quiz game with your friends!',
   manifest: '/site.webmanifest',
-  themeColor: '#cf4747',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: 'Space-Quiz',
-  },
   icons: {
     icon: [
       { url: '/favicon.ico' },
@@ -28,6 +22,10 @@ export const metadata: Metadata = {
       { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],
   },
+};
+
+export const viewport = {
+  themeColor: '#cf4747',
 };
 
 export default function RootLayout({

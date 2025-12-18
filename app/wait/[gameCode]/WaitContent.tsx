@@ -32,8 +32,8 @@ function Background() {
 }
 
 // === SMART NAME DISPLAY ===
-const SmartNameDisplay = React.memo(({ 
-  name, 
+const SmartNameDisplay = React.memo(({
+  name,
   maxLength = 8,
   className = "",
   multilineClassName = ""
@@ -44,7 +44,7 @@ const SmartNameDisplay = React.memo(({
   multilineClassName?: string;
 }) => {
   const { displayName, isBroken } = formatDisplayName(name, maxLength)
-  
+
   if (isBroken) {
     return (
       <span className={`${className} ${multilineClassName} whitespace-pre-line leading-tight text-center block`}>
@@ -52,7 +52,7 @@ const SmartNameDisplay = React.memo(({
       </span>
     )
   }
-  
+
   return (
     <span className={className}>
       {displayName}
@@ -62,12 +62,12 @@ const SmartNameDisplay = React.memo(({
 SmartNameDisplay.displayName = "SmartNameDisplay"
 
 // === PLAYER CARD COMPONENT ===
-const PlayerCard = React.memo(({ 
-  player, 
-  index, 
-  isCurrentPlayer, 
-  onExitGame 
-}: { 
+const PlayerCard = React.memo(({
+  player,
+  index,
+  isCurrentPlayer,
+  onExitGame
+}: {
   player: {
     id: string
     name: string
@@ -83,17 +83,16 @@ const PlayerCard = React.memo(({
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: index * 0.1 }}
-      className={`relative rounded-lg p-3 sm:p-4 md:p-5 w-full max-w-[160px] sm:max-w-[180px] md:max-w-[200px] lg:max-w-[220px] xl:max-w-[240px] transition-all duration-300 player-card-mobile ${
-        isCurrentPlayer 
-          ? 'bg-gradient-to-br from-blue-900/90 to-purple-900/90 border-2 border-green-400 shadow-[0_0_25px_rgba(34,197,94,0.6)] hover:shadow-[0_0_30px_rgba(34,197,94,0.8)]' 
-          : 'bg-black/90 border-2 border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.4)] hover:shadow-[0_0_25px_rgba(59,130,246,0.6)]'
-      }`}
+      className={`relative rounded-lg p-3 sm:p-4 md:p-5 w-full max-w-[160px] sm:max-w-[180px] md:max-w-[200px] lg:max-w-[220px] xl:max-w-[240px] transition-all duration-300 player-card-mobile ${isCurrentPlayer
+        ? 'bg-gradient-to-br from-blue-900/90 to-purple-900/90 border-2 border-green-400 shadow-[0_0_25px_rgba(34,197,94,0.6)] hover:shadow-[0_0_30px_rgba(34,197,94,0.8)]'
+        : 'bg-black/90 border-2 border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.4)] hover:shadow-[0_0_25px_rgba(59,130,246,0.6)]'
+        }`}
     >
       {/* Player Name */}
       <div className="text-center mb-2 sm:mb-3">
         <h4 className="text-white font-bold text-sm sm:text-base md:text-lg lg:text-xl drop-shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1">
-          <SmartNameDisplay 
-            name={player.name} 
+          <SmartNameDisplay
+            name={player.name}
             maxLength={12}
             className="text-white"
             multilineClassName="text-white"
@@ -112,11 +111,10 @@ const PlayerCard = React.memo(({
         <motion.img
           src={player.avatar}
           alt={getFirstName(player.name)}
-          className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 rounded-full object-cover border-2 shadow-[0_0_10px_rgba(59,130,246,0.4)] ${
-            isCurrentPlayer 
-              ? 'border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.6)]' 
-              : 'border-blue-400'
-          }`}
+          className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 rounded-full object-cover border-2 shadow-[0_0_10px_rgba(59,130,246,0.4)] ${isCurrentPlayer
+            ? 'border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.6)]'
+            : 'border-blue-400'
+            }`}
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: index * 0.1 + 0.2, type: "spring" }}
@@ -145,13 +143,13 @@ const PlayerCard = React.memo(({
 PlayerCard.displayName = "PlayerCard"
 
 // === PLAYER LIST COMPONENT ===
-const PlayerList = React.memo(({ 
-  players, 
+const PlayerList = React.memo(({
+  players,
   currentPlayerName,
   onExitGame,
   isUpdating,
   t
-}: { 
+}: {
   players: Array<{
     id: string
     name: string
@@ -233,7 +231,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
   useEffect(() => {
     const stored = localStorage.getItem("player")
     if (!stored) {
-      console.log("[WAIT] No player data found, redirecting to home")
+
       router.replace("/")
       return
     }
@@ -243,7 +241,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
     setPlayerAvatar(avatar)
 
     const fetchGame = async () => {
-      console.log("[WAIT] Fetching game data for code:", gameCode)
+
       const { data, error } = await supabase
         .from("game_sessions")
         .select("id, status, quiz_id, countdown_started_at, participants")
@@ -251,7 +249,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
         .single()
 
       if (error || !data) {
-        console.log("[WAIT] Game not found, redirecting to home")
+
         toast.error("Game not found")
         router.replace("/")
         return
@@ -259,27 +257,27 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
 
       // Check if game is finished or ended (host has left)
       if (data.status === "finished") {
-        console.log("[WAIT] Game has ended, host has left the session")
+
         toast.error("Game has ended. Host has left the session.")
         router.replace("/")
         return
       }
 
-      console.log("[WAIT] Game found:", data)
+
       setGameId(data.id)
 
       // Check if player still exists in the game (use nickname if available)
       const playerExists = data.participants?.find((p: any) => (getDisplayName(p) === name))
 
       if (!playerExists) {
-        console.log("[WAIT] Player not found in game, redirecting to home")
+
         toast.error("You are not in this game")
         router.replace("/")
         return
       }
 
       if (data.status === 'active' && !data.countdown_started_at) {
-        console.log("[WAIT] Game already started, redirecting to play")
+
         router.replace(`/play/${gameCode}`)
         return
       }
@@ -288,7 +286,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
       const fetchPlayers = async () => {
         // Players are now stored in the participants JSONB field
         const participants = data.participants || []
-        
+
         // Convert participants to the expected format
         const playersData = participants.map((participant: any, index: number) => ({
           id: participant.id || `player-${index}`,
@@ -306,177 +304,107 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
 
     fetchGame()
 
-    // Fallback refresh every 5 seconds to ensure sync
-    const fallbackInterval = setInterval(async () => {
-      if (!gameId || !playerName) return
-      
-      try {
-        // Get game data to fetch participants from JSONB field
-        const { data: gameData, error: gameError } = await supabase
-          .from("game_sessions")
-          .select("participants")
-          .eq("id", gameId)
-          .single()
-
-        if (!gameError && gameData) {
-          const participants = gameData.participants || []
-          const playersData = participants.map((participant: any, index: number) => ({
-            id: participant.id || `player-${index}`,
-            name: getDisplayName(participant),
-            avatar: participant.avatar || '',
-            created_at: participant.created_at || new Date().toISOString()
-          }))
-          setAllPlayers(playersData)
-        }
-      } catch (error) {
-        console.error("[WAIT] Fallback refresh error:", error)
-      }
-    }, 5000)
-
-    return () => {
-      clearInterval(fallbackInterval)
-    }
   }, [gameCode, router, gameId, playerName])
 
   useEffect(() => {
     if (loading || !gameId || !playerName || isRedirecting) return
 
-    console.log("[PLAYER] 🎧 Setting up kick listener for player:", playerName, "in game:", gameId)
+    let countdownInterval: NodeJS.Timeout | null = null
+    let countdownStartedAt: string | null = null
 
-    // Listen for real-time game status changes
-    const gameStatusSubscription = supabase
-      .channel(`game-status-${gameId}`)
+    // Function to run countdown tick
+    const runCountdownTick = async () => {
+      if (!countdownStartedAt) return
+
+      const start = new Date(countdownStartedAt).getTime()
+      const serverTime = await syncServerTime()
+      const elapsed = Math.floor((serverTime - start) / 1000)
+      const left = Math.max(0, Math.min(10, 10 - elapsed))
+
+      if (left > 0) {
+        setCountdownValue(left)
+        setShowCountdown(true)
+      } else {
+        if (countdownInterval) {
+          clearInterval(countdownInterval)
+          countdownInterval = null
+        }
+        setIsRedirecting(true)
+        router.replace(`/play/${gameCode}`)
+      }
+    }
+
+    // Start countdown interval
+    const startCountdown = (startedAt: string) => {
+      countdownStartedAt = startedAt
+
+      // Clear existing interval if any
+      if (countdownInterval) {
+        clearInterval(countdownInterval)
+      }
+
+      // Run immediately
+      runCountdownTick()
+
+      // Then run every second
+      countdownInterval = setInterval(runCountdownTick, 1000)
+    }
+
+    // Listen for real-time game updates (status, participants, countdown)
+    const gameSubscription = supabase
+      .channel(`game-session-${gameId}`)
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "games", filter: `id=eq.${gameId}` },
+        { event: "UPDATE", schema: "public", table: "game_sessions", filter: `id=eq.${gameId}` },
         async (payload) => {
-          console.log("[GAME] Game status updated:", payload.new)
-          const updatedGame = payload.new
-          
-          // If game is finished (host left), redirect player
-          if (updatedGame.finished === true || updatedGame.status === "finished") {
-            console.log("[GAME] Host has left the session, redirecting player")
+          const newGameData = payload.new
+
+          // 1. Handle Game Status (Finished/Host Left)
+          if (newGameData.status === "finished") {
             toast.error("Host has left the game session")
-            
-            // Clean up and redirect
             await cleanupPresence()
             clearGame?.()
             localStorage.removeItem("player")
             router.replace("/")
             return
           }
-        }
-      )
-      .subscribe()
 
-    // Listen for real-time player changes (add/delete)
-    const playersSubscription = supabase
-      .channel(`players-${gameId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "players", filter: `game_id=eq.${gameId}` },
-        async (payload) => {
-          console.log("[PLAYER] 🟢 New player joined:", payload.new)
-          const newPlayer = payload.new
-          
-          // Show updating indicator
-          setIsUpdating(true)
-          
-          // Add new player to the list
-          setAllPlayers(prev => [...prev, {
-            id: newPlayer.id,
-            name: newPlayer.name,
-            avatar: newPlayer.avatar,
-            created_at: newPlayer.created_at
-          }])
-          
-          // Show notification for new player (only if it's not the current player)
-          if (newPlayer.name !== playerName) {
-            toast.success(`${newPlayer.name} joined the game!`, {
-              duration: 3000,
-              position: "top-center"
-            })
-          }
-          
-          // Hide updating indicator after a short delay
-          setTimeout(() => setIsUpdating(false), 1000)
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "DELETE", schema: "public", table: "players", filter: `game_id=eq.${gameId}` },
-        async (payload) => {
-          console.log("[PLAYER] 🔴 Player deleted:", payload.old)
-          console.log("[PLAYER] 🔍 Current player name:", playerName)
-          console.log("[PLAYER] 🔍 Deleted player name:", payload.old.name)
-          console.log("[PLAYER] 🔍 Is exiting:", isExiting)
-          const deletedPlayer = payload.old
-          
-          // If current player is exiting voluntarily, don't process their own deletion
-          if (isExiting && (deletedPlayer.name === playerName || deletedPlayer.nickname === playerName)) {
-            console.log("[PLAYER] ℹ️ Current player is exiting voluntarily, ignoring their own deletion")
-            return
-          }
-          
-          // Show updating indicator
-          setIsUpdating(true)
-          
-          // Update players list immediately
-          setAllPlayers(prev => {
-            const filtered = prev.filter(p => p.id !== deletedPlayer.id)
-            console.log(`[PLAYER] 🗑️ Removed player "${deletedPlayer.name}" from list. Remaining:`, filtered.length)
-            return filtered
-          })
-          
-          // Check if the deleted player is the current player
-          if (deletedPlayer.name === playerName || deletedPlayer.nickname === playerName) {
-            console.log("[PLAYER] 🦵 Current player was kicked by host - REDIRECTING")
-            toast.error("You have been kicked from the game by the host")
-            
-            // Clean up and redirect
-            await cleanupPresence()
-            clearGame?.()
-            localStorage.removeItem("player")
-            router.replace("/")
-            return
-          } else {
-            console.log("[PLAYER] ℹ️ Another player was deleted, not current player")
-            // Show notification for player leaving (only if it's not the current player)
-            toast.info(`${deletedPlayer.name} left the game`, {
-              duration: 3000,
-              position: "top-center"
-            })
-          }
-          
-          // Force refresh to ensure consistency
-          setTimeout(async () => {
-            try {
-              const { data: gameData, error: gameError } = await supabase
-                .from("game_sessions")
-                .select("participants")
-                .eq("id", gameId)
-                .single()
+          // 2. Handle Participants Update
+          if (newGameData.participants) {
+            const participants = newGameData.participants || []
 
-              if (!gameError && gameData) {
-                const participants = gameData.participants || []
-                const playersData = participants.map((participant: any, index: number) => ({
-                  id: participant.id || `player-${index}`,
-                  name: getDisplayName(participant),
-                  avatar: participant.avatar || '',
-                  created_at: participant.created_at || new Date().toISOString()
-                }))
-                setAllPlayers(playersData)
-                console.log("[PLAYER] 🔄 Refreshed player list after deletion")
-              }
-            } catch (error) {
-              console.error("[PLAYER] ❌ Error refreshing player list:", error)
+            // Check if current player was kicked
+            const playerStillExists = participants.some((p: any) => getDisplayName(p) === playerName)
+            if (!playerStillExists && !isExiting) {
+              toast.error("You have been kicked from the game by the host")
+              await cleanupPresence()
+              clearGame?.()
+              localStorage.removeItem("player")
+              router.replace("/")
+              return
             }
-            setIsUpdating(false)
-          }, 1000)
-        },
+
+            // Update players list
+            const playersData = participants.map((participant: any, index: number) => ({
+              id: participant.id || `player-${index}`,
+              name: getDisplayName(participant),
+              avatar: participant.avatar || '',
+              created_at: participant.created_at || new Date().toISOString()
+            }))
+            setAllPlayers(playersData)
+          }
+
+          // 3. Handle Game Start / Countdown
+          if (newGameData.status === 'active' && !newGameData.countdown_started_at) {
+            setIsRedirecting(true)
+            router.replace(`/play/${gameCode}`)
+          } else if (newGameData.countdown_started_at && newGameData.countdown_started_at !== countdownStartedAt) {
+            // Start countdown when countdown_started_at is set or changed
+            startCountdown(newGameData.countdown_started_at)
+          }
+        }
       )
       .subscribe((status) => {
-        console.log("[PLAYER] 📡 Subscription status:", status)
         if (status === 'SUBSCRIBED') {
           setConnectionStatus('connected')
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
@@ -484,148 +412,29 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
         }
       })
 
-    // Fallback: Check if player still exists in participants JSONB field every 2 seconds
-    const playerCheckInterval = setInterval(async () => {
-      if (!gameId || !playerName || isRedirecting) return
-      
-      try {
-        const { data: gameData, error: gameError } = await supabase
-          .from("game_sessions")
-          .select("participants")
-          .eq("id", gameId)
-          .single()
+    // Check initial countdown state on mount
+    const checkInitialCountdown = async () => {
+      const { data } = await supabase
+        .from("game_sessions")
+        .select("countdown_started_at, status")
+        .eq("id", gameId)
+        .single()
 
-        if (gameError || !gameData) {
-          console.log("[PLAYER] 🔍 Game not found - might have been deleted")
-          console.log("[PLAYER] 🦵 Redirecting to home page")
-          toast.error("Game has been deleted by the host")
-          
-          await cleanupPresence()
-          clearGame?.()
-          localStorage.removeItem("player")
-          router.replace("/")
-          return
-        }
-
-        // Check if player still exists in participants
-        const participants = gameData.participants || []
-        const playerExists = participants.some((participant: any) => 
-          (getDisplayName(participant) === playerName)
-        )
-
-        if (!playerExists) {
-          console.log("[PLAYER] 🔍 Player not found in participants - might have been kicked")
-          console.log("[PLAYER] 🦵 Redirecting to home page")
-          toast.error("You have been kicked from the game by the host")
-          
-          await cleanupPresence()
-          clearGame?.()
-          localStorage.removeItem("player")
-          router.replace("/")
-          return
-        }
-      } catch (checkError) {
-        console.error("[PLAYER] ❌ Error checking player existence:", checkError)
-      }
-    }, 2000)
-
-    const tick = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("game_sessions")
-          .select("countdown_started_at, status")
-          .eq("id", gameId)
-          .single()
-
-        if (!data) return
-
-        if (data.countdown_started_at) {
-          const start = new Date(data.countdown_started_at).getTime()
-
-          let serverTime: number
-          try {
-            serverTime = await syncServerTime()
-          } catch (error) {
-            console.warn("[v0] Server time sync failed, using client time:", error)
-            serverTime = Date.now()
-          }
-
-          const elapsed = Math.floor((serverTime - start) / 1000)
-
-          if (elapsed >= 10) {
-            console.log("[v0] Countdown finished, redirecting to play")
-            setIsRedirecting(true)
-            router.replace(`/play/${gameCode}`)
-            return
-          }
-
-          const left = Math.max(0, Math.min(10, 10 - elapsed))
-
-          console.log(
-            "[v0] Player countdown sync - Server time:",
-            new Date(serverTime).toISOString(),
-            "Start:",
-            new Date(start).toISOString(),
-            "Elapsed:",
-            elapsed,
-            "Left:",
-            left,
-          )
-
-          if (left >= 0 && left <= 10) {
-            setCountdownValue(left)
-            setShowCountdown(true)
-          }
-
-          if (left === 0) {
-            console.log("[v0] Countdown reached 0, redirecting immediately")
-            setIsRedirecting(true)
-            router.replace(`/play/${gameCode}`)
-          }
-        } else if (data.status === 'active') {
-          console.log("[v0] Game already started, redirecting")
-          setIsRedirecting(true)
-          router.replace(`/play/${gameCode}`)
-        }
-      } catch (error) {
-        console.error("[v0] Error in countdown tick:", error)
-
-        try {
-          const { data } = await supabase
-            .from("game_sessions")
-            .select("countdown_started_at, status")
-            .eq("id", gameId)
-            .single()
-
-          if (data?.status === 'active') {
-            console.log("[v0] Fallback: game started, redirecting")
-            setIsRedirecting(true)
-            router.replace(`/play/${gameCode}`)
-          } else if (data?.countdown_started_at) {
-            const start = new Date(data.countdown_started_at).getTime()
-            const elapsed = Math.floor((Date.now() - start) / 1000)
-
-            if (elapsed >= 10) {
-              console.log("[v0] Fallback: countdown finished, redirecting")
-              setIsRedirecting(true)
-              router.replace(`/play/${gameCode}`)
-            }
-          }
-        } catch (fallbackError) {
-          console.error("[v0] Fallback countdown also failed:", fallbackError)
-        }
+      if (data?.countdown_started_at) {
+        startCountdown(data.countdown_started_at)
+      } else if (data?.status === 'active') {
+        setIsRedirecting(true)
+        router.replace(`/play/${gameCode}`)
       }
     }
 
-    tick()
-    const iv = setInterval(tick, 200)
+    checkInitialCountdown()
+
     return () => {
-      clearInterval(iv)
-      clearInterval(playerCheckInterval)
-      playersSubscription.unsubscribe()
-      gameStatusSubscription.unsubscribe()
+      gameSubscription.unsubscribe()
+      if (countdownInterval) clearInterval(countdownInterval)
     }
-  }, [loading, gameId, gameCode, router, isRedirecting, playerName, clearGame])
+  }, [loading, gameId, gameCode, router, isRedirecting, playerName, clearGame, isExiting])
 
   const showExitDialog = () => {
     setShowExitConfirm(true)
@@ -634,19 +443,19 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
   const handleExitConfirm = async () => {
     setShowExitConfirm(false)
     setIsExiting(true) // Set exiting state to prevent real-time updates
-    
+
     // Reset exiting state after 5 seconds as a safety measure
     const exitTimeout = setTimeout(() => {
       setIsExiting(false)
     }, 5000)
-    
+
     try {
-      console.log("[v0] Starting exit process for player:", playerName, "in game:", gameId)
+
 
       await cleanupPresence()
 
       if (gameId && playerName) {
-        console.log("[v0] Removing player from participants...")
+
 
         // Get current game data
         const { data: gameData, error: gameError } = await supabase
@@ -656,8 +465,8 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
           .single()
 
         if (gameError || !gameData) {
-          console.error("[v0] Error finding game:", gameError)
-          console.log("[v0] Game not found, might already be deleted")
+
+
           toast.success("Left the game successfully")
           clearGame?.()
           localStorage.removeItem("player")
@@ -667,7 +476,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
 
         // Remove player from participants array
         const participants = gameData.participants || []
-        const updatedParticipants = participants.filter((participant: any) => 
+        const updatedParticipants = participants.filter((participant: any) =>
           getDisplayName(participant) !== playerName
         )
 
@@ -678,11 +487,11 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
           .eq("id", gameId)
 
         if (updateError) {
-          console.error("[PLAYER] ❌ Error removing player from participants:", updateError)
+
           toast.error("Failed to remove player from game")
           return
         } else {
-          console.log("[PLAYER] ✅ Player successfully removed from participants")
+
         }
 
         // Wait a moment for real-time updates to propagate
@@ -696,17 +505,17 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
           .single()
 
         if (verifyError) {
-          console.log("[v0] Verification query failed (this might be normal):", verifyError)
+
         } else if (verifyGameData) {
           const participants = verifyGameData.participants || []
-          const playerStillExists = participants.some((participant: any) => 
+          const playerStillExists = participants.some((participant: any) =>
             getDisplayName(participant) === playerName
           )
-          
+
           if (playerStillExists) {
-            console.warn("[v0] Player still exists in participants after deletion")
+
             // Final cleanup attempt - remove player again
-            const finalParticipants = participants.filter((participant: any) => 
+            const finalParticipants = participants.filter((participant: any) =>
               getDisplayName(participant) !== playerName
             )
             await supabase
@@ -714,7 +523,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
               .update({ participants: finalParticipants })
               .eq("id", gameId)
           } else {
-            console.log("[v0] Player successfully removed from participants")
+
           }
         }
 
@@ -726,11 +535,11 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
       clearGame?.()
       localStorage.removeItem("player")
 
-      console.log("[v0] Redirecting to home page...")
+
       clearTimeout(exitTimeout) // Clear the timeout since exit was successful
       router.replace("/")
     } catch (error) {
-      console.error("[v0] Error exiting game:", error)
+
       toast.error("Failed to exit game")
       clearTimeout(exitTimeout) // Clear the timeout
       setIsExiting(false) // Reset exiting state on error
@@ -809,8 +618,8 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
             transition={{ delay: 0.3 }}
             className="flex justify-center"
           >
-            <PlayerList 
-              players={allPlayers} 
+            <PlayerList
+              players={allPlayers}
               currentPlayerName={playerName}
               onExitGame={showExitDialog}
               isUpdating={isUpdating}

@@ -16,7 +16,7 @@ export type TranslationKey =
   // Custom for select quiz page
   | 'selectQuiz' | 'searchQuizzes' | 'allCategory' | 'starting'
   // Rules dialog
-  | 'gameRules' | 'timeLimit' | 'numberOfQuestions' | 'selectTimeLimit' | 'selectNumberOfQuestions' | 'minutes' | 'back'
+  | 'gameRules' | 'timeLimit' | 'numberOfQuestions' | 'selectTimeLimit' | 'selectNumberOfQuestions' | 'minutes' | 'back' | 'creating'
   // Host page
   | 'spaceQuiz' | 'startQuiz' | 'exitGame' | 'waitingForPlayersToJoin'
   | 'playersLabel' | 'exitGameQuestion' | 'exitGameWarning' | 'endSession'
@@ -42,7 +42,7 @@ export type TranslationKey =
   // Host countdown
   | 'quizStarting'
   // Host actions
-  | 'endQuiz'
+  | 'endQuiz' | 'endQuizQuestion' | 'endQuizWarning' | 'confirmEndQuiz'
   // Auth related
   | 'login' | 'signInWithGoogle' | 'signingIn' | 'signOut' | 'signingOut' | 'profile' | 'settings'
   | 'welcome' | 'welcomeBack' | 'joinSpaceQuiz' | 'loginSubtitle' | 'benefit1' | 'benefit2' | 'benefit3' | 'signInError' | 'signOutError'
@@ -156,7 +156,8 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     selectTimeLimit: 'Select time limit',
     selectNumberOfQuestions: 'Select number of questions',
     minutes: 'minutes',
-    back: 'Back'
+    back: 'Back',
+    creating: 'Creating...'
     ,
     // Host page
     spaceQuiz: 'Space-Quiz',
@@ -166,7 +167,7 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     playersLabel: 'Players',
     exitGameQuestion: 'Exit Game?',
     exitGameWarning: 'Are you sure you want to exit? The game session will end immediately and all players will be disconnected.',
-    endSession: 'End Session',
+    endSession: 'Exit',
     // Tryout play
     currentQuestion: 'Current',
     answered: 'Answered',
@@ -231,7 +232,10 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     quizStarting: 'Quiz Starting!',
     // Host actions
     endQuiz: 'End Quiz',
-    
+    endQuizQuestion: 'End Quiz?',
+    endQuizWarning: 'Are you sure you want to end the quiz now?',
+    confirmEndQuiz: 'End Quiz',
+
     // Auth related
     login: 'Login',
     signInWithGoogle: 'Sign in with Google',
@@ -395,7 +399,8 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     selectTimeLimit: 'Pilih batas waktu',
     selectNumberOfQuestions: 'Pilih jumlah pertanyaan',
     minutes: 'menit',
-    back: 'Kembali'
+    back: 'Kembali',
+    creating: 'Membuat...'
     ,
     // Host page
     spaceQuiz: 'Kuis-Antariksa',
@@ -405,7 +410,7 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     playersLabel: 'Pemain',
     exitGameQuestion: 'Keluar dari Permainan?',
     exitGameWarning: 'Apakah Anda yakin ingin keluar? Sesi permainan akan segera berakhir dan semua pemain akan terputus.',
-    endSession: 'Akhiri Sesi',
+    endSession: 'Keluar',
     // Tryout play
     currentQuestion: 'Saat ini',
     answered: 'Sudah dijawab',
@@ -470,7 +475,10 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     quizStarting: 'Kuis Dimulai!',
     // Host actions
     endQuiz: 'Akhiri Kuis',
-    
+    endQuizQuestion: 'Akhiri Kuis?',
+    endQuizWarning: 'Apakah Anda yakin ingin mengakhiri kuis sekarang?',
+    confirmEndQuiz: 'Akhiri Kuis',
+
     // Auth related
     login: 'Masuk',
     signInWithGoogle: 'Masuk dengan Google',
@@ -634,7 +642,8 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     selectTimeLimit: '选择时间限制',
     selectNumberOfQuestions: '选择题目数量',
     minutes: '分钟',
-    back: '返回'
+    back: '返回',
+    creating: '创建中...'
     ,
     // Host page
     spaceQuiz: '太空问答',
@@ -644,7 +653,7 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     playersLabel: '玩家',
     exitGameQuestion: '退出游戏？',
     exitGameWarning: '确定要退出吗？当前游戏会立即结束，所有玩家将断开连接。',
-    endSession: '结束会话',
+    endSession: '退出',
     // Tryout play
     currentQuestion: '当前',
     answered: '已答',
@@ -709,7 +718,10 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     quizStarting: '测验开始！',
     // Host actions
     endQuiz: '结束测验',
-    
+    endQuizQuestion: '结束测验？',
+    endQuizWarning: '您确定要立即结束测验吗？',
+    confirmEndQuiz: '结束测验',
+
     // Auth related
     login: '登录',
     signInWithGoogle: '使用Google登录',

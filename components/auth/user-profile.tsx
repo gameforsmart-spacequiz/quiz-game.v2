@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { LogOut } from "lucide-react"
+import { LogOut, ChevronDown } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +20,7 @@ export function UserProfile() {
   const { user, profile, signOut, loading } = useAuth()
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
 
   if (!user || !profile) {
     return null
@@ -53,48 +54,37 @@ export function UserProfile() {
   const displayName = profile.fullname || profile.username || user.email?.split('@')[0] || 'User'
   const rawAvatarUrl = profile.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture
   const [avatarLoadError, setAvatarLoadError] = useState(false)
-  
+
   // Create a proxy URL for Google Photos to bypass CORS
   const avatarUrl = rawAvatarUrl ? `https://images.weserv.nl/?url=${encodeURIComponent(rawAvatarUrl)}&w=64&h=64&fit=cover&output=png` : null
 
   // Debug logging for avatar URL
   useEffect(() => {
     if (user && profile) {
-      console.log('🔍 UserProfile Avatar Debug:', {
-        profileAvatarUrl: profile?.avatar_url,
-        userAvatarUrl: user?.user_metadata?.avatar_url,
-        userPicture: user?.user_metadata?.picture,
-        rawAvatarUrl: rawAvatarUrl,
-        proxyAvatarUrl: avatarUrl,
-        displayName,
-        profileUsername: profile?.username,
-        profileFullname: profile?.fullname,
-        profileEmail: profile?.email
-      })
-      
+
       // Test if the avatar URL is valid
       if (avatarUrl) {
-        console.log('🧪 Testing UserProfile proxy avatar URL:', avatarUrl)
+
         const testImg = document.createElement('img')
         testImg.crossOrigin = 'anonymous'
         testImg.referrerPolicy = 'no-referrer'
         testImg.onload = () => {
-          console.log('✅ UserProfile proxy test image loaded successfully')
+
         }
         testImg.onerror = () => {
           console.error('❌ UserProfile proxy test image failed to load')
         }
         testImg.src = avatarUrl
       }
-      
+
       // Also test raw URL for comparison
       if (rawAvatarUrl) {
-        console.log('🧪 Testing raw Google avatar URL:', rawAvatarUrl)
+
         const rawTestImg = document.createElement('img')
         rawTestImg.crossOrigin = 'anonymous'
         rawTestImg.referrerPolicy = 'no-referrer'
         rawTestImg.onload = () => {
-          console.log('✅ Raw Google avatar loaded successfully')
+
         }
         rawTestImg.onerror = () => {
           console.error('❌ Raw Google avatar failed to load (expected due to CORS)')
@@ -106,35 +96,50 @@ export function UserProfile() {
 
   return (
     <div className="fixed top-4 left-4 z-50">
-      <DropdownMenu>
+      <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
-          <div className="relative flex items-center space-x-3 bg-black/30 backdrop-blur-md border border-cyan-400/30 rounded-full px-4 py-2 hover:bg-cyan-500/10 hover:border-cyan-400/50 transition-all duration-300 cursor-pointer shadow-lg">
-            <Avatar className="h-8 w-8 ring-2 ring-cyan-400/30">
-              {avatarUrl && !avatarLoadError ? (
-                <Image
-                  src={avatarUrl}
-                  alt={displayName}
-                  width={32}
-                  height={32}
-                  className="object-cover rounded-full"
-                  unoptimized
-                  onError={() => {
-                    console.error('❌ UserProfile avatar failed to load:', avatarUrl)
-                    setAvatarLoadError(true)
-                  }}
-                  onLoad={() => {
-                    console.log('✅ UserProfile avatar loaded successfully:', avatarUrl)
-                  }}
-                />
-              ) : (
-                <AvatarFallback className="bg-gradient-to-br from-cyan-400 to-purple-500 text-white text-xs font-bold">
-                  {getInitials(displayName)}
-                </AvatarFallback>
-              )}
-            </Avatar>
-            <span className="text-white font-mono text-sm font-medium">
+          <div className="relative flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full pl-1.5 pr-4 py-1.5 hover:bg-white/15 hover:border-white/30 transition-all duration-300 cursor-pointer shadow-xl">
+            {/* Avatar with Ring */}
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 p-[2px]">
+                <div className="w-full h-full rounded-full bg-gray-900"></div>
+              </div>
+              <Avatar className="h-10 w-10 relative z-10 ring-2 ring-cyan-400/50">
+                {avatarUrl && !avatarLoadError ? (
+                  <Image
+                    src={avatarUrl}
+                    alt={displayName}
+                    width={40}
+                    height={40}
+                    className="object-cover rounded-full"
+                    unoptimized
+                    onError={() => {
+                      console.error('❌ UserProfile avatar failed to load:', avatarUrl)
+                      setAvatarLoadError(true)
+                    }}
+                    onLoad={() => {
+
+                    }}
+                  />
+                ) : (
+                  <AvatarFallback className="bg-gradient-to-br from-cyan-400 to-purple-500 text-white text-sm font-bold">
+                    {getInitials(displayName)}
+                  </AvatarFallback>
+                )}
+              </Avatar>
+            </div>
+
+            {/* Username */}
+            <span className="text-white font-medium text-sm">
               {displayName}
             </span>
+
+            {/* Chevron with rotation animation */}
+            <ChevronDown
+              className={`w-4 h-4 text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : 'rotate-0'}`}
+            />
+
+            {/* Loading overlay */}
             {(loading || isSigningOut) && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
                 <div className="w-4 h-4 border-2 border-cyan-400/50 border-t-cyan-400 rounded-full animate-spin"></div>
@@ -142,14 +147,14 @@ export function UserProfile() {
             )}
           </div>
         </DropdownMenuTrigger>
-        <DropdownMenuContent 
-          className="w-40 bg-black/40 backdrop-blur-xl border border-cyan-400/30 shadow-2xl rounded-lg"
+        <DropdownMenuContent
+          className="w-44 bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl rounded-xl mt-2"
           align="start"
         >
-          <DropdownMenuItem 
+          <DropdownMenuItem
             onClick={handleLogoutClick}
             disabled={loading || isSigningOut}
-            className="text-red-300 hover:bg-red-500/20 cursor-pointer font-mono focus:bg-red-500/20 rounded-md"
+            className="text-red-400 hover:bg-red-500/20 cursor-pointer font-medium focus:bg-red-500/20 rounded-lg mx-1 my-1"
           >
             <LogOut className="mr-2 h-4 w-4" />
             <span>
@@ -168,4 +173,3 @@ export function UserProfile() {
     </div>
   )
 }
-

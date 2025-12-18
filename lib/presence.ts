@@ -35,11 +35,11 @@ export function initializePresence(gameCode: string, playerData: { name: string;
 export async function cleanupPresence() {
   if (presenceChannel) {
     try {
-      console.log("[v0] Cleaning up presence channel...")
+
       await presenceChannel.untrack()
       await presenceChannel.unsubscribe()
       presenceChannel = null
-      console.log("[v0] Presence channel cleaned up successfully")
+
     } catch (error) {
       console.error("[v0] Error cleaning up presence channel:", error)
       // Force cleanup even if there's an error

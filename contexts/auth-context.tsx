@@ -141,17 +141,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       // Get the correct redirect URL using utility
       const redirectUrl = getOAuthRedirectUrl()
-      
+
       // Log authentication context for debugging
       logAuthContext()
-      
+
       // Additional logging for localhost debugging
       if (window.location.hostname === 'localhost') {
-        console.log('🔍 Localhost OAuth Debug:', {
-          currentOrigin: window.location.origin,
-          redirectUrl,
-          expectedCallback: `${window.location.origin}/auth/callback`
-        })
       }
 
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -196,24 +191,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (data.user) {
         // Profile will be created/updated automatically via auth state change listener
         // Loading state will be handled by onAuthStateChange listener
-        console.log('✅ Email sign in successful, waiting for auth state change...')
-        
+
+
         // Immediate redirect attempt
         setTimeout(() => {
           if (typeof window !== 'undefined' && window.location.pathname.includes('/auth/login')) {
-            console.log('🚀 Immediate redirect attempt')
+
             const homepageUrl = getHomepageUrl()
-            console.log('🚀 Redirecting to:', homepageUrl)
             window.location.href = homepageUrl
           }
         }, 500) // Immediate redirect after 500ms
-        
+
         // Fallback redirect if onAuthStateChange doesn't trigger
         setTimeout(() => {
           if (typeof window !== 'undefined' && window.location.pathname.includes('/auth/login')) {
-            console.log('🔄 Fallback redirect triggered - onAuthStateChange may not have fired')
+
             const homepageUrl = getHomepageUrl()
-            console.log('🔄 Fallback redirect to:', homepageUrl)
             window.location.href = homepageUrl
           }
         }, 2000) // 2 second fallback
@@ -257,13 +250,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         // Log authentication context for debugging
         logAuthContext()
-        
+
         // Check if user is coming from main domain (cross-domain auth)
         const fromMainDomain = isFromMainDomain()
 
         // Get initial session
         const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession()
-        
+
         if (sessionError) {
           console.error('Session error:', sessionError)
           return
@@ -272,7 +265,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (initialSession?.user && mounted) {
           setSession(initialSession)
           setUser(initialSession.user)
-          
+
           try {
             // Fetch or create profile
             const profileData = await fetchProfile(initialSession.user.id)
@@ -287,7 +280,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           }
         } else if (isQuizProduction() && !initialSession?.user) {
           // If in production and no session, check if user might be logged in on main domain
-          console.log('🔍 No session found in production, checking for cross-domain auth')
+
         }
       } catch (error) {
         console.error('Auth initialization error:', error)
@@ -302,9 +295,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Add timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
       if (mounted) {
-        console.log('⚠️ Auth initialization timeout, setting loading to false')
+
         setLoading(false)
-        
+
         // Don't auto-redirect from login page to prevent animation restart
         // User should manually navigate or complete login process
       }
@@ -322,13 +315,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       async (event, session) => {
         if (!mounted) return
 
-        console.log('Auth state changed:', event, session?.user?.email)
+
 
         if (event === 'SIGNED_IN' && session?.user) {
-          console.log('✅ User signed in, setting loading to false')
+
           setSession(session)
           setUser(session.user)
-          
+
           try {
             // Create or update profile
             await createOrUpdateProfile(session.user)
@@ -337,25 +330,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
           } finally {
             // Always set loading to false, even if profile creation fails
             setLoading(false)
-            
+
             // Redirect to homepage after successful login (both OAuth and manual)
             if (typeof window !== 'undefined') {
-              console.log('🚀 Redirecting to homepage after successful login')
+
+
               const homepageUrl = getHomepageUrl()
-              console.log('🚀 Homepage URL:', homepageUrl)
-              
               // Check if there's a pending game code to preserve
               const pendingCode = localStorage.getItem('pending-game-code')
               let finalUrl = homepageUrl
-              
+
               if (pendingCode) {
                 // Add game code to URL so it gets detected by GameCodeHandler
                 const url = new URL(homepageUrl)
                 url.searchParams.set('code', pendingCode)
                 finalUrl = url.toString()
-                console.log('🎯 Adding pending game code to redirect URL:', pendingCode)
+
               }
-              
+
               // Use setTimeout to ensure redirect happens after state updates
               setTimeout(() => {
                 window.location.href = finalUrl
@@ -363,24 +355,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
             }
           }
         } else if (event === 'SIGNED_OUT') {
-          console.log('❌ User signed out')
+
           setSession(null)
           setUser(null)
           setProfile(null)
           setLoading(false)
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-          console.log('🔄 Token refreshed')
+
           setSession(session)
           setUser(session.user)
           setLoading(false)
         } else if (event === 'USER_UPDATED' && session?.user) {
-          console.log('👤 User updated')
+
           setSession(session)
           setUser(session.user)
           setLoading(false)
         } else {
           // Handle any other events
-          console.log('🔍 Other auth event:', event)
+
           setLoading(false)
         }
       }

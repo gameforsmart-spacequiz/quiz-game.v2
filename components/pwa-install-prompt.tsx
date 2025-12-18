@@ -32,15 +32,15 @@ export function PWAInstallPrompt() {
       const hasOpenDialog = dialogs.length > 0 && Array.from(dialogs).some(dialog => {
         const element = dialog as HTMLElement
         // Check if dialog is visible (not hidden)
-        const isVisible = element.offsetParent !== null || 
-                         (element.style.display !== 'none' && 
-                          !element.hasAttribute('aria-hidden'))
+        const isVisible = element.offsetParent !== null ||
+          (element.style.display !== 'none' &&
+            !element.hasAttribute('aria-hidden'))
         return isVisible
       })
-      
+
       const wasDialogOpen = hasDialogOpen
       setHasDialogOpen(hasOpenDialog)
-      
+
       // If dialog just opened, hide the prompt immediately
       if (hasOpenDialog && !wasDialogOpen && showPrompt) {
         setShowPrompt(false)
@@ -75,8 +75,8 @@ export function PWAInstallPrompt() {
     if (typeof window === 'undefined') return
 
     const isDev = window.location.hostname === 'localhost' ||
-                  window.location.hostname === '127.0.0.1' ||
-                  window.location.port !== ''
+      window.location.hostname === '127.0.0.1' ||
+      window.location.port !== ''
     setIsDevelopment(isDev)
 
     // Check if app is already installed
@@ -96,18 +96,18 @@ export function PWAInstallPrompt() {
         if (promptTimeoutRef.current) {
           clearTimeout(promptTimeoutRef.current)
         }
-        
+
         promptTimeoutRef.current = setTimeout(() => {
           // Double check conditions before showing
           const currentPath = window.location.pathname
           const dialogs = document.querySelectorAll('[role="dialog"]')
           const hasOpenDialog = dialogs.length > 0 && Array.from(dialogs).some(dialog => {
             const element = dialog as HTMLElement
-            return element.offsetParent !== null || 
-                   (element.style.display !== 'none' && 
-                    !element.hasAttribute('aria-hidden'))
+            return element.offsetParent !== null ||
+              (element.style.display !== 'none' &&
+                !element.hasAttribute('aria-hidden'))
           })
-          
+
           if (currentPath === '/' && !hasOpenDialog) {
             setShowPrompt(true)
           }
@@ -140,11 +140,11 @@ export function PWAInstallPrompt() {
         const { outcome } = await deferredPrompt.userChoice
 
         if (outcome === 'accepted') {
-          console.log('User accepted the install prompt')
+
           setIsInstalled(true)
           setShowPrompt(false)
         } else {
-          console.log('User dismissed the install prompt')
+
           handleDismiss()
         }
 
@@ -179,9 +179,9 @@ export function PWAInstallPrompt() {
           initial={{ x: 100, opacity: 0, scale: 0.9 }}
           animate={{ x: 0, opacity: 1, scale: 1 }}
           exit={{ x: 100, opacity: 0, scale: 0.9 }}
-          transition={{ 
-            type: "spring", 
-            stiffness: 300, 
+          transition={{
+            type: "spring",
+            stiffness: 300,
             damping: 25,
             opacity: { duration: 0.2 },
             scale: { duration: 0.2 }
@@ -191,7 +191,7 @@ export function PWAInstallPrompt() {
           <div className="bg-black/80 backdrop-blur-xl border-2 border-cyan-400/50 rounded-lg shadow-2xl p-3 relative overflow-hidden">
             {/* Background glow effect */}
             <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-pink-500/10 animate-pulse"></div>
-            
+
             {/* Close button */}
             <button
               onClick={handleDismiss}

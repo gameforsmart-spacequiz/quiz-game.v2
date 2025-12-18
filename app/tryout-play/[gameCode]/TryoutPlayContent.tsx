@@ -56,7 +56,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
       if (savedQuestion) {
         setCurrentQuestion(parseInt(savedQuestion))
       }
-      
+
       // Check if this is a page refresh and show a message
       const navEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
       const isRefresh = navEntry?.type === 'reload'
@@ -77,7 +77,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
   const [isAnswered, setIsAnswered] = useState(false)
   const [showResult, setShowResult] = useState(false)
   const [isCorrect, setIsCorrect] = useState(false)
-  const [answers, setAnswers] = useState<{[key: number]: string}>(() => {
+  const [answers, setAnswers] = useState<{ [key: number]: string }>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(`tryout-answers-${gameCode}`)
       return saved ? JSON.parse(saved) : {}
@@ -164,25 +164,18 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
   }, [answers]);
 
   // Function to check if all questions are answered and handle finish logic
-  const checkAndFinishQuiz = useCallback((updatedAnswers?: {[key: number]: string}) => {
+  const checkAndFinishQuiz = useCallback((updatedAnswers?: { [key: number]: string }) => {
     // Use updated answers if provided, otherwise use current state
     const currentAnswers = updatedAnswers || answers;
     const unanswered = [];
-    
+
     for (let i = 0; i < allQuestions.length; i++) {
       if (!currentAnswers[i] || currentAnswers[i] === '') {
         unanswered.push(i);
       }
     }
 
-    console.log("Checking finish quiz:", {
-      totalQuestions: allQuestions.length,
-      answeredQuestions: Object.keys(currentAnswers).length,
-      unansweredQuestions: unanswered.length,
-      unanswered: unanswered,
-      answers: currentAnswers,
-      updatedAnswers: updatedAnswers
-    });
+
 
     if (unanswered.length > 0) {
       // There are unanswered questions - show unanswered dialog
@@ -300,7 +293,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
     const a = [...arr]
     for (let i = a.length - 1; i > 0; i--) {
       const j = Math.floor(rng() * (i + 1))
-      ;[a[i], a[j]] = [a[j], a[i]]
+        ;[a[i], a[j]] = [a[j], a[i]]
     }
     return a
   }, [createRng])
@@ -313,25 +306,25 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
         console.error("Invalid quiz data structure:", quizData);
         return [];
       }
-      
+
       if (quizData.questions.length === 0) {
         console.error("Quiz has no questions");
         return [];
       }
-      
+
       if (questionCount <= 0) {
         console.error("Invalid question count:", questionCount);
         return [];
       }
-      
+
       const shuffledQuestions = seededShuffle(quizData.questions, seed).slice(0, questionCount)
-      
+
       return shuffledQuestions.map((q: any, idx: number) => {
         if (!q || !q.answers || !Array.isArray(q.answers)) {
           console.error("Invalid question structure:", q);
           return q;
         }
-        
+
         const answerSeed = seed + (q.id || idx) * 101
         return {
           ...q,
@@ -355,7 +348,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
 
       // Check if all data is already loaded from localStorage
       if (allQuestions.length > 0 && sessionSeed !== null && quiz && gameSettings) {
-        console.log("All data already loaded from localStorage, skipping fetch");
+
         setLoading(false);
         return;
       }
@@ -378,7 +371,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
         timeLimit: gameData.total_time_minutes,
         questionCount: parseInt(gameData.question_limit),
       });
-      
+
       // Only set time if not already loaded from localStorage
       if (timeLeft === 0) {
         setTimeLeft(gameData.total_time_minutes);
@@ -420,30 +413,23 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
       if (!seed) {
         seed = `${gameData.id}-${playerId || 'tryout'}`.split('').reduce((a: number, b: string) => a + b.charCodeAt(0), 0)
         setSessionSeed(seed);
-        console.log("Generated new seed for consistent randomization:", seed);
+
       } else {
-        console.log("Using existing seed for consistent randomization:", seed);
+
       }
-      
+
       const shuffled = regenerateQuestionsWithSeed(seed!, quizData, parseInt(gameData.question_limit));
-      
+
       if (!shuffled || shuffled.length === 0) {
         console.error("Failed to generate questions from quiz data");
         toast.error("Failed to load quiz questions!");
         router.replace("/");
         return;
       }
-      
+
       setAllQuestions(shuffled);
-      console.log("Tryout quiz loaded with consistent randomization:", {
-        questionsCount: shuffled.length,
-        timeLimit: gameData.total_time_minutes,
-        questionCount: parseInt(gameData.question_limit),
-        seed: seed,
-        firstQuestionId: shuffled[0]?.id,
-        lastQuestionId: shuffled[shuffled.length - 1]?.id
-      });
-      
+
+
       // Show toast that questions are randomized
       toast.success(t('questionsRandomized'));
       setLoading(false);
@@ -453,12 +439,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
   }, [gameCode, router, setCurrentQuestion, setGameId, playerId, regenerateQuestionsWithSeed, allQuestions.length, sessionSeed, timeLeft, quiz, gameSettings, playerName]);
 
   const handleAnswer = useCallback(async (choiceId: number | null) => {
-    console.log("Handling answer:", {
-      choiceId,
-      currentQuestion,
-      totalQuestions: allQuestions.length,
-      timeLeft
-    });
+
 
     setIsAnswered(true);
     setSelectedChoiceId(choiceId);
@@ -476,16 +457,12 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
       setAnswers(updatedAnswers);
     }
 
-    console.log("Answer saved:", selectedChoice?.answer);
+
 
     // Auto-advance after 0.5 seconds
     setTimeout(() => {
-      console.log("Auto-advancing:", {
-        currentQuestion,
-        totalQuestions: allQuestions.length,
-        willAdvance: currentQuestion < allQuestions.length - 1
-      });
-      
+
+
       // Find next unanswered question using the updated answers
       const nextUnansweredIndex = (() => {
         for (let i = currentQuestion + 1; i < allQuestions.length; i++) {
@@ -495,10 +472,10 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
         }
         return -1; // No unanswered questions found
       })();
-      
+
       if (nextUnansweredIndex !== -1) {
         // Found next unanswered question - go to it
-        console.log("Going to next unanswered question:", nextUnansweredIndex);
+
         setCurrentQuestion(nextUnansweredIndex);
         setSelectedChoiceId(null);
         setIsAnswered(false);
@@ -507,7 +484,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
         toast.info(`Melompat ke soal ${nextUnansweredIndex + 1} yang belum dijawab`);
       } else {
         // No more unanswered questions - check if all questions are completed
-        console.log("No more unanswered questions, checking if all questions are completed");
+
         checkAndFinishQuiz(updatedAnswers);
       }
     }, 500);
@@ -515,17 +492,17 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
 
   // Function to automatically finish quiz when time runs out
   const autoFinishQuiz = useCallback(() => {
-    console.log("Auto-finishing quiz due to time limit");
-    
+
+
     // Calculate final score
     let finalScore = 0;
     let finalCorrect = 0;
-    
+
     // Calculate points per question to ensure max 100 points total
     // 5 questions = 20pts/question, 10 = 10pts/question, 20 = 5pts/question
     const totalQuestions = allQuestions.length;
     const pointsPerQuestion = Math.round(100 / totalQuestions);
-    
+
     allQuestions.forEach((question, index) => {
       const userAnswer = answers[index];
       if (userAnswer) {
@@ -536,11 +513,11 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
         }
       }
     });
-    
+
     // Update store with final scores
     setScore(finalScore);
     setCorrectAnswers(finalCorrect);
-    
+
     // Clean up localStorage
     if (typeof window !== 'undefined') {
       localStorage.removeItem(`tryout-answers-${gameCode}`);
@@ -555,10 +532,10 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
       localStorage.removeItem(`tryout-show-unanswered-dialog-${gameCode}`);
       localStorage.removeItem(`tryout-unanswered-questions-${gameCode}`);
     }
-    
+
     // Show time's up message
     toast.error("Waktu habis! Quiz otomatis selesai.");
-    
+
     // Redirect to results
     router.push(`/tryout-result/${gameCode}`);
   }, [allQuestions, answers, setScore, setCorrectAnswers, gameCode, router]);
@@ -569,7 +546,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
       return () => clearTimeout(timer);
     } else if (timeLeft === 0 && allQuestions.length > 0 && !loading) {
-      console.log("Time's up! Auto-finishing quiz");
+
       // Auto-finish the quiz when time runs out
       autoFinishQuiz();
     }
@@ -642,314 +619,311 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
       <div className="relative z-10 h-screen flex flex-col overflow-hidden">
         {/* Mobile Scroll Container */}
         <div className="flex-1 overflow-y-auto lg:overflow-visible min-h-0">
-        {/* Header */}
-        <div className="flex items-center justify-between p-2 sm:p-4 flex-shrink-0">
-          <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
-            <Button
-              onClick={() => setShowBackConfirmationDialog(true)}
-              variant="outline"
-              className="bg-white/10 backdrop-blur-lg border-white/20 text-white hover:bg-white/20 transition-all duration-300 flex-shrink-0 text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-            >
-              <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">{t('back')}</span>
-            </Button>
-            
-            <div className="text-left min-w-0 flex-1">
-              <h1 className="text-sm sm:text-lg md:text-xl font-bold text-white truncate">{quiz?.title || 'Quiz'}</h1>
-              {quiz?.description && <p className="text-xs sm:text-sm text-gray-300 truncate">{quiz.description}</p>}
+          {/* Header */}
+          <div className="flex items-center justify-between p-2 sm:p-4 flex-shrink-0">
+            <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
+              <Button
+                onClick={() => setShowBackConfirmationDialog(true)}
+                variant="outline"
+                className="bg-white/10 backdrop-blur-lg border-white/20 text-white hover:bg-white/20 transition-all duration-300 flex-shrink-0 text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
+              >
+                <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">{t('back')}</span>
+              </Button>
+
+              <div className="text-left min-w-0 flex-1">
+                <h1 className="text-sm sm:text-lg md:text-xl font-bold text-white truncate">{quiz?.title || 'Quiz'}</h1>
+                {quiz?.description && <p className="text-xs sm:text-sm text-gray-300 truncate">{quiz.description}</p>}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Main Content - Scrollable */}
-        <div className="flex-1 flex flex-col lg:flex-row gap-2 sm:gap-4 lg:gap-6 px-2 sm:px-4 pb-2 sm:pb-4 min-h-0 overflow-hidden">
-          {/* Question Content */}
-          <div className="flex-1 min-w-0 overflow-y-auto">
-            <motion.div
-              key={currentQuestion}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="bg-black/30 backdrop-blur-xl border border-white/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-2xl relative overflow-hidden h-full"
-            >
-              {/* Galaxy Background Pattern */}
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-blue-900/20 to-indigo-900/20 rounded-xl sm:rounded-2xl"></div>
-              <div className="absolute top-0 right-0 w-16 h-16 sm:w-24 sm:h-24 md:w-32 md:h-32 bg-gradient-radial from-white/10 to-transparent rounded-full blur-lg sm:blur-xl"></div>
-              <div className="absolute bottom-0 left-0 w-12 h-12 sm:w-16 sm:h-16 md:w-24 md:h-24 bg-gradient-radial from-blue-400/20 to-transparent rounded-full blur-md sm:blur-lg"></div>
-              <div className="relative z-10 flex flex-col h-full">
-              {/* Question Tags and Timer */}
-              <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
-                <div className="flex flex-wrap gap-2 sm:gap-3">
-                  <span className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-blue-300 border border-blue-400/30 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium backdrop-blur-sm">
-                    {t('questionNumber')} {currentQuestion + 1}
-                  </span>
-                  {answers[currentQuestion] && (
-                    <span className="bg-gradient-to-r from-green-500/20 to-green-600/20 text-green-300 border border-green-400/30 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium backdrop-blur-sm">
-                      {t('alreadyAnsweredCheck')}
-                    </span>
-                  )}
-                  {!answers[currentQuestion] && (
-                    <span className="bg-gradient-to-r from-red-500/20 to-red-600/20 text-red-300 border border-red-400/30 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium backdrop-blur-sm">
-                      ⚠ {t('notAnswered')}
-                    </span>
-                  )}
-                </div>
-                
-                {/* Timer - Aligned with question tags */}
-                <div className="flex items-center gap-1 sm:gap-2 text-white bg-white/10 backdrop-blur-lg px-2 sm:px-3 md:px-4 py-1 sm:py-2 rounded-lg border border-white/20 shadow-lg">
-                  <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400" />
-                  <span className="text-sm sm:text-base md:text-lg font-mono font-bold">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
-                </div>
-              </div>
+          {/* Main Content - Scrollable */}
+          <div className="flex-1 flex flex-col lg:flex-row gap-2 sm:gap-4 lg:gap-6 px-2 sm:px-4 pb-2 sm:pb-4 min-h-0 overflow-hidden">
+            {/* Question Content */}
+            <div className="flex-1 min-w-0 overflow-y-auto">
+              <motion.div
+                key={currentQuestion}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="bg-black/30 backdrop-blur-xl border border-white/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-2xl relative overflow-hidden h-full"
+              >
+                {/* Galaxy Background Pattern */}
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-blue-900/20 to-indigo-900/20 rounded-xl sm:rounded-2xl"></div>
+                <div className="absolute top-0 right-0 w-16 h-16 sm:w-24 sm:h-24 md:w-32 md:h-32 bg-gradient-radial from-white/10 to-transparent rounded-full blur-lg sm:blur-xl"></div>
+                <div className="absolute bottom-0 left-0 w-12 h-12 sm:w-16 sm:h-16 md:w-24 md:h-24 bg-gradient-radial from-blue-400/20 to-transparent rounded-full blur-md sm:blur-lg"></div>
+                <div className="relative z-10 flex flex-col h-full">
+                  {/* Question Tags and Timer */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 mb-3 sm:mb-4 flex-shrink-0">
+                    <div className="flex flex-wrap gap-2 sm:gap-3">
+                      <span className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-blue-300 border border-blue-400/30 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium backdrop-blur-sm">
+                        {t('questionNumber')} {currentQuestion + 1}
+                      </span>
+                      {answers[currentQuestion] && (
+                        <span className="bg-gradient-to-r from-green-500/20 to-green-600/20 text-green-300 border border-green-400/30 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium backdrop-blur-sm">
+                          {t('alreadyAnsweredCheck')}
+                        </span>
+                      )}
+                      {!answers[currentQuestion] && (
+                        <span className="bg-gradient-to-r from-red-500/20 to-red-600/20 text-red-300 border border-red-400/30 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium backdrop-blur-sm">
+                          ⚠ {t('notAnswered')}
+                        </span>
+                      )}
+                    </div>
 
-              {/* Question */}
-              <div className="mb-4 sm:mb-6 flex-shrink-0">
-                <h2 className="text-base sm:text-lg md:text-xl font-bold text-white mb-3 sm:mb-4 leading-tight">
-                  {currentQ.question}
-                </h2>
-                {currentQ.image && (
-                  <div className="relative w-full max-w-xs sm:max-w-sm md:max-w-md mx-auto h-32 sm:h-40 md:h-48 mb-3 sm:mb-4">
-                    <Image
-                      src={currentQ.image}
-                      alt={currentQ.question}
-                      fill
-                      className="object-contain rounded-lg"
-                    />
+                    {/* Timer - Aligned with question tags */}
+                    <div className="flex items-center gap-1 sm:gap-2 text-white bg-white/10 backdrop-blur-lg px-2 sm:px-3 md:px-4 py-1 sm:py-2 rounded-lg border border-white/20 shadow-lg">
+                      <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400" />
+                      <span className="text-sm sm:text-base md:text-lg font-mono font-bold">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
+                    </div>
                   </div>
-                )}
-              </div>
 
-              {/* Answers */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6 flex-shrink-0">
-                {currentQ.answers?.map((choice, index) => {
-                  const isSelected = selectedChoiceId?.toString() === choice.id?.toString();
-                  const isAnswered = answers[currentQuestion] === choice.answer;
-
-                  return (
-                    <button
-                      key={choice.id}
-                      onClick={() => handleAnswer(parseInt(choice.id?.toString() || "0"))}
-                      className={`p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border-2 transition-all duration-200 backdrop-blur-sm relative overflow-hidden ${
-                        isSelected || isAnswered
-                          ? 'border-purple-400 bg-purple-500/20'
-                          : 'border-white/30 bg-black/20 hover:border-purple-300 hover:bg-purple-500/10'
-                      }`}
-                    >
-                      {/* Galaxy effect for choices */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent rounded-lg sm:rounded-xl"></div>
-                      <div className="relative z-10 flex items-center gap-2 sm:gap-3">
-                        <div className={`w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold backdrop-blur-sm flex-shrink-0 ${
-                          isSelected || isAnswered
-                            ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg'
-                            : 'bg-gradient-to-br from-purple-400/30 to-purple-600/30 text-purple-200 border border-purple-400/50'
-                        }`}>
-                          {String.fromCharCode(65 + index)}
-                        </div>
-                        <span className="text-white font-medium text-sm sm:text-base leading-tight flex-1 text-left">{choice.answer}</span>
-                        {isAnswered && (
-                          <span className="ml-auto text-xs text-purple-300 flex-shrink-0">✓</span>
-                        )}
-                        {isSelected && !isAnswered && (
-                          <span className="ml-auto text-xs text-blue-300 flex-shrink-0 hidden sm:inline">Selected</span>
-                        )}
+                  {/* Question */}
+                  <div className="mb-4 sm:mb-6 flex-shrink-0">
+                    <h2 className="text-base sm:text-lg md:text-xl font-bold text-white mb-3 sm:mb-4 leading-tight">
+                      {currentQ.question}
+                    </h2>
+                    {currentQ.image && (
+                      <div className="relative w-full max-w-xs sm:max-w-sm md:max-w-md mx-auto h-32 sm:h-40 md:h-48 mb-3 sm:mb-4">
+                        <Image
+                          src={currentQ.image}
+                          alt={currentQ.question}
+                          fill
+                          className="object-contain rounded-lg"
+                        />
                       </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Navigation Buttons */}
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-between flex-shrink-0 mt-auto">
-                <button
-                  onClick={() => {
-                    // Find previous unanswered question
-                    const prevUnansweredIndex = findPreviousUnansweredQuestion(currentQuestion);
-                    
-                    if (prevUnansweredIndex !== -1) {
-                      // Found previous unanswered question - go to it
-                      console.log("Previous button clicked, going to unanswered question:", prevUnansweredIndex);
-                      const prevQuestion = allQuestions[prevUnansweredIndex];
-                      const prevAnswer = answers[prevUnansweredIndex];
-                      
-                      setCurrentQuestion(prevUnansweredIndex);
-                      
-                      // Set the selected choice if there's a previous answer
-                      if (prevAnswer && prevQuestion) {
-                        const selectedChoice = prevQuestion.answers?.find(c => c.answer === prevAnswer);
-                        setSelectedChoiceId(selectedChoice?.id ? parseInt(selectedChoice.id.toString()) : null);
-                        setIsAnswered(true);
-                      } else {
-                        setSelectedChoiceId(null);
-                        setIsAnswered(false);
-                      }
-                      setShowResult(false);
-                    } else if (currentQuestion > 0) {
-                      // No previous unanswered question, go to previous question in sequence
-                      const prevQuestion = allQuestions[currentQuestion - 1];
-                      const prevAnswer = answers[currentQuestion - 1];
-                      
-                      setCurrentQuestion(currentQuestion - 1);
-                      
-                      // Set the selected choice if there's a previous answer
-                      if (prevAnswer && prevQuestion) {
-                        const selectedChoice = prevQuestion.answers?.find(c => c.answer === prevAnswer);
-                        setSelectedChoiceId(selectedChoice?.id ? parseInt(selectedChoice.id.toString()) : null);
-                        setIsAnswered(true);
-                      } else {
-                        setSelectedChoiceId(null);
-                        setIsAnswered(false);
-                      }
-                      setShowResult(false);
-                    }
-                  }}
-                  disabled={currentQuestion === 0}
-                  className="px-3 sm:px-4 py-2 rounded-lg border border-white/30 text-white/70 disabled:opacity-50 disabled:cursor-not-allowed bg-black/20 backdrop-blur-sm hover:bg-white/10 transition-all duration-200 text-sm sm:text-base"
-                >
-                  ← {t('previous')}
-                </button>
-                <button
-                  onClick={() => {
-                    // Find next unanswered question
-                    const nextUnansweredIndex = findNextUnansweredQuestion(currentQuestion);
-                    
-                    if (nextUnansweredIndex !== -1) {
-                      // Found next unanswered question - go to it
-                      console.log("Next button clicked, going to unanswered question:", nextUnansweredIndex);
-                      const nextQuestion = allQuestions[nextUnansweredIndex];
-                      const nextAnswer = answers[nextUnansweredIndex];
-                      
-                      setCurrentQuestion(nextUnansweredIndex);
-                      
-                      // Set the selected choice if there's an answer for this question
-                      if (nextAnswer && nextQuestion) {
-                        const selectedChoice = nextQuestion.answers?.find(c => c.answer === nextAnswer);
-                        setSelectedChoiceId(selectedChoice?.id ? parseInt(selectedChoice.id.toString()) : null);
-                        setIsAnswered(true);
-                      } else {
-                        setSelectedChoiceId(null);
-                        setIsAnswered(false);
-                      }
-                      setShowResult(false);
-                    } else {
-                      // No more unanswered questions - check if all questions are completed
-                      console.log("Next button clicked, no more unanswered questions, checking completion");
-                      checkAndFinishQuiz(answers);
-                    }
-                  }}
-                  disabled={false}
-                  className="px-3 sm:px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 backdrop-blur-sm hover:from-purple-500 hover:to-blue-500 transition-all duration-200 shadow-lg text-sm sm:text-base"
-                >
-                  {findNextUnansweredQuestion(currentQuestion) === -1 ? t('complete') : `${t('next')} →`}
-                </button>
-              </div>
-
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="w-full lg:w-80 flex flex-col space-y-3 sm:space-y-4 lg:space-y-6 min-h-0">
-            {/* Progress Section */}
-            <div className="bg-black/30 backdrop-blur-xl border border-white/20 rounded-xl sm:rounded-2xl p-4 sm:p-4 md:p-6 shadow-2xl relative overflow-hidden flex-shrink-0">
-              {/* Galaxy Background Pattern */}
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-blue-900/20 to-indigo-900/20 rounded-xl sm:rounded-2xl"></div>
-              <div className="absolute top-0 right-0 w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-gradient-radial from-white/10 to-transparent rounded-full blur-md sm:blur-lg"></div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-4 sm:mb-4">
-                  <div className="w-6 h-6 sm:w-6 sm:h-6 bg-gradient-to-br from-purple-500/30 to-blue-500/30 rounded-full flex items-center justify-center backdrop-blur-sm border border-purple-400/50">
-                    <span className="text-purple-300 text-sm sm:text-sm">🧠</span>
+                    )}
                   </div>
-                  <h3 className="font-bold text-white text-sm sm:text-base">{t('progress')}</h3>
-                </div>
-                
-                <div className="mb-4 sm:mb-4">
-                  <div className="flex justify-between text-xs sm:text-sm text-gray-300 mb-2">
-                    <span>{Object.keys(answers).length}/{allQuestions.length}</span>
-                    <span>{Math.round((Object.keys(answers).length / allQuestions.length) * 100)}% {t('complete')}</span>
-                  </div>
-                  <div className="w-full bg-black/30 rounded-full h-2 sm:h-2 border border-white/20">
-                    <div 
-                      className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 sm:h-2 rounded-full transition-all duration-300 shadow-lg"
-                      style={{ width: `${(Object.keys(answers).length / allQuestions.length) * 100}%` }}
-                    ></div>
-                  </div>
-                </div>
-               
-                
-              </div>
-            </div>
 
-            {/* Questions Section - Scrollable */}
-            <div className="bg-black/30 backdrop-blur-xl border border-white/20 rounded-xl sm:rounded-2xl p-4 sm:p-4 md:p-6 shadow-2xl relative overflow-hidden flex-1 min-h-0 flex flex-col">
-              {/* Galaxy Background Pattern */}
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-blue-900/20 to-indigo-900/20 rounded-xl sm:rounded-2xl"></div>
-              <div className="absolute bottom-0 right-0 w-12 h-12 sm:w-16 sm:h-16 bg-gradient-radial from-blue-400/20 to-transparent rounded-full blur-sm sm:blur-md"></div>
-              <div className="relative z-10 flex flex-col h-full">
-                <h3 className="font-bold text-white mb-4 sm:mb-4 text-sm sm:text-base flex-shrink-0">{t('questions')}</h3>
-                <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-purple-400/30 scrollbar-track-transparent max-h-48 sm:max-h-60 md:max-h-72">
-                  <div className="grid grid-cols-5 sm:grid-cols-5 gap-2 sm:gap-3 md:gap-4 pb-4">
-                    {allQuestions.map((_, index) => {
-                      const isAnswered = answers[index] !== undefined && answers[index] !== '';
-                      const isCurrent = index === currentQuestion;
+                  {/* Answers */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6 flex-shrink-0">
+                    {currentQ.answers?.map((choice, index) => {
+                      const isSelected = selectedChoiceId?.toString() === choice.id?.toString();
+                      const isAnswered = answers[currentQuestion] === choice.answer;
+
                       return (
                         <button
-                          key={index}
-                          onClick={() => {
-                            const targetQuestion = allQuestions[index];
-                            const targetAnswer = answers[index];
-                            
-                            setCurrentQuestion(index);
-                            
-                            // Set the selected choice if there's an answer for this question
-                            if (targetAnswer && targetQuestion) {
-                              const selectedChoice = targetQuestion.answers?.find(c => c.answer === targetAnswer);
-                              setSelectedChoiceId(selectedChoice?.id ? parseInt(selectedChoice.id.toString()) : null);
-                              setIsAnswered(true);
-                            } else {
-                              setSelectedChoiceId(null);
-                              setIsAnswered(false);
-                            }
-                            setShowResult(false);
-                          }}
-                          className={`w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg sm:rounded-lg text-xs sm:text-sm font-bold transition-all duration-200 backdrop-blur-sm relative ${
-                            isCurrent
-                              ? 'bg-gradient-to-br from-purple-600 to-blue-600 text-white shadow-lg border border-purple-400/50'
-                              : isAnswered
-                              ? 'bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg border border-green-400/50'
-                              : 'bg-gradient-to-br from-red-500/20 to-red-600/20 text-red-300 hover:bg-red-500/30 border border-red-400/30 hover:border-red-300'
-                          }`}
-                          title={isAnswered ? `${t('question')} ${index + 1} - ${t('alreadyAnswered')}` : `${t('question')} ${index + 1} - ${t('notAnsweredYet')}`}
+                          key={choice.id}
+                          onClick={() => handleAnswer(parseInt(choice.id?.toString() || "0"))}
+                          className={`p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl border-2 transition-all duration-200 backdrop-blur-sm relative overflow-hidden ${isSelected || isAnswered
+                            ? 'border-purple-400 bg-purple-500/20'
+                            : 'border-white/30 bg-black/20 hover:border-purple-300 hover:bg-purple-500/10'
+                            }`}
                         >
-                          {index + 1}
-                          {isAnswered && (
-                            <div className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 w-3 h-3 sm:w-3 sm:h-3 bg-green-400 rounded-full border border-white/50"></div>
-                          )}
+                          {/* Galaxy effect for choices */}
+                          <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent rounded-lg sm:rounded-xl"></div>
+                          <div className="relative z-10 flex items-center gap-2 sm:gap-3">
+                            <div className={`w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold backdrop-blur-sm flex-shrink-0 ${isSelected || isAnswered
+                              ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg'
+                              : 'bg-gradient-to-br from-purple-400/30 to-purple-600/30 text-purple-200 border border-purple-400/50'
+                              }`}>
+                              {String.fromCharCode(65 + index)}
+                            </div>
+                            <span className="text-white font-medium text-sm sm:text-base leading-tight flex-1 text-left">{choice.answer}</span>
+                            {isAnswered && (
+                              <span className="ml-auto text-xs text-purple-300 flex-shrink-0">✓</span>
+                            )}
+                            {isSelected && !isAnswered && (
+                              <span className="ml-auto text-xs text-blue-300 flex-shrink-0 hidden sm:inline">Selected</span>
+                            )}
+                          </div>
                         </button>
                       );
                     })}
                   </div>
+
+                  {/* Navigation Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-between flex-shrink-0 mt-auto">
+                    <button
+                      onClick={() => {
+                        // Find previous unanswered question
+                        const prevUnansweredIndex = findPreviousUnansweredQuestion(currentQuestion);
+
+                        if (prevUnansweredIndex !== -1) {
+                          // Found previous unanswered question - go to it
+
+                          const prevQuestion = allQuestions[prevUnansweredIndex];
+                          const prevAnswer = answers[prevUnansweredIndex];
+
+                          setCurrentQuestion(prevUnansweredIndex);
+
+                          // Set the selected choice if there's a previous answer
+                          if (prevAnswer && prevQuestion) {
+                            const selectedChoice = prevQuestion.answers?.find(c => c.answer === prevAnswer);
+                            setSelectedChoiceId(selectedChoice?.id ? parseInt(selectedChoice.id.toString()) : null);
+                            setIsAnswered(true);
+                          } else {
+                            setSelectedChoiceId(null);
+                            setIsAnswered(false);
+                          }
+                          setShowResult(false);
+                        } else if (currentQuestion > 0) {
+                          // No previous unanswered question, go to previous question in sequence
+                          const prevQuestion = allQuestions[currentQuestion - 1];
+                          const prevAnswer = answers[currentQuestion - 1];
+
+                          setCurrentQuestion(currentQuestion - 1);
+
+                          // Set the selected choice if there's a previous answer
+                          if (prevAnswer && prevQuestion) {
+                            const selectedChoice = prevQuestion.answers?.find(c => c.answer === prevAnswer);
+                            setSelectedChoiceId(selectedChoice?.id ? parseInt(selectedChoice.id.toString()) : null);
+                            setIsAnswered(true);
+                          } else {
+                            setSelectedChoiceId(null);
+                            setIsAnswered(false);
+                          }
+                          setShowResult(false);
+                        }
+                      }}
+                      disabled={currentQuestion === 0}
+                      className="px-3 sm:px-4 py-2 rounded-lg border border-white/30 text-white/70 disabled:opacity-50 disabled:cursor-not-allowed bg-black/20 backdrop-blur-sm hover:bg-white/10 transition-all duration-200 text-sm sm:text-base"
+                    >
+                      ← {t('previous')}
+                    </button>
+                    <button
+                      onClick={() => {
+                        // Find next unanswered question
+                        const nextUnansweredIndex = findNextUnansweredQuestion(currentQuestion);
+
+                        if (nextUnansweredIndex !== -1) {
+                          // Found next unanswered question - go to it
+
+                          const nextQuestion = allQuestions[nextUnansweredIndex];
+                          const nextAnswer = answers[nextUnansweredIndex];
+
+                          setCurrentQuestion(nextUnansweredIndex);
+
+                          // Set the selected choice if there's an answer for this question
+                          if (nextAnswer && nextQuestion) {
+                            const selectedChoice = nextQuestion.answers?.find(c => c.answer === nextAnswer);
+                            setSelectedChoiceId(selectedChoice?.id ? parseInt(selectedChoice.id.toString()) : null);
+                            setIsAnswered(true);
+                          } else {
+                            setSelectedChoiceId(null);
+                            setIsAnswered(false);
+                          }
+                          setShowResult(false);
+                        } else {
+                          // No more unanswered questions - check if all questions are completed
+
+                          checkAndFinishQuiz(answers);
+                        }
+                      }}
+                      disabled={false}
+                      className="px-3 sm:px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 backdrop-blur-sm hover:from-purple-500 hover:to-blue-500 transition-all duration-200 shadow-lg text-sm sm:text-base"
+                    >
+                      {findNextUnansweredQuestion(currentQuestion) === -1 ? t('complete') : `${t('next')} →`}
+                    </button>
+                  </div>
+
                 </div>
-                
-                {/* Legend */}
-                <div className="mt-4 sm:mt-4 space-y-2 sm:space-y-2 flex-shrink-0">
-                  <div className="flex items-center gap-2 sm:gap-2 text-xs text-gray-300">
-                    <div className="w-3 h-3 sm:w-3 sm:h-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded"></div>
-                    <span className="text-xs">{t('currentQuestion')}</span>
+              </motion.div>
+            </div>
+
+            {/* Sidebar */}
+            <div className="w-full lg:w-80 flex flex-col space-y-3 sm:space-y-4 lg:space-y-6 min-h-0">
+              {/* Progress Section */}
+              <div className="bg-black/30 backdrop-blur-xl border border-white/20 rounded-xl sm:rounded-2xl p-4 sm:p-4 md:p-6 shadow-2xl relative overflow-hidden flex-shrink-0">
+                {/* Galaxy Background Pattern */}
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-blue-900/20 to-indigo-900/20 rounded-xl sm:rounded-2xl"></div>
+                <div className="absolute top-0 right-0 w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-gradient-radial from-white/10 to-transparent rounded-full blur-md sm:blur-lg"></div>
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-4 sm:mb-4">
+                    <div className="w-6 h-6 sm:w-6 sm:h-6 bg-gradient-to-br from-purple-500/30 to-blue-500/30 rounded-full flex items-center justify-center backdrop-blur-sm border border-purple-400/50">
+                      <span className="text-purple-300 text-sm sm:text-sm">🧠</span>
+                    </div>
+                    <h3 className="font-bold text-white text-sm sm:text-base">{t('progress')}</h3>
                   </div>
-                  <div className="flex items-center gap-2 sm:gap-2 text-xs text-gray-300">
-                    <div className="w-3 h-3 sm:w-3 sm:h-3 bg-gradient-to-br from-green-500 to-green-600 rounded"></div>
-                    <span className="text-xs">{t('answered')}</span>
+
+                  <div className="mb-4 sm:mb-4">
+                    <div className="flex justify-between text-xs sm:text-sm text-gray-300 mb-2">
+                      <span>{Object.keys(answers).length}/{allQuestions.length}</span>
+                      <span>{Math.round((Object.keys(answers).length / allQuestions.length) * 100)}% {t('complete')}</span>
+                    </div>
+                    <div className="w-full bg-black/30 rounded-full h-2 sm:h-2 border border-white/20">
+                      <div
+                        className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 sm:h-2 rounded-full transition-all duration-300 shadow-lg"
+                        style={{ width: `${(Object.keys(answers).length / allQuestions.length) * 100}%` }}
+                      ></div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 sm:gap-2 text-xs text-gray-300">
-                    <div className="w-3 h-3 sm:w-3 sm:h-3 bg-gradient-to-br from-red-500/20 to-red-600/20 rounded border border-red-400/30"></div>
-                    <span className="text-xs">{t('unanswered')}</span>
+
+
+                </div>
+              </div>
+
+              {/* Questions Section - Scrollable */}
+              <div className="bg-black/30 backdrop-blur-xl border border-white/20 rounded-xl sm:rounded-2xl p-4 sm:p-4 md:p-6 shadow-2xl relative overflow-hidden flex-1 min-h-0 flex flex-col">
+                {/* Galaxy Background Pattern */}
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-blue-900/20 to-indigo-900/20 rounded-xl sm:rounded-2xl"></div>
+                <div className="absolute bottom-0 right-0 w-12 h-12 sm:w-16 sm:h-16 bg-gradient-radial from-blue-400/20 to-transparent rounded-full blur-sm sm:blur-md"></div>
+                <div className="relative z-10 flex flex-col h-full">
+                  <h3 className="font-bold text-white mb-4 sm:mb-4 text-sm sm:text-base flex-shrink-0">{t('questions')}</h3>
+                  <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-purple-400/30 scrollbar-track-transparent max-h-48 sm:max-h-60 md:max-h-72">
+                    <div className="grid grid-cols-5 sm:grid-cols-5 gap-2 sm:gap-3 md:gap-4 pb-4">
+                      {allQuestions.map((_, index) => {
+                        const isAnswered = answers[index] !== undefined && answers[index] !== '';
+                        const isCurrent = index === currentQuestion;
+                        return (
+                          <button
+                            key={index}
+                            onClick={() => {
+                              const targetQuestion = allQuestions[index];
+                              const targetAnswer = answers[index];
+
+                              setCurrentQuestion(index);
+
+                              // Set the selected choice if there's an answer for this question
+                              if (targetAnswer && targetQuestion) {
+                                const selectedChoice = targetQuestion.answers?.find(c => c.answer === targetAnswer);
+                                setSelectedChoiceId(selectedChoice?.id ? parseInt(selectedChoice.id.toString()) : null);
+                                setIsAnswered(true);
+                              } else {
+                                setSelectedChoiceId(null);
+                                setIsAnswered(false);
+                              }
+                              setShowResult(false);
+                            }}
+                            className={`w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg sm:rounded-lg text-xs sm:text-sm font-bold transition-all duration-200 backdrop-blur-sm relative ${isCurrent
+                              ? 'bg-gradient-to-br from-purple-600 to-blue-600 text-white shadow-lg border border-purple-400/50'
+                              : isAnswered
+                                ? 'bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg border border-green-400/50'
+                                : 'bg-gradient-to-br from-red-500/20 to-red-600/20 text-red-300 hover:bg-red-500/30 border border-red-400/30 hover:border-red-300'
+                              }`}
+                            title={isAnswered ? `${t('question')} ${index + 1} - ${t('alreadyAnswered')}` : `${t('question')} ${index + 1} - ${t('notAnsweredYet')}`}
+                          >
+                            {index + 1}
+                            {isAnswered && (
+                              <div className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 w-3 h-3 sm:w-3 sm:h-3 bg-green-400 rounded-full border border-white/50"></div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Legend */}
+                  <div className="mt-4 sm:mt-4 space-y-2 sm:space-y-2 flex-shrink-0">
+                    <div className="flex items-center gap-2 sm:gap-2 text-xs text-gray-300">
+                      <div className="w-3 h-3 sm:w-3 sm:h-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded"></div>
+                      <span className="text-xs">{t('currentQuestion')}</span>
+                    </div>
+                    <div className="flex items-center gap-2 sm:gap-2 text-xs text-gray-300">
+                      <div className="w-3 h-3 sm:w-3 sm:h-3 bg-gradient-to-br from-green-500 to-green-600 rounded"></div>
+                      <span className="text-xs">{t('answered')}</span>
+                    </div>
+                    <div className="flex items-center gap-2 sm:gap-2 text-xs text-gray-300">
+                      <div className="w-3 h-3 sm:w-3 sm:h-3 bg-gradient-to-br from-red-500/20 to-red-600/20 rounded border border-red-400/30"></div>
+                      <span className="text-xs">{t('unanswered')}</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
         </div>
       </div>
 
@@ -995,12 +969,12 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                     // Calculate final score
                     let finalScore = 0;
                     let finalCorrect = 0;
-                    
+
                     // Calculate points per question to ensure max 100 points total
                     // 5 questions = 20pts/question, 10 = 10pts/question, 20 = 5pts/question
                     const totalQuestions = allQuestions.length;
                     const pointsPerQuestion = Math.round(100 / totalQuestions);
-                    
+
                     allQuestions.forEach((question, index) => {
                       const userAnswer = answers[index];
                       if (userAnswer) {
@@ -1011,11 +985,11 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                         }
                       }
                     });
-                    
+
                     // Update store with final scores
                     setScore(finalScore);
                     setCorrectAnswers(finalCorrect);
-                    
+
                     // Clean up localStorage
                     if (typeof window !== 'undefined') {
                       localStorage.removeItem(`tryout-answers-${gameCode}`);
@@ -1030,7 +1004,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                       localStorage.removeItem(`tryout-show-unanswered-dialog-${gameCode}`);
                       localStorage.removeItem(`tryout-unanswered-questions-${gameCode}`);
                     }
-                    
+
                     // Redirect to results
                     router.push(`/tryout-result/${gameCode}`);
                   }}
@@ -1051,7 +1025,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
             {/* Galaxy Background Pattern */}
             <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-blue-900/20 to-indigo-900/20 rounded-2xl"></div>
             <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-radial from-white/10 to-transparent rounded-full blur-lg"></div>
-            
+
             {/* Header */}
             <div className="relative z-10 text-center p-6 pb-4">
               <div className="mb-4">
@@ -1109,7 +1083,7 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                   onClick={() => {
                     // Go to first unanswered question
                     const firstUnanswered = unansweredQuestions[0];
-                    console.log("Going to unanswered question:", firstUnanswered);
+
                     setCurrentQuestion(firstUnanswered);
                     setSelectedChoiceId(null);
                     setIsAnswered(false);
@@ -1179,10 +1153,10 @@ export default function TryoutPlayContent({ gameCode }: TryoutPlayContentProps) 
                       localStorage.removeItem(`tryout-show-unanswered-dialog-${gameCode}`);
                       localStorage.removeItem(`tryout-unanswered-questions-${gameCode}`);
                     }
-                    
+
                     // Reset game state but keep tryout mode
                     resetGameKeepMode();
-                    
+
                     // Navigate back
                     router.push("/select-quiz");
                   }}

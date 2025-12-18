@@ -20,8 +20,8 @@ export function PWAInstallButton() {
 
     // Check if we're in development mode (check hostname)
     const isDev = window.location.hostname === 'localhost' ||
-                  window.location.hostname === '127.0.0.1' ||
-                  window.location.port !== '';
+      window.location.hostname === '127.0.0.1' ||
+      window.location.port !== '';
     setIsDevelopment(isDev);
 
     // Check if app is already installed
@@ -84,10 +84,10 @@ export function PWAInstallButton() {
         const { outcome } = await deferredPrompt.userChoice;
 
         if (outcome === 'accepted') {
-          console.log('User accepted the install prompt');
+
           setIsInstalled(true);
         } else {
-          console.log('User dismissed the install prompt');
+
           // Keep the button visible, browser might trigger beforeinstallprompt again later
         }
 
@@ -103,7 +103,7 @@ export function PWAInstallButton() {
         alert('PWA install hanya tersedia di production build. Jalankan "npm run build && npm start" untuk test install prompt.');
       } else {
         // Guide user to browser menu
-        console.log('Install prompt not available. Please use browser menu to install.');
+
         // Optionally show a toast or message to user
       }
     }

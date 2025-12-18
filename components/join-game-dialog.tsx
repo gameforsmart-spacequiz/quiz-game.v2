@@ -60,11 +60,11 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
   const [scanError, setScanError] = useState<string>("")
   const scannerRef = useRef<Html5Qrcode | null>(null)
   const qrReaderRef = useRef<HTMLDivElement>(null)
-  
+
   // Get Google avatar URL - prioritize profile data, then user metadata
   const rawGoogleAvatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture
   const googleAvatarUrl = rawGoogleAvatarUrl ? `https://images.weserv.nl/?url=${encodeURIComponent(rawGoogleAvatarUrl)}&w=64&h=64&fit=cover&output=png` : null
-  
+
   // Detect mobile device
   useEffect(() => {
     const checkMobile = () => {
@@ -83,35 +83,17 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
     }
   }, [open, user, profile])
 
-  // Debug logging for avatar URL (only in development)
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development' && user && profile) {
-      console.log('🔍 JoinGameDialog Avatar Debug:', {
-        profileAvatarUrl: profile?.avatar_url,
-        userAvatarUrl: user?.user_metadata?.avatar_url,
-        userPicture: user?.user_metadata?.picture,
-        rawGoogleAvatarUrl: rawGoogleAvatarUrl,
-        proxyGoogleAvatarUrl: googleAvatarUrl,
-        hasProfile: !!profile,
-        hasUser: !!user,
-        profileUsername: profile?.username,
-        profileFullname: profile?.fullname,
-        profileEmail: profile?.email
-      })
-    }
-  }, [user, profile, googleAvatarUrl])
-
   // Initialize selectedAvatar when component mounts or profile changes
   useEffect(() => {
     if (googleAvatarUrl && !selectedAvatar) {
-      console.log('🎯 Initializing with Google avatar:', googleAvatarUrl)
-      
+
+
       // Set Google avatar directly - let the Image component handle loading
-      console.log('🎯 Setting Google avatar:', googleAvatarUrl)
+
       setSelectedAvatar(googleAvatarUrl)
-      
+
     } else if (!googleAvatarUrl && !selectedAvatar) {
-      console.log('🎯 Initializing with first animal avatar')
+
       setSelectedAvatar(ANIMAL_AVATARS[0])
     }
   }, [googleAvatarUrl, selectedAvatar])
@@ -132,16 +114,16 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
       // Validasi ketat: hanya set game code jika panjangnya persis 6 digit
       // Abaikan kode OAuth yang biasanya lebih panjang
       const trimmedCode = initialGameCode.trim().toUpperCase()
-      
+
       // Validasi: panjang persis 6 karakter dan hanya alphanumeric
       const isValidGameCode = trimmedCode.length === 6 && /^[A-Z0-9]{6}$/.test(trimmedCode)
-      
+
       if (isValidGameCode) {
-        console.log("✅ Setting valid game code:", trimmedCode)
+
         form.setValue("gameCode", trimmedCode)
       } else {
         // Jika bukan kode 6 digit, abaikan (kemungkinan kode OAuth atau invalid)
-        console.log("⚠️ Invalid game code ignored (length:", trimmedCode.length, ", code:", trimmedCode.substring(0, 10) + (trimmedCode.length > 10 ? "..." : ""), ")")
+
         form.setValue("gameCode", "")
       }
     } else {
@@ -163,13 +145,13 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
     if (profile) {
       const displayName = profile.fullname || profile.username || ""
       form.setValue("name", displayName)
-      
+
       // Set Google avatar as default if available
       if (googleAvatarUrl) {
-        console.log('🎯 Setting Google avatar as default:', googleAvatarUrl)
+
         setSelectedAvatar(googleAvatarUrl)
       } else {
-        console.log('⚠️ No Google avatar URL available, using first animal avatar')
+
         setSelectedAvatar(ANIMAL_AVATARS[0])
       }
     }
@@ -218,7 +200,7 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
       if ('permissions' in navigator) {
         const permission = await navigator.permissions.query({ name: 'camera' as PermissionName })
         setCameraPermission(permission.state)
-        
+
         permission.onchange = () => {
           setCameraPermission(permission.state)
         }
@@ -227,7 +209,6 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
         setCameraPermission('prompt')
       }
     } catch (error) {
-      console.error("Error checking camera permission:", error)
       setCameraPermission('prompt')
     }
   }
@@ -236,7 +217,7 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
   const startScanning = async () => {
     try {
       setScanError("")
-      
+
       // Check if camera is available
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setScanError("Camera not available on this device")
@@ -245,7 +226,7 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
 
       // Check camera permission first
       await checkCameraPermission()
-      
+
       // Try to access camera to check permission
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true })
@@ -264,10 +245,10 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
       }
 
       setIsScanning(true)
-      
+
       // Wait for DOM to be ready
       await new Promise(resolve => setTimeout(resolve, 100))
-      
+
       // Mobile: Scroll to camera view when scanning starts
       if (isMobile) {
         setTimeout(() => {
@@ -277,7 +258,7 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
           }
         }, 200)
       }
-      
+
       const qrReaderElement = document.getElementById("qr-reader")
       if (!qrReaderElement) {
         setScanError("QR scanner element not found")
@@ -287,10 +268,10 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
 
       const scanner = new Html5Qrcode("qr-reader")
       scannerRef.current = scanner
-      
+
       // Determine camera facing mode based on device
       const facingMode = isMobile ? "environment" : "user" // Back camera on mobile, front on desktop
-      
+
       await scanner.start(
         { facingMode },
         {
@@ -309,9 +290,9 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
         },
         async (decodedText) => {
           // Success callback
-          console.log("QR Code scanned:", decodedText)
+
           const gameCode = extractGameCodeFromUrl(decodedText)
-          
+
           // Validate game code
           if (gameCode && gameCode.length === 6 && /^[A-Z0-9]{6}$/.test(gameCode)) {
             form.setValue("gameCode", gameCode)
@@ -325,7 +306,6 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
               setIsScanning(false)
               setScanError("")
             } catch (error) {
-              console.error("Error stopping scanner after scan:", error)
               setIsScanning(false)
             }
           } else {
@@ -336,15 +316,13 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
           // Error callback (silent - terus scan)
           // Only log errors that are not "NotFoundException" (which is normal while scanning)
           if (!errorMessage.includes("NotFoundException")) {
-            console.debug("QR scan error:", errorMessage)
           }
         }
       )
     } catch (error: any) {
-      console.error("Error starting QR scanner:", error)
       setIsScanning(false)
       setScanError(error.message || "Failed to start camera. Please try again.")
-      
+
       if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
         setCameraPermission('denied')
         setScanError("Camera permission denied. Please allow camera access in your browser settings.")
@@ -365,7 +343,6 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
       setIsScanning(false)
       setScanError("")
     } catch (error) {
-      console.error("Error stopping QR scanner:", error)
       setIsScanning(false)
     }
   }, [])
@@ -375,12 +352,11 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
     return () => {
       if (scannerRef.current) {
         try {
-          scannerRef.current.stop().catch(console.error)
+          scannerRef.current.stop().catch(() => { })
           // clear() may return void, so we don't use .catch() on it
           scannerRef.current.clear()
           scannerRef.current = null
         } catch (error) {
-          console.error("Error cleaning up scanner:", error)
         }
       }
       setIsScanning(false)
@@ -434,7 +410,7 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
       }
 
       const playerId = generateXID()
-      
+
       // Add player to participants array (use nickname going forward; keep name for backward compatibility if present)
       const newParticipant = {
         id: playerId,
@@ -473,7 +449,6 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
       router.push(`/wait/${data.gameCode.toUpperCase()}`)
       onOpenChange(false)
     } catch (error) {
-      console.error("Error joining game:", error)
     } finally {
       setIsLoading(false)
     }
@@ -543,7 +518,7 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
               background: "linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)"
             }}
           />
-          
+
           {/* Simplified animated elements - only on desktop */}
           <div className="absolute inset-0 flex items-center justify-center hidden md:block">
             <div className="absolute orbit-inner">
@@ -580,11 +555,10 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
         <div className="relative z-10 bg-black/20 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-2xl">
           <button
             onClick={handleClose}
-            className={`absolute right-4 top-4 rounded-sm ring-offset-background transition-all focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground z-20 text-white hover:text-cyan-300 ${
-              isScanning && isMobile 
-                ? 'opacity-50 hover:opacity-100 bg-black/40 backdrop-blur-sm p-2 rounded-full border border-white/20' 
+            className={`absolute right-4 top-4 rounded-sm ring-offset-background transition-all focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground z-20 text-white hover:text-cyan-300 ${isScanning && isMobile
+                ? 'opacity-50 hover:opacity-100 bg-black/40 backdrop-blur-sm p-2 rounded-full border border-white/20'
                 : 'opacity-70 hover:opacity-100'
-            }`}
+              }`}
             disabled={isScanning && isMobile}
             title={isScanning && isMobile ? 'Stop scanning first to close' : 'Close'}
           >
@@ -596,10 +570,10 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              transition={{ 
-                delay: isMobile ? 0 : 0.2, 
-                type: "spring", 
-                stiffness: isMobile ? 200 : 150 
+              transition={{
+                delay: isMobile ? 0 : 0.2,
+                type: "spring",
+                stiffness: isMobile ? 200 : 150
               }}
               className="mb-4 flex justify-center"
             >
@@ -610,8 +584,8 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
                 <Star className={`absolute bottom-1 left-1 w-2 h-2 text-purple-300 ${isMobile ? '' : 'animate-pulse'}`} style={isMobile ? {} : { animationDelay: "1s" }} />
               </div>
             </motion.div>
-            
-            <DialogTitle 
+
+            <DialogTitle
               className="text-2xl font-bold text-center text-transparent bg-gradient-to-r from-cyan-300 via-purple-300 to-pink-300 bg-clip-text"
               style={{
                 textShadow: "0 0 20px rgba(147, 197, 253, 0.5), 0 0 40px rgba(168, 85, 247, 0.3)",
@@ -635,8 +609,8 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
                 >
                   {/* Camera View - Full Focus */}
                   <div className="relative bg-black/40 rounded-xl overflow-hidden border-2 border-cyan-400/60 -mx-6 shadow-2xl shadow-cyan-500/30">
-                    <div 
-                      id="qr-reader" 
+                    <div
+                      id="qr-reader"
                       className="w-full"
                       style={{ minHeight: 'calc(70vh - 120px)' }}
                     />
@@ -683,191 +657,180 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
                 <div className={`${isScanning && !isMobile ? 'flex flex-row gap-6 lg:gap-8 xl:gap-10 items-start' : 'space-y-6'}`}>
                   {/* Left Column: Form Fields */}
                   <div className={`${isScanning && !isMobile ? 'flex-shrink-0 w-full max-w-xs sm:max-w-sm' : 'w-full'} space-y-6`}>
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-cyan-100 font-mono">
-                          {t('username', 'Username')}
-                        </FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder={t('enterUsername', 'Choose a username')} 
-                            {...field} 
-                            className="bg-black/30 border-cyan-400/30 text-white placeholder:text-cyan-200/60 backdrop-blur-sm focus:border-cyan-400 focus:ring-cyan-400/20 font-mono"
-                          />
-                        </FormControl>
-                        <FormMessage className="text-red-300" />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="gameCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-cyan-100 font-mono">{t('gameCode', 'Game Code')}</FormLabel>
-                        <FormControl>
-                          <div className="space-y-2">
-                            <div className="flex gap-2">
-                              <Input
-                                placeholder={t('enterCode', 'Enter 6-digit code or paste join link')}
-                                {...field}
-                                onChange={(e) => {
-                                  const extractedCode = extractGameCodeFromUrl(e.target.value)
-                                  field.onChange(extractedCode)
-                                }}
-                                maxLength={200}
-                                className="bg-black/30 border-cyan-400/30 text-white placeholder:text-cyan-200/60 backdrop-blur-sm focus:border-cyan-400 focus:ring-cyan-400/20 font-mono text-center text-lg tracking-widest flex-1"
-                                readOnly={!!initialGameCode || isScanning}
-                                disabled={isScanning}
-                              />
-                              <Button
-                                type="button"
-                                onClick={isScanning ? stopScanning : startScanning}
-                                variant="outline"
-                                disabled={!!initialGameCode}
-                                className="shrink-0 bg-black/30 border-cyan-400/30 text-white hover:bg-cyan-500/30 hover:border-cyan-400 backdrop-blur-sm font-mono px-3 sm:px-4"
-                              >
-                                {isScanning ? (
-                                  <>
-                                    <CameraOff className="h-4 w-4 sm:mr-2" />
-                                    <span className="hidden sm:inline">Stop</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Camera className="h-4 w-4 sm:mr-2" />
-                                    <span className="hidden sm:inline">Scan QR</span>
-                                  </>
-                                )}
-                              </Button>
-                            </div>
-                            {scanError && (
-                              <p className="text-sm text-red-400 font-mono">{scanError}</p>
-                            )}
-                            {cameraPermission === 'denied' && (
-                              <p className="text-sm text-yellow-400 font-mono">
-                                Camera access denied. Please allow camera access in browser settings to scan QR codes.
-                              </p>
-                            )}
-                          </div>
-                        </FormControl>
-                        <FormMessage className="text-red-300" />
-                        {initialGameCode && <p className="text-sm text-green-400 mt-1 font-mono">✓ {t('gameCode', 'Game code use QR')}</p>}
-                      </FormItem>
-                    )}
-                  />
-
-                  <div>
-                    <Label className="text-sm font-medium mb-3 block text-cyan-100 font-mono">
-                      {t('chooseAvatar', 'Choose Your Avatar')}
-                      {user && profile && (
-                        <span className="text-xs text-green-400 ml-2">
-                          ({t('googleAvatar', 'Google avatar selected')})
-                        </span>
-                      )}
-                    </Label>
-                    <div className="grid grid-cols-4 gap-3 mb-3">
-                      {/* Google Avatar (if logged in) - Only load when dialog is open */}
-                      {user && profile && avatarLoaded && (
-                        <motion.button
-                          key="google-avatar"
-                          type="button"
-                          whileHover={isMobile ? {} : { scale: 1.1 }}
-                          whileTap={isMobile ? {} : { scale: 0.9 }}
-                          onClick={() => setSelectedAvatar(googleAvatarUrl || ANIMAL_AVATARS[0])}
-                          className={`relative w-16 h-16 rounded-full overflow-hidden border-2 transition-all backdrop-blur-sm ${
-                            selectedAvatar === googleAvatarUrl
-                              ? "border-green-400 ring-2 ring-green-400/30 shadow-lg shadow-green-400/20"
-                              : "border-green-400/30 hover:border-green-400/60 hover:shadow-lg hover:shadow-green-400/10"
-                          }`}
-                        >
-                          {googleAvatarUrl ? (
-                            <img
-                              src={googleAvatarUrl}
-                              alt="Google Avatar"
-                              className="w-full h-full object-cover"
-                              crossOrigin="anonymous"
-                              referrerPolicy="no-referrer"
-                              onError={(e) => {
-                                console.error('❌ Google avatar failed to load:', googleAvatarUrl)
-                                console.error('❌ Error event:', e)
-                                const img = e.target as HTMLImageElement
-                                console.error('❌ Image element:', img)
-                                console.error('❌ Image src:', img.src)
-                              }}
-                              onLoad={(e) => {
-                                console.log('✅ Google avatar loaded successfully:', googleAvatarUrl)
-                                const img = e.target as HTMLImageElement
-                                console.log('✅ Image dimensions:', img.naturalWidth, 'x', img.naturalHeight)
-                                console.log('✅ Image src:', img.src)
-                              }}
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-cyan-100 font-mono">
+                            {t('username', 'Username')}
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder={t('enterUsername', 'Choose a username')}
+                              {...field}
+                              className="bg-black/30 border-cyan-400/30 text-white placeholder:text-cyan-200/60 backdrop-blur-sm focus:border-cyan-400 focus:ring-cyan-400/20 font-mono"
                             />
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
-                              <span className="text-white text-lg font-bold">
-                                {profile?.fullname?.charAt(0).toUpperCase() || profile?.username?.charAt(0).toUpperCase() || 'G'}
-                              </span>
-                            </div>
-                          )}
-                          {selectedAvatar === googleAvatarUrl && (
-                            <div className={`absolute inset-0 bg-green-400/20 ${isMobile ? '' : 'animate-pulse'}`}></div>
-                          )}
-                          {/* Google icon indicator */}
-                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                            <span className="text-white text-xs font-bold">G</span>
-                          </div>
-                        </motion.button>
+                          </FormControl>
+                          <FormMessage className="text-red-300" />
+                        </FormItem>
                       )}
-                      
-                      {/* Animal Avatars - Only load when dialog is open */}
-                      {avatarLoaded && ANIMAL_AVATARS.map((avatarUrl, index) => (
-                        <motion.button
-                          key={index}
-                          type="button"
-                          whileHover={isMobile ? {} : { scale: 1.1 }}
-                          whileTap={isMobile ? {} : { scale: 0.9 }}
-                          onClick={() => setSelectedAvatar(avatarUrl)}
-                          className={`relative w-16 h-16 rounded-full overflow-hidden border-2 transition-all backdrop-blur-sm ${
-                            selectedAvatar === avatarUrl
-                              ? "border-cyan-400 ring-2 ring-cyan-400/30 shadow-lg shadow-cyan-400/20"
-                              : "border-cyan-400/30 hover:border-cyan-400/60 hover:shadow-lg hover:shadow-cyan-400/10"
-                          }`}
-                        >
-                          <img
-                            src={avatarUrl || "/placeholder.svg"}
-                            alt={`Animal ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                          {selectedAvatar === avatarUrl && (
-                            <div className={`absolute inset-0 bg-cyan-400/20 ${isMobile ? '' : 'animate-pulse'}`}></div>
-                          )}
-                        </motion.button>
-                      ))}
-                    </div>
-                  </div>
+                    />
 
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className={`${isScanning && !isMobile ? 'flex justify-start' : 'w-full'}`}
-                  >
-                    <Button
-                      type="submit"
-                      disabled={isLoading}
-                      className={`${isScanning && !isMobile ? 'w-auto min-w-[200px]' : 'w-full'} bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold py-3 px-6 rounded-xl shadow-lg shadow-cyan-500/30 border border-cyan-400/30 backdrop-blur-sm font-mono relative overflow-hidden transition-all duration-300`}
-                      style={{ imageRendering: "pixelated" }}
+                    <FormField
+                      control={form.control}
+                      name="gameCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-cyan-100 font-mono">{t('gameCode', 'Game Code')}</FormLabel>
+                          <FormControl>
+                            <div className="space-y-2">
+                              <div className="flex gap-2">
+                                <Input
+                                  placeholder={t('enterCode', 'Enter 6-digit code or paste join link')}
+                                  {...field}
+                                  onChange={(e) => {
+                                    const extractedCode = extractGameCodeFromUrl(e.target.value)
+                                    field.onChange(extractedCode)
+                                  }}
+                                  maxLength={200}
+                                  className="bg-black/30 border-cyan-400/30 text-white placeholder:text-cyan-200/60 backdrop-blur-sm focus:border-cyan-400 focus:ring-cyan-400/20 font-mono text-center text-lg tracking-widest flex-1"
+                                  readOnly={!!initialGameCode || isScanning}
+                                  disabled={isScanning}
+                                />
+                                <Button
+                                  type="button"
+                                  onClick={isScanning ? stopScanning : startScanning}
+                                  variant="outline"
+                                  disabled={!!initialGameCode}
+                                  className="shrink-0 bg-black/30 border-cyan-400/30 text-white hover:bg-cyan-500/30 hover:border-cyan-400 backdrop-blur-sm font-mono px-3 sm:px-4"
+                                >
+                                  {isScanning ? (
+                                    <>
+                                      <CameraOff className="h-4 w-4 sm:mr-2" />
+                                      <span className="hidden sm:inline">Stop</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Camera className="h-4 w-4 sm:mr-2" />
+                                      <span className="hidden sm:inline">Scan QR</span>
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                              {scanError && (
+                                <p className="text-sm text-red-400 font-mono">{scanError}</p>
+                              )}
+                              {cameraPermission === 'denied' && (
+                                <p className="text-sm text-yellow-400 font-mono">
+                                  Camera access denied. Please allow camera access in browser settings to scan QR codes.
+                                </p>
+                              )}
+                            </div>
+                          </FormControl>
+                          <FormMessage className="text-red-300" />
+                          {initialGameCode && <p className="text-sm text-green-400 mt-1 font-mono">✓ {t('gameCode', 'Game code use QR')}</p>}
+                        </FormItem>
+                      )}
+                    />
+
+                    <div>
+                      <Label className="text-sm font-medium mb-3 block text-cyan-100 font-mono">
+                        {t('chooseAvatar', 'Choose Your Avatar')}
+                        {user && profile && (
+                          <span className="text-xs text-green-400 ml-2">
+                            ({t('googleAvatar', 'Google avatar selected')})
+                          </span>
+                        )}
+                      </Label>
+                      <div className="grid grid-cols-4 gap-3 mb-3">
+                        {/* Google Avatar (if logged in) - Only load when dialog is open */}
+                        {user && profile && avatarLoaded && (
+                          <motion.button
+                            key="google-avatar"
+                            type="button"
+                            whileHover={isMobile ? {} : { scale: 1.1 }}
+                            whileTap={isMobile ? {} : { scale: 0.9 }}
+                            onClick={() => setSelectedAvatar(googleAvatarUrl || ANIMAL_AVATARS[0])}
+                            className={`relative w-16 h-16 rounded-full overflow-hidden border-2 transition-all backdrop-blur-sm ${selectedAvatar === googleAvatarUrl
+                                ? "border-green-400 ring-2 ring-green-400/30 shadow-lg shadow-green-400/20"
+                                : "border-green-400/30 hover:border-green-400/60 hover:shadow-lg hover:shadow-green-400/10"
+                              }`}
+                          >
+                            {googleAvatarUrl ? (
+                              <img
+                                src={googleAvatarUrl}
+                                alt="Google Avatar"
+                                className="w-full h-full object-cover"
+                                crossOrigin="anonymous"
+                                referrerPolicy="no-referrer"
+                                onError={(e) => {
+                                }}
+                                onLoad={(e) => {
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
+                                <span className="text-white text-lg font-bold">
+                                  {profile?.fullname?.charAt(0).toUpperCase() || profile?.username?.charAt(0).toUpperCase() || 'G'}
+                                </span>
+                              </div>
+                            )}
+                            {selectedAvatar === googleAvatarUrl && (
+                              <div className={`absolute inset-0 bg-green-400/20 ${isMobile ? '' : 'animate-pulse'}`}></div>
+                            )}
+                            {/* Google icon indicator */}
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                              <span className="text-white text-xs font-bold">G</span>
+                            </div>
+                          </motion.button>
+                        )}
+
+                        {/* Animal Avatars - Only load when dialog is open */}
+                        {avatarLoaded && ANIMAL_AVATARS.map((avatarUrl, index) => (
+                          <motion.button
+                            key={index}
+                            type="button"
+                            whileHover={isMobile ? {} : { scale: 1.1 }}
+                            whileTap={isMobile ? {} : { scale: 0.9 }}
+                            onClick={() => setSelectedAvatar(avatarUrl)}
+                            className={`relative w-16 h-16 rounded-full overflow-hidden border-2 transition-all backdrop-blur-sm ${selectedAvatar === avatarUrl
+                                ? "border-cyan-400 ring-2 ring-cyan-400/30 shadow-lg shadow-cyan-400/20"
+                                : "border-cyan-400/30 hover:border-cyan-400/60 hover:shadow-lg hover:shadow-cyan-400/10"
+                              }`}
+                          >
+                            <img
+                              src={avatarUrl || "/placeholder.svg"}
+                              alt={`Animal ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            {selectedAvatar === avatarUrl && (
+                              <div className={`absolute inset-0 bg-cyan-400/20 ${isMobile ? '' : 'animate-pulse'}`}></div>
+                            )}
+                          </motion.button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className={`${isScanning && !isMobile ? 'flex justify-start' : 'w-full'}`}
                     >
-                      <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/20 to-blue-400/20 animate-pulse"></div>
-                      <span className="relative z-10">
-                        {isLoading ? t('loading', 'Joining...') : t('joinGame', 'Join Game')}
-                      </span>
-                      <div className="absolute top-2 right-2 w-2 h-2 bg-yellow-300 rounded-full animate-ping"></div>
-                    </Button>
-                  </motion.div>
-                </div>
+                      <Button
+                        type="submit"
+                        disabled={isLoading}
+                        className={`${isScanning && !isMobile ? 'w-auto min-w-[200px]' : 'w-full'} bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold py-3 px-6 rounded-xl shadow-lg shadow-cyan-500/30 border border-cyan-400/30 backdrop-blur-sm font-mono relative overflow-hidden transition-all duration-300`}
+                        style={{ imageRendering: "pixelated" }}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/20 to-blue-400/20 animate-pulse"></div>
+                        <span className="relative z-10">
+                          {isLoading ? t('loading', 'Joining...') : t('joinGame', 'Join Game')}
+                        </span>
+                        <div className="absolute top-2 right-2 w-2 h-2 bg-yellow-300 rounded-full animate-ping"></div>
+                      </Button>
+                    </motion.div>
+                  </div>
 
                   {/* Right Column: QR Scanner Area (only visible when scanning on desktop) */}
                   {isScanning && !isMobile && (
@@ -879,8 +842,8 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
                       className="flex-shrink-0 w-full max-w-md lg:max-w-lg space-y-3"
                     >
                       <div className="relative bg-black/40 rounded-lg overflow-hidden border border-cyan-400/30">
-                        <div 
-                          id="qr-reader" 
+                        <div
+                          id="qr-reader"
                           className="w-full"
                           style={{ minHeight: '400px' }}
                         />
