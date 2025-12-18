@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button'
 // Flag component using actual flag images
 function FlagDisplay({ flagImage, fallback, className = "" }: { flagImage: string, fallback: string, className?: string }) {
   const [imageError, setImageError] = useState(false)
-  
+
   if (imageError) {
     return (
       <span className={`inline-flex items-center justify-center text-xs font-bold bg-cyan-100 text-cyan-700 px-1.5 py-0.5 rounded border ${className}`}>
@@ -25,7 +25,7 @@ function FlagDisplay({ flagImage, fallback, className = "" }: { flagImage: strin
       </span>
     )
   }
-  
+
   return (
     <div className={`inline-flex items-center justify-center ${className}`}>
       <Image
@@ -35,7 +35,7 @@ function FlagDisplay({ flagImage, fallback, className = "" }: { flagImage: strin
         height={14}
         className="rounded-sm border border-gray-300 shadow-sm"
         onError={() => setImageError(true)}
-        style={{ 
+        style={{
           objectFit: 'cover',
           minWidth: '20px',
           minHeight: '14px'
@@ -60,26 +60,26 @@ export function AppMenu() {
   const [isLanguageSubmenuOpen, setIsLanguageSubmenuOpen] = useState(false)
 
   const languages = [
-    { 
-      code: 'en', 
-      name: t('english', 'English'), 
+    {
+      code: 'en',
+      name: t('english', 'English'),
       flagImage: '/images/flags/us.svg',
       flagFallback: 'US',
-      nativeName: 'English' 
+      nativeName: 'English'
     },
-    { 
-      code: 'id', 
-      name: t('indonesian', 'Indonesian'), 
+    {
+      code: 'id',
+      name: t('indonesian', 'Indonesian'),
       flagImage: '/images/flags/id.svg',
       flagFallback: 'ID',
-      nativeName: 'Bahasa Indonesia' 
+      nativeName: 'Bahasa Indonesia'
     },
-    { 
-      code: 'zh', 
-      name: t('chinese', 'Chinese'), 
+    {
+      code: 'zh',
+      name: t('chinese', 'Chinese'),
       flagImage: '/images/flags/cn.svg',
       flagFallback: 'CN',
-      nativeName: '中文' 
+      nativeName: '中文'
     },
   ]
 
@@ -117,8 +117,8 @@ export function AppMenu() {
     if (typeof window === 'undefined') return
 
     const isDev = window.location.hostname === 'localhost' ||
-                  window.location.hostname === '127.0.0.1' ||
-                  window.location.port !== ''
+      window.location.hostname === '127.0.0.1' ||
+      window.location.port !== ''
     setIsDevelopment(isDev)
 
     if (window.matchMedia('(display-mode: standalone)').matches) {
@@ -201,10 +201,10 @@ export function AppMenu() {
         const { outcome } = await deferredPrompt.userChoice
 
         if (outcome === 'accepted') {
-          console.log('User accepted the install prompt')
+
           setIsInstalled(true)
         } else {
-          console.log('User dismissed the install prompt')
+
         }
 
         setDeferredPrompt(null)
@@ -235,7 +235,7 @@ export function AppMenu() {
             <Menu className="w-5 h-5 text-cyan-300" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent 
+        <DropdownMenuContent
           className="w-56 bg-black/40 backdrop-blur-xl border border-cyan-400/30 shadow-2xl rounded-lg"
           align="end"
         >
@@ -254,9 +254,9 @@ export function AppMenu() {
           >
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center space-x-2">
-                <FlagDisplay 
-                  flagImage={currentLanguageData.flagImage} 
-                  fallback={currentLanguageData.flagFallback} 
+                <FlagDisplay
+                  flagImage={currentLanguageData.flagImage}
+                  fallback={currentLanguageData.flagFallback}
                   className=""
                 />
                 <span>{t('language', 'Language')}</span>
@@ -264,7 +264,7 @@ export function AppMenu() {
               <span className="ml-auto text-xs">{isLanguageSubmenuOpen ? '▼' : '▶'}</span>
             </div>
           </DropdownMenuItem>
-          
+
           {/* Language Options - Shown when clicked */}
           {isLanguageSubmenuOpen && (
             <>
@@ -276,14 +276,13 @@ export function AppMenu() {
                     changeLanguage(language.code)
                     setIsLanguageSubmenuOpen(false)
                   }}
-                  className={`text-white hover:bg-cyan-500/20 cursor-pointer focus:bg-cyan-500/20 rounded-md focus:text-white pl-8 ${
-                    currentLanguage === language.code ? 'bg-cyan-500/30' : ''
-                  }`}
+                  className={`text-white hover:bg-cyan-500/20 cursor-pointer focus:bg-cyan-500/20 rounded-md focus:text-white pl-8 ${currentLanguage === language.code ? 'bg-cyan-500/30' : ''
+                    }`}
                 >
                   <div className="flex items-center space-x-2">
-                    <FlagDisplay 
-                      flagImage={language.flagImage} 
-                      fallback={language.flagFallback} 
+                    <FlagDisplay
+                      flagImage={language.flagImage}
+                      fallback={language.flagFallback}
                       className=""
                     />
                     <div className="flex flex-col">

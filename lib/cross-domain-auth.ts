@@ -48,15 +48,15 @@ export function isVercel(): boolean {
  */
 export function getOAuthRedirectUrl(): string {
   if (typeof window === 'undefined') return '/auth/callback'
-  
+
   if (isQuizProduction()) {
     return `${window.location.origin}/auth/callback`
   }
-  
+
   if (isVercel()) {
     return `${window.location.origin}/auth/callback`
   }
-  
+
   // For localhost and other environments, use the current origin
   return `${window.location.origin}/auth/callback`
 }
@@ -66,15 +66,15 @@ export function getOAuthRedirectUrl(): string {
  */
 export function getHomepageUrl(): string {
   if (typeof window === 'undefined') return '/'
-  
+
   if (isQuizProduction()) {
     return window.location.origin
   }
-  
+
   if (isVercel()) {
     return window.location.origin
   }
-  
+
   // For localhost and other environments, use the current origin
   return window.location.origin
 }
@@ -83,14 +83,14 @@ export function getHomepageUrl(): string {
  * Create a redirect URL from main domain to quiz domain with auth context
  */
 export function createQuizRedirectUrl(fromMainDomain: boolean = false): string {
-  const baseUrl = isLocalhost() 
-    ? CROSS_DOMAIN_CONFIG.LOCALHOST 
+  const baseUrl = isLocalhost()
+    ? CROSS_DOMAIN_CONFIG.LOCALHOST
     : CROSS_DOMAIN_CONFIG.QUIZ_DOMAIN
-  
+
   if (fromMainDomain) {
     return `${baseUrl}?from=main`
   }
-  
+
   return baseUrl
 }
 
@@ -99,7 +99,7 @@ export function createQuizRedirectUrl(fromMainDomain: boolean = false): string {
  */
 export function isFromMainDomain(): boolean {
   if (typeof window === 'undefined') return false
-  
+
   const urlParams = new URLSearchParams(window.location.search)
   return urlParams.get('from') === 'main'
 }
@@ -109,16 +109,6 @@ export function isFromMainDomain(): boolean {
  */
 export function logAuthContext(): void {
   if (typeof window === 'undefined') return
-  
-  console.log('🔍 Cross-domain auth context:', {
-    hostname: window.location.hostname,
-    isQuizProduction: isQuizProduction(),
-    isMainProduction: isMainProduction(),
-    isLocalhost: isLocalhost(),
-    isVercel: isVercel(),
-    isFromMainDomain: isFromMainDomain(),
-    oauthRedirectUrl: getOAuthRedirectUrl(),
-    homepageUrl: getHomepageUrl(),
-    currentUrl: window.location.href
-  })
+
+  // Logging removed for production
 }

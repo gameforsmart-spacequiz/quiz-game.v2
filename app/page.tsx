@@ -23,12 +23,12 @@ function GameCodeHandler({ onGameCodeDetected }: { onGameCodeDetected: (code: st
       // Validasi ketat: hanya terima kode yang panjangnya persis 6 digit (game code)
       // Abaikan kode OAuth yang biasanya lebih panjang (biasanya 40+ karakter)
       const trimmedCode = codeParam.trim().toUpperCase()
-      
+
       // Validasi: hanya terima jika panjangnya persis 6 karakter dan alphanumeric
       const isValidGameCode = trimmedCode.length === 6 && /^[A-Z0-9]{6}$/.test(trimmedCode)
-      
+
       if (isValidGameCode) {
-        console.log("✅ Game code detected from URL:", trimmedCode) // Debug log
+
         onGameCodeDetected(trimmedCode)
 
         // Hapus parameter code dari URL agar tidak terdeteksi lagi
@@ -36,7 +36,7 @@ function GameCodeHandler({ onGameCodeDetected }: { onGameCodeDetected: (code: st
         window.history.replaceState(null, "", newUrl)
       } else {
         // Jika bukan kode 6 digit, abaikan (kemungkinan kode OAuth atau invalid)
-        console.log("⚠️ Ignoring non-game code from URL (length:", trimmedCode.length, ", code:", trimmedCode.substring(0, 10) + "...)") // Debug log
+
         // Hapus parameter code dari URL meskipun tidak valid untuk mencegah masalah
         const newUrl = window.location.pathname
         window.history.replaceState(null, "", newUrl)
@@ -69,16 +69,16 @@ function HomePageContent() {
   useEffect(() => {
     if (user && typeof window !== 'undefined') {
       const pendingCode = localStorage.getItem('pending-game-code')
-      
+
       if (pendingCode) {
-        console.log('🎯 Found pending game code after login:', pendingCode)
+
         localStorage.removeItem('pending-game-code')
-        
+
         // Set game code and trigger join dialog
         setGameCodeFromUrl(pendingCode)
         setShowJoinGame(true)
         setShowTutorial(false)
-        
+
         // Clear URL parameter if exists
         const url = new URL(window.location.href)
         url.searchParams.delete('code')
@@ -88,27 +88,26 @@ function HomePageContent() {
   }, [user])
 
   const handleGameCodeDetected = (code: string) => {
-    console.log("🎯 Game code detected:", code)
-    console.log("🎯 Current state - showTutorial:", showTutorial, "hasShownTutorial:", hasShownTutorial)
-    
+
+
     setGameCodeFromUrl(code)
-    
+
     // Reset state untuk memastikan tutorial muncul
     setShowJoinGame(false)
     setShowTutorial(false)
-    
+
     // Selalu tampilkan tutorial untuk user baru dari link join
     if (!hasShownTutorial) {
-      console.log("🎯 First time user - showing tutorial")
+
       setShowTutorial(true)
       setHasShownTutorial(true)
     } else {
-      console.log("🎯 Returning user - showing tutorial again")
+
       // Untuk user yang sudah pernah lihat, tetap tampilkan tutorial
       setShowTutorial(true)
     }
-    
-    console.log("🎯 After state update - showTutorial:", true, "gameCodeFromUrl:", code)
+
+
   }
 
   const handleHostGame = () => {
@@ -118,39 +117,39 @@ function HomePageContent() {
 
   // Handle tutorial close
   const handleTutorialClose = (closedByX: boolean = false) => {
-    console.log("🎯 Tutorial closed", closedByX ? "by X button" : "normally")
+
     setShowTutorial(false)
-    
+
     // Jika ditutup dengan tombol X, jangan buka dialog join
     if (closedByX) {
-      console.log("🎯 Tutorial closed by X - not opening join dialog")
+
       setGameCodeFromUrl("") // Reset gameCodeFromUrl
       setHasUserClickedJoin(false) // Reset hasUserClickedJoin
       return
     }
-    
+
     // Jika ada game code dari URL, langsung buka dialog join
     if (gameCodeFromUrl) {
-      console.log("🎯 Opening join game dialog after tutorial close")
+
       setShowJoinGame(true)
     } else if (hasUserClickedJoin) {
       // Jika user klik tombol JOIN (bukan dari URL), buka dialog join
-      console.log("🎯 Opening join game dialog after tutorial close (user clicked join)")
+
       setShowJoinGame(true)
     }
   }
 
   // Handle tutorial confirm (user selesai tutorial)
   const handleTutorialConfirm = () => {
-    console.log("🎯 Tutorial confirmed")
+
     setShowTutorial(false)
     // Jika ada game code dari URL, langsung buka dialog join
     if (gameCodeFromUrl) {
-      console.log("🎯 Opening join game dialog after tutorial confirm")
+
       setShowJoinGame(true)
     } else if (hasUserClickedJoin) {
       // Jika user klik tombol JOIN (bukan dari URL), buka dialog join
-      console.log("🎯 Opening join game dialog after tutorial confirm (user clicked join)")
+
       setShowJoinGame(true)
     }
   }
@@ -177,22 +176,16 @@ function HomePageContent() {
 
   // Debug effect untuk memantau state changes
   useEffect(() => {
-    console.log("🎯 State changed:", {
-      showJoinGame,
-      showTutorial,
-      gameCodeFromUrl,
-      hasUserClickedJoin
-    })
   }, [showJoinGame, showTutorial, gameCodeFromUrl, hasUserClickedJoin])
 
   return (
-    <>
+    <div className="fixed inset-0 overflow-hidden">
       <Suspense fallback={null}>
         <GameCodeHandler onGameCodeDetected={handleGameCodeDetected} />
       </Suspense>
 
       <AppMenu />
-      
+
       {/* Auth Components - User is guaranteed to be logged in here */}
       <UserProfile />
 
@@ -289,48 +282,26 @@ function HomePageContent() {
         <div className="absolute inset-0 bg-black/30"></div>
       </div>
 
-      <div className="relative z-10 container mx-auto px-4 py-8 min-h-screen flex flex-col justify-center items-center">
+      <div className="relative z-10 container mx-auto px-4 py-8 min-h-screen flex flex-col justify-center items-center overflow-hidden">
         <motion.div
           initial={{ opacity: 0, y: -50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
           className="text-center mb-8 sm:mb-12"
         >
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: "spring", stiffness: 150 }}
-            className="mb-4 sm:mb-6"
-          >
-            <div
-              className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 mx-auto bg-gradient-to-br from-purple-500/30 to-cyan-500/30 backdrop-blur-xl rounded-2xl flex items-center justify-center mb-4 border-2 border-white/40 shadow-lg shadow-purple-500/20 relative overflow-hidden"
-              style={{ imageRendering: "pixelated" }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-400/10 to-cyan-400/10 animate-pulse"></div>
-              <Gamepad2 className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-white relative z-10" />
-              <Sparkles className="absolute top-1 right-1 w-3 h-3 text-cyan-300 animate-pulse" />
-              <Star
-                className="absolute bottom-1 left-1 w-2 h-2 text-purple-300 animate-pulse"
-                style={{ animationDelay: "1s" }}
-              />
-            </div>
-          </motion.div>
 
-          <h1
-            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-transparent bg-gradient-to-r from-cyan-300 via-purple-300 to-pink-300 bg-clip-text mb-3 sm:mb-4 relative"
-            style={{
-              textShadow: "0 0 20px rgba(147, 197, 253, 0.5), 0 0 40px rgba(168, 85, 247, 0.3)",
-              fontFamily: "monospace",
-              imageRendering: "pixelated",
-            }}
-          >
-            {t('title', 'SPACE QUIZ')}
-            <div className="absolute -top-2 -right-2 w-4 h-4 bg-yellow-300 rounded-full animate-ping opacity-75"></div>
-            <div
-              className="absolute -top-1 -left-3 w-2 h-2 bg-cyan-300 rounded-full animate-pulse"
-              style={{ animationDelay: "1s" }}
-            ></div>
-          </h1>
+
+          {/* Logo Image */}
+          <div className="relative mb-3 sm:mb-4">
+            <img
+              src="/images/logo/spacequiz.webp"
+              alt="Space Quiz"
+              className="h-auto w-[130px] sm:w-[320px] md:w-[380px] lg:w-[390px] mx-auto object-contain drop-shadow-2xl"
+              style={{
+                filter: "drop-shadow(0 0 20px rgba(147, 197, 253, 0.5)) drop-shadow(0 0 40px rgba(168, 85, 247, 0.3))",
+              }}
+            />
+          </div>
           <p
             className="text-base sm:text-lg md:text-xl text-cyan-100 max-w-2xl mx-auto px-4"
             style={{
@@ -371,7 +342,7 @@ function HomePageContent() {
           <motion.div whileHover={{ scale: 1.05, y: -10 }} whileTap={{ scale: 0.95 }} className="group">
             <Button
               onClick={() => {
-                console.log("🎯 JOIN button clicked")
+
                 setHasUserClickedJoin(true)
                 setShowTutorial(true)
               }}
@@ -402,7 +373,7 @@ function HomePageContent() {
           onConfirm={handleTutorialConfirm}
         />
       )}
-    </>
+    </div>
   )
 }
 

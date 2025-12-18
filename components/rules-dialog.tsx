@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Clock, Hash, Play, ArrowLeft, Gamepad2, Sparkles, Star, Settings } from "lucide-react"
+import { Clock, Hash, Play, ArrowLeft, Gamepad2, Sparkles, Star, Settings, Loader2 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { Quiz, GameSettings } from "@/lib/types"
 
@@ -28,9 +28,10 @@ interface RulesDialogProps {
   onOpenChange: (open: boolean) => void
   quiz: Quiz | null
   onStartGame: (settings: GameSettings) => void
+  isLoading?: boolean
 }
 
-export function RulesDialog({ open, onOpenChange, quiz, onStartGame }: RulesDialogProps) {
+export function RulesDialog({ open, onOpenChange, quiz, onStartGame, isLoading = false }: RulesDialogProps) {
   const { t } = useLanguage()
   const [timeLimitMinutes, setTimeLimitMinutes] = useState(5) // 5 minutes
   const timeLimit = timeLimitMinutes // Already in minutes for database
@@ -65,11 +66,11 @@ export function RulesDialog({ open, onOpenChange, quiz, onStartGame }: RulesDial
   const getQuestionOptions = () => {
     const maxQuestions = quiz?.questions?.length || 0
     const options: number[] = []
-    
+
     // Default options: 5, 10, 20 (maksimal 20)
     // Only show options that are available in the quiz (max 20)
     const maxAllowed = Math.min(maxQuestions, 20)
-    
+
     if (maxAllowed >= 5) {
       options.push(5)
     }
@@ -79,17 +80,17 @@ export function RulesDialog({ open, onOpenChange, quiz, onStartGame }: RulesDial
     if (maxAllowed >= 20) {
       options.push(20)
     }
-    
+
     // If quiz has less than 5 questions, show only what's available
     if (maxQuestions > 0 && maxQuestions < 5) {
       return [maxQuestions]
     }
-    
+
     // If no questions, return default options
     if (options.length === 0) {
       return [5, 10, 20]
     }
-    
+
     return options
   }
 
@@ -124,7 +125,7 @@ export function RulesDialog({ open, onOpenChange, quiz, onStartGame }: RulesDial
                     backgroundImage: "url('/images/galaxy.webp')",
                   }}
                 />
-                
+
                 {/* Animated space elements */}
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="absolute orbit-inner">
@@ -173,8 +174,8 @@ export function RulesDialog({ open, onOpenChange, quiz, onStartGame }: RulesDial
                       <Star className="absolute bottom-1 left-1 w-2 h-2 text-purple-300 animate-pulse" style={{ animationDelay: "1s" }} />
                     </div>
                   </motion.div>
-                  
-                  <DialogTitle 
+
+                  <DialogTitle
                     className="text-2xl font-bold text-center text-transparent bg-gradient-to-r from-cyan-300 via-purple-300 to-pink-300 bg-clip-text flex items-center justify-center gap-2"
                     style={{
                       textShadow: "0 0 20px rgba(147, 197, 253, 0.5), 0 0 40px rgba(168, 85, 247, 0.3)",
@@ -271,17 +272,21 @@ export function RulesDialog({ open, onOpenChange, quiz, onStartGame }: RulesDial
                         {t('back')}
                       </Button>
                     </motion.div>
-                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <motion.div whileHover={!isLoading ? { scale: 1.02 } : {}} whileTap={!isLoading ? { scale: 0.98 } : {}}>
                       <Button
                         onClick={handleStartGame}
-                        className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold flex items-center gap-2 shadow-lg shadow-cyan-500/30 border border-cyan-400/30 backdrop-blur-sm font-mono relative overflow-hidden px-6"
+                        disabled={isLoading}
+                        className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold flex items-center gap-2 shadow-lg shadow-cyan-500/30 border border-cyan-400/30 backdrop-blur-sm font-mono relative overflow-hidden px-6 disabled:opacity-70 disabled:cursor-not-allowed"
                         style={{ imageRendering: "pixelated" }}
                       >
                         <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/20 to-blue-400/20 animate-pulse"></div>
-                        <Play className="h-4 w-4 relative z-10" />
-                        {/* penanda */}
-                        <span className="relative z-10">{t('startGame')}</span>
-                        <div className="absolute top-2 right-2 w-2 h-2 bg-yellow-300 rounded-full animate-ping"></div>
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 relative z-10 animate-spin" />
+                        ) : (
+                          <Play className="h-4 w-4 relative z-10" />
+                        )}
+                        <span className="relative z-10">{isLoading ? t('creating') : t('startGame')}</span>
+                        {!isLoading && <div className="absolute top-2 right-2 w-2 h-2 bg-yellow-300 rounded-full animate-ping"></div>}
                       </Button>
                     </motion.div>
                   </div>

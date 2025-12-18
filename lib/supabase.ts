@@ -13,7 +13,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   const missingVars = []
   if (!supabaseUrl) missingVars.push('NEXT_PUBLIC_SUPABASE_URL')
   if (!supabaseAnonKey) missingVars.push('NEXT_PUBLIC_SUPABASE_ANON_KEY')
-  
+
   if (isBuildTime) {
     console.warn(`⚠️  Missing Supabase environment variables during build: ${missingVars.join(', ')}`)
     console.warn('⚠️  Using placeholder values for build. Make sure to set environment variables in production.')
@@ -53,7 +53,7 @@ if (finalUrl !== 'https://placeholder.supabase.co') {
 }
 
 if (!isBuildTime) {
-  console.log('✅ Supabase configured successfully:', finalUrl)
+
 }
 
 export const supabase = createClient(finalUrl, finalKey)

@@ -99,7 +99,6 @@ const spaceBackgroundCSS = `
 
 export default function SpaceDodge({ onComplete }: Props) {
   const [timeLeft, setTimeLeft] = useState(30)
-  const [score, setScore] = useState(0)
   const [meteors, setMeteors] = useState<Meteor[]>([])
   const [powerUps, setPowerUps] = useState<PowerUp[]>([])
   const [particles, setParticles] = useState<Particle[]>([])
@@ -115,7 +114,7 @@ export default function SpaceDodge({ onComplete }: Props) {
   // Mobile detection
   const isMobile = useRef(
     /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-      window.innerWidth <= 768,
+    window.innerWidth <= 768,
   )
 
   // Tambahkan di awal komponen
@@ -197,7 +196,6 @@ export default function SpaceDodge({ onComplete }: Props) {
           .filter((m) => {
             if (m.y > 110) return false
             if (checkCollision(m.x, m.y)) {
-              setScore((s) => Math.max(0, s - 20))
               spawnParticles(m.x, m.y, 6, "#f87171")
               if (collisionSound) {
                 collisionSound.currentTime = 0
@@ -218,7 +216,6 @@ export default function SpaceDodge({ onComplete }: Props) {
           .filter((p) => {
             if (p.y > 110) return false
             if (checkCollision(p.x, p.y)) {
-              setScore((s) => s + p.points)
               spawnParticles(p.x, p.y, 5, p.type === "star" ? "#fbbf24" : p.type === "heart" ? "#ec4899" : "#38bdf8")
               if (powerUpSound) {
                 powerUpSound.currentTime = 0
@@ -313,7 +310,7 @@ export default function SpaceDodge({ onComplete }: Props) {
       audioRef.current
         .play()
         .then(() => {
-          console.log("Background music started successfully")
+
         })
         .catch((error) => {
           console.error("Background music autoplay error:", error)
@@ -322,7 +319,7 @@ export default function SpaceDodge({ onComplete }: Props) {
             audioRef.current
               ?.play()
               .then(() => {
-                console.log("Background music started on interaction")
+
                 document.removeEventListener("click", tryPlayOnInteract)
                 document.removeEventListener("touchstart", tryPlayOnInteract)
                 document.removeEventListener("keydown", tryPlayOnInteract)
@@ -359,9 +356,9 @@ export default function SpaceDodge({ onComplete }: Props) {
   useEffect(() => {
     if (gameOver) {
       // Only call onComplete, let PlayContent handle database operations
-      onComplete(Math.floor(score))
+      onComplete(0)
     }
-  }, [gameOver, score, onComplete])
+  }, [gameOver, onComplete])
 
   return (
     <div
@@ -395,7 +392,7 @@ export default function SpaceDodge({ onComplete }: Props) {
             SPACE QUIZ
           </h2>
         </div>
-        
+
         {/* Main HUD */}
         <div className="flex items-center gap-4 bg-gradient-to-r from-purple-900/80 to-indigo-900/80 backdrop-blur-md px-6 py-3 rounded-lg border-2 border-yellow-300 shadow-lg">
           <div className="flex items-center gap-2">
@@ -407,7 +404,6 @@ export default function SpaceDodge({ onComplete }: Props) {
               />
             </div>
           </div>
-          <span className="font-bold text-yellow-300">⭐ {Math.floor(score)}</span>
         </div>
       </div>
 

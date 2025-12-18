@@ -11,7 +11,7 @@ export function CrossDomainRedirect() {
   useEffect(() => {
     // Redirect to quiz domain with auth context
     const quizUrl = createQuizRedirectUrl(true)
-    console.log('🔄 Redirecting to quiz domain:', quizUrl)
+
     window.location.href = quizUrl
   }, [])
 
@@ -39,13 +39,13 @@ export function createQuizLink(): string {
  */
 export function shouldRedirectToQuiz(): boolean {
   if (typeof window === 'undefined') return false
-  
+
   // Check if user is on main domain and wants to access quiz
   const isMainDomain = window.location.hostname === 'www.gameforsmart.com'
-  const wantsQuiz = window.location.pathname.includes('quiz') || 
-                   window.location.search.includes('quiz') ||
-                   window.location.hash.includes('quiz')
-  
+  const wantsQuiz = window.location.pathname.includes('quiz') ||
+    window.location.search.includes('quiz') ||
+    window.location.hash.includes('quiz')
+
   return isMainDomain && wantsQuiz
 }
 

@@ -67,6 +67,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
   const [progressRestored, setProgressRestored] = useState(false)
   const [storeHydrated, setStoreHydrated] = useState(false)
   const [sessionSeed, setSessionSeed] = useState<number | null>(null)
+  const [startedAt, setStartedAt] = useState<string | null>(null)
 
   // Seeded RNG (mulberry32) and Fisher-Yates shuffle for stable per-session randomness
   const createRng = useCallback((seed: number) => {
@@ -84,7 +85,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
     const a = [...arr]
     for (let i = a.length - 1; i > 0; i--) {
       const j = Math.floor(rng() * (i + 1))
-      ;[a[i], a[j]] = [a[j], a[i]]
+        ;[a[i], a[j]] = [a[j], a[i]]
     }
     return a
   }, [createRng])
@@ -94,41 +95,37 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
     try {
       // Validate input data
       if (!quizData || !quizData.questions || !Array.isArray(quizData.questions)) {
-        console.error("Invalid quiz data structure:", quizData);
+
         return [];
       }
-      
+
       if (quizData.questions.length === 0) {
-        console.error("Quiz has no questions");
+
         return [];
       }
-      
+
       if (questionCount <= 0) {
-        console.error("Invalid question count:", questionCount);
+
         return [];
       }
-      
+
       // Create a shared seed for question selection (same for all players)
       const sharedSeed = `${gameId}-${quizStartTime || Date.now()}`.split('').reduce((a: number, b: string) => a + b.charCodeAt(0), 0)
-      
+
       // Use shared seed to select the SAME questions for all players
       const selectedQuestions = seededShuffle(quizData.questions, sharedSeed).slice(0, questionCount)
-      
+
       // Use player-specific seed to shuffle the ORDER of selected questions
       const shuffledQuestions = seededShuffle(selectedQuestions, seed)
-      
+
       return shuffledQuestions.map((q: any, idx: number) => {
         // Validate question structure
         if (!q || !q.answers || !Array.isArray(q.answers)) {
-          console.error("Invalid question structure:", q);
-          console.error("Question index:", idx);
-          console.error("Question ID:", q?.id);
-          console.error("Question text:", q?.question);
-          console.error("Answers:", q?.answers);
+
           // Skip invalid questions instead of returning them
           return null;
         }
-        
+
         // derive a sub-seed for answers to reduce correlation with question order
         const answerSeed = seed + (q.id || idx) * 101
         return {
@@ -137,7 +134,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
         }
       }).filter(q => q !== null) // Remove null values from invalid questions
     } catch (error) {
-      console.error("Error in regenerateQuestionsWithSeed:", error);
+
       return [];
     }
   }, [seededShuffle])
@@ -145,7 +142,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
   useEffect(() => {
     const fetchGame = async () => {
       if (!gameCode || typeof gameCode !== "string") {
-        console.error("Invalid game code:", gameCode);
+
         toast.error("Invalid game code!");
         router.replace("/");
         return;
@@ -158,8 +155,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
         .single()
 
       if (gameErr || !gameData) {
-        console.error("Game fetch error:", gameErr?.message, gameErr?.details);
-        console.error("Game code attempted:", gameCode);
+
         toast.error("Game not found!");
         router.replace("/");
         return;
@@ -171,6 +167,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
         questionCount: gameData.question_limit === 'all' ? 999 : parseInt(gameData.question_limit),
       });
       setTimeLeft(gameData.total_time_minutes * 60); // Convert to seconds for timer
+      setStartedAt(gameData.started_at);
 
       const { data: quizData, error: quizErr } = await supabase
         .from("quizzes")
@@ -179,9 +176,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
         .single()
 
       if (quizErr || !quizData) {
-        console.error("Quiz fetch error:", quizErr?.message, quizErr?.details);
-        console.error("Attempted to fetch quiz ID:", gameData.quiz_id);
-        console.error("Game data:", gameData);
+
         toast.error("Quiz not found!");
         router.replace("/");
         return;
@@ -189,7 +184,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
 
       // Validate quiz data structure
       if (!quizData.questions || !Array.isArray(quizData.questions) || quizData.questions.length === 0) {
-        console.error("Quiz has no questions or invalid structure:", quizData);
+
         toast.error("Quiz has no questions!");
         router.replace("/");
         return;
@@ -198,34 +193,33 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
       setQuiz(quizData as Quiz);
 
       // Use the current_questions from game_sessions if available, otherwise use quiz questions
-      let questionsToUse = gameData.current_questions && gameData.current_questions.length > 0 
-        ? gameData.current_questions 
+      let questionsToUse = gameData.current_questions && gameData.current_questions.length > 0
+        ? gameData.current_questions
         : quizData.questions;
 
       // Validate questionsToUse structure
       if (!questionsToUse || !Array.isArray(questionsToUse) || questionsToUse.length === 0) {
-        console.error("Invalid questionsToUse:", questionsToUse);
-        console.log("Falling back to quiz questions:", quizData.questions);
+
         questionsToUse = quizData.questions;
       }
 
       // Validate each question has required structure
       const validQuestions = questionsToUse.filter((q: any) => {
         if (!q || !q.answers || !Array.isArray(q.answers)) {
-          console.warn("Invalid question structure found:", q);
+
           return false;
         }
         return true;
       });
 
       if (validQuestions.length === 0) {
-        console.error("No valid questions found after filtering");
+
         toast.error("No valid questions found!");
         router.replace("/");
         return;
       }
 
-      console.log(`Using ${validQuestions.length} valid questions out of ${questionsToUse.length} total`);
+
       questionsToUse = validQuestions;
 
       // Build a per-session seed key for HOST-PLAYER mode
@@ -233,12 +227,12 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
       const sessionKey = `session-seed-${gameData.id}-${playerId}-${gameData.started_at || "nostart"}`
       const existingSeed = typeof window !== "undefined" ? localStorage.getItem(sessionKey) : null;
       let seed: number;
-      
+
       if (existingSeed) {
         // Use existing seed for consistency across refreshes
         seed = parseInt(existingSeed);
         setSessionSeed(seed);
-        console.log(`[HOST-PLAYER] Using existing player seed: ${seed} for player ${playerId}`);
+
       } else {
         // Create unique seed per player for different question order
         // Include playerId so each player gets different order of the SAME questions
@@ -247,17 +241,15 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
         // Store the session seed for consistency within the same session
         setSessionSeed(seed);
         if (typeof window !== "undefined") localStorage.setItem(sessionKey, seed.toString());
-        console.log(`[HOST-PLAYER] Created player seed: ${seed} for player ${playerId} - Same questions, different order`);
+
       }
-      
+
       // Generate questions using the seed
       const shuffled = regenerateQuestionsWithSeed(seed, { questions: questionsToUse }, gameData.question_limit === 'all' ? 999 : parseInt(gameData.question_limit), gameData.id, gameData.started_at);
-      
+
       // Validate generated questions
       if (!shuffled || shuffled.length === 0) {
-        console.error("Failed to generate questions from quiz data");
-        console.error("Input questionsToUse:", questionsToUse);
-        console.error("Generated shuffled:", shuffled);
+
         toast.error("Failed to load quiz questions!");
         router.replace("/");
         return;
@@ -266,49 +258,43 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
       // Additional validation for each generated question
       const validShuffled = shuffled.filter(q => {
         if (!q || !q.answers || !Array.isArray(q.answers)) {
-          console.warn("Invalid shuffled question:", q);
+
           return false;
         }
         return true;
       });
 
       if (validShuffled.length === 0) {
-        console.error("No valid questions after shuffling");
+
         toast.error("No valid questions after processing!");
         router.replace("/");
         return;
       }
 
-      console.log(`Generated ${validShuffled.length} valid questions after shuffling`);
-      
+
+
       setAllQuestions(validShuffled);
-      
+
       // Save questions to database current_questions field
       const { error: updateError } = await supabase
         .from("game_sessions")
         .update({ current_questions: validShuffled })
         .eq("id", gameData.id);
-      
+
       if (updateError) {
-        console.error("Error saving questions to database:", updateError);
+
       } else {
-        console.log("Questions saved to database successfully");
+
       }
-      
-      console.log(`Quiz loaded successfully:`, {
-        gameId: gameData.id,
-        quizId: gameData.quiz_id,
-        questionCount: gameData.question_limit === 'all' ? 999 : parseInt(gameData.question_limit),
-        questionsLoaded: shuffled.length,
-        isStarted: gameData.status === 'active'
-      });
+
+
 
       if (gameData.status === 'active') {
         setIsQuizStarted(true);
       } else {
         setIsQuizStarted(false);
       }
-      
+
       setLoading(false);
     }
 
@@ -319,41 +305,41 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
   useEffect(() => {
     if (!storeHydrated && !loading && gameId && playerId && isQuizStarted) {
       setStoreHydrated(true);
-      
+
       // Check if this is a fresh game session by comparing gameId with stored gameId
       const storedGameId = localStorage.getItem('current-game-id');
       const isNewGameSession = storedGameId !== gameId;
-      
+
       if (isNewGameSession) {
         // This is a new game session, reset progress
-        console.log("New game session detected, resetting progress");
+
         setCurrentQuestion(0);
         setScore(0);
         setCorrectAnswers(0);
         localStorage.setItem('current-game-id', gameId);
-        
+
         // Also ensure player starts with fresh database state
         const resetPlayerProgress = async () => {
           try {
             await supabase
               .from("players")
-              .update({ 
-                score: 0, 
+              .update({
+                score: 0,
                 // current_question removed - calculate from responses instead 
               })
               .eq("id", playerId);
-              
+
             setProgressRestored(true);
           } catch (error) {
-            console.error("Error resetting player progress:", error);
+
             setProgressRestored(true);
           }
         };
-        
+
         resetPlayerProgress();
         return;
       }
-      
+
       // Existing session - restore progress from database
       const restoreProgress = async () => {
         try {
@@ -365,7 +351,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
             .single()
 
           if (gameError) {
-            console.error("Error fetching game session:", gameError)
+
             setProgressRestored(true);
             return;
           }
@@ -373,7 +359,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
           // Find player in participants array
           const player = gameSession.participants.find((p: any) => p.id === playerId);
           if (!player) {
-            console.error("Player not found in game session");
+
             setProgressRestored(true);
             return;
           }
@@ -381,19 +367,19 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
           // Get player's responses from this session
           const playerResponses = gameSession.responses.filter((r: any) => r.player_id === playerId);
           const normalAnswers = playerResponses.filter((r: any) => r.question_id !== 'mini-game');
-          
+
           if (normalAnswers.length > 0) {
             const lastAnsweredIndex = normalAnswers.length - 1;
             const nextQuestion = lastAnsweredIndex + 1;
-            
+
             if (nextQuestion < (gameSettings?.questionCount || 15)) {
               setCurrentQuestion(nextQuestion);
-              console.log(`Restored progress: player at question ${nextQuestion}/${gameSettings?.questionCount}`);
-              
+
+
               // Correct count from normal answers only
               const correctCount = normalAnswers.filter((answer: any) => answer.is_correct).length;
               setCorrectAnswers(correctCount);
-              
+
               // Set score from participant data
               setScore(player.score || 0);
               setProgressRestored(true);
@@ -407,7 +393,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
             setProgressRestored(true);
           }
         } catch (error) {
-          console.error("Error restoring progress:", error);
+
           setProgressRestored(true);
         }
       };
@@ -429,7 +415,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
             .single()
 
           if (gameError) {
-            console.error("Error fetching game session for cleanup:", gameError)
+
             return
           }
 
@@ -450,7 +436,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
             .update({ participants: updatedParticipants })
             .eq("id", gameId)
         } catch (error) {
-          console.error("Error marking player as inactive on leave:", error)
+
         }
       }
     }
@@ -466,7 +452,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
             .single()
 
           if (gameError) {
-            console.error("Error fetching game session for cleanup:", gameError)
+
             return
           }
 
@@ -487,7 +473,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
             .update({ participants: updatedParticipants })
             .eq("id", gameId)
         } catch (error) {
-          console.error("Error marking player as inactive on visibility change:", error)
+
         }
       }
     }
@@ -505,58 +491,17 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
     if (!gameCode) return;
 
     const channel = supabase
-      .channel("game-start")
+      .channel("game-status")
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "game_sessions", filter: `game_pin=eq.${gameCode.toUpperCase()}` },
         (payload) => {
-          if (payload.new.status === 'active' && !isQuizStarted) {
-            setIsQuizStarted(true);
-          }
-        },
-      )
-      .subscribe();
+          const newStatus = payload.new.status;
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [gameCode, isQuizStarted]);
-
-  // Fallback polling if Realtime is not enabled in production: detect start and quiz_start_time
-  useEffect(() => {
-    if (!gameCode || isQuizStarted) return;
-    let cancelled = false;
-    const poll = async () => {
-      try {
-        const { data } = await supabase
-          .from("game_sessions")
-          .select("status, started_at")
-          .eq("game_pin", gameCode.toUpperCase())
-          .single();
-        if (!cancelled && data?.status === 'active' && data?.started_at) {
-          setIsQuizStarted(true);
-        }
-      } catch {}
-    };
-    const iv = setInterval(poll, 500);
-    // run once immediately
-    poll();
-    return () => {
-      cancelled = true;
-      clearInterval(iv);
-    };
-  }, [gameCode, isQuizStarted]);
-
-  useEffect(() => {
-    if (!gameCode) return;
-
-    const channel = supabase
-      .channel("game-finished")
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "game_sessions", filter: `game_pin=eq.${gameCode.toUpperCase()}` },
-        (payload) => {
-          if (payload.new.status === 'finished') {
+          if (newStatus === 'active') {
+            if (!isQuizStarted) setIsQuizStarted(true);
+            if (payload.new.started_at) setStartedAt(payload.new.started_at);
+          } else if (newStatus === 'finished') {
             router.replace(`/result/${gameCode}`);
           }
         },
@@ -566,42 +511,21 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [gameCode, router]);
+  }, [gameCode, isQuizStarted, router]);
 
   // Timer sinkron dengan server - mulai setelah countdown selesai
   useEffect(() => {
-    if (!isQuizStarted || !gameSettings) return;
+    if (!isQuizStarted || !gameSettings || !startedAt) return;
 
-    let unsub = () => {};
-    let pollInterval: NodeJS.Timeout;
+    let unsub = () => { };
 
-    // Poll untuk menunggu started_at di-set setelah countdown selesai
-    const waitForQuizStart = async () => {
-      const { data, error } = await supabase
-        .from("game_sessions")
-        .select("started_at, total_time_minutes")
-        .eq("game_pin", gameCode.toUpperCase())
-        .single();
-
-      if (error) {
-        console.error("Timer fetch error:", error?.message, error?.details);
-        return;
-      }
-
-      // Jika started_at belum di-set, tunggu (countdown masih berjalan)
-      if (!data?.started_at) {
-        console.log("[PLAYER] Waiting for countdown to finish...");
-        return;
-      }
-
-      console.log("[PLAYER] Quiz timer starting now!");
-      
+    const startTimer = async () => {
       // Get server time offset to avoid client clock issues (Vercel/production)
       const serverNow = await syncServerTime();
       const clientOffset = serverNow - Date.now();
 
-      const start = new Date(data.started_at).getTime();
-      const limitMs = data.total_time_minutes * 60 * 1000; // Convert minutes to milliseconds (correct)
+      const start = new Date(startedAt).getTime();
+      const limitMs = gameSettings.timeLimit * 60 * 1000; // Convert minutes to milliseconds
 
       const tick = () => {
         const now = Date.now() + clientOffset;
@@ -616,16 +540,15 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
       const iv = setInterval(tick, 1000);
       unsub = () => {
         clearInterval(iv);
-        if (pollInterval) clearInterval(pollInterval);
       };
     };
 
-    // Mulai polling untuk menunggu quiz_start_time
-    waitForQuizStart();
-    pollInterval = setInterval(waitForQuizStart, 500); // Poll setiap 500ms
+    startTimer();
 
-    return unsub;
-  }, [isQuizStarted, gameSettings, gameCode]);
+    return () => {
+      unsub();
+    };
+  }, [isQuizStarted, gameSettings, startedAt]);
 
   // When timer hits zero, navigate player to result page (production-safe)
   useEffect(() => {
@@ -638,7 +561,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
   // Safety check: if currentQuestion is out of bounds, reset it
   useEffect(() => {
     if (allQuestions.length > 0 && currentQuestion >= allQuestions.length) {
-      console.warn(`Current question ${currentQuestion} is out of bounds (max: ${allQuestions.length - 1}), resetting to 0`);
+
       setCurrentQuestion(0);
     }
   }, [currentQuestion, allQuestions.length, setCurrentQuestion]);
@@ -682,7 +605,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
     try {
       // Validasi ID
       if (!gameId || !playerId) {
-        console.error("Missing gameId or playerId:", { gameId, playerId });
+
         toast.error("Invalid game or player data!");
         router.replace("/");
         return;
@@ -696,7 +619,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
         .single();
 
       if (gameError) {
-        console.error("Game session fetch error:", gameError.message, gameError.details);
+
         throw gameError;
       }
 
@@ -735,7 +658,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
         .eq("id", gameId);
 
       if (updateError) {
-        console.error("Game session update error:", updateError.message, updateError.details);
+
         throw updateError;
       }
 
@@ -750,12 +673,12 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
           .eq("id", gameId);
 
         if (updateError) {
-          console.error("Game session update error:", updateError.message, updateError.details);
+
           throw updateError;
         }
       }
     } catch (error: any) {
-      console.error("Error updating answer and score:", error.message, error.details, error.hint);
+
       toast.error(`Failed to save answer: ${error.message}`);
       return;
     }
@@ -791,7 +714,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
     try {
       // Validasi ID
       if (!gameId || !playerId) {
-        console.error("Missing gameId or playerId for mini-game:", { gameId, playerId });
+
         toast.error("Invalid game or player data!");
         router.replace("/");
         return;
@@ -799,12 +722,12 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
 
       // Ensure score is valid
       if (typeof score !== 'number' || isNaN(score) || score < 0) {
-        console.error("Invalid mini-game score:", score);
+
         toast.error("Invalid mini-game score!");
         return;
       }
 
-      console.log("Processing mini-game completion:", { gameId, playerId, score });
+
 
       // Get current game session data
       const { data: gameSession, error: fetchError } = await supabase
@@ -814,7 +737,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
         .single();
 
       if (fetchError) {
-        console.error("Failed to fetch game session:", fetchError);
+
         toast.error("Failed to update score - please try again");
         return;
       }
@@ -853,20 +776,14 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
         .eq("id", gameId);
 
       if (updateError) {
-        console.error("Game session update failed:", updateError);
         toast.error("Failed to update game session");
         return;
       }
 
-      console.log("Mini-game score saved successfully:", { 
-        playerId, 
-        score
-      });
-      
+
       toast.success(`Mini-game bonus: +${score} points!`);
 
     } catch (error: any) {
-      console.error("Unexpected error saving mini-game score:", error);
       toast.error("Failed to save mini-game score - please contact support");
     }
 
@@ -896,16 +813,8 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
 
   // Check if quiz data is still loading or if questions array is empty
   if (!quiz || allQuestions.length === 0) {
-    console.log("Quiz loading state:", {
-      hasQuiz: !!quiz,
-      questionsCount: allQuestions.length,
-      currentQuestion,
-      loading,
-      gameSettings: !!gameSettings,
-      isQuizStarted,
-      progressRestored
-    });
-    
+
+
     return (
       <>
         <Background />
@@ -920,13 +829,8 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
 
   // Check if current question exists in the questions array
   if (!question) {
-    console.error("Question not found:", {
-      currentQuestion,
-      totalQuestions: allQuestions.length,
-      questionData: allQuestions[currentQuestion],
-      quizData: quiz
-    });
-    
+
+
     return (
       <>
         <Background />
@@ -1028,7 +932,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
                   if (isRight) buttonColor = "green";
                   else if (isSelected && !isRight) buttonColor = "red";
                 }
-//
+                //
                 return (
                   <PixelButton
                     key={answer.id}
@@ -1061,20 +965,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
               })}
             </div>
 
-            <AnimatePresence>
-              {showResult && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  className="mt-6 text-center"
-                >
-                  <div className={`text-2xl font-bold ${isCorrect ? "text-green-400" : "text-red-400"}`}>
-                    {isCorrect ? "✅ Correct!" : "❌ Wrong!"}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+
           </motion.div>
         </div>
       </div>

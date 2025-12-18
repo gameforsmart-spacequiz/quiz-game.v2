@@ -27,20 +27,20 @@ export function TutorialModal({ open, onClose, onConfirm }: TutorialModalProps) 
   const prevStep = () => setStep((prev) => prev - 1)
 
   const handleFinish = () => {
-    console.log("🎯 Tutorial finished - calling onConfirm")
+
     setStep(1)
     onConfirm()
   }
 
   const handleClose = () => {
-    console.log("🎯 Tutorial closed by X button")
+
     setStep(1)
     onClose(true) // Pass true to indicate it was closed by X button
   }
 
   const handleDialogClose = (open: boolean) => {
     if (!open) {
-      console.log("🎯 Tutorial dialog onOpenChange - calling onClose")
+
       onClose(false) // Pass false to indicate normal close
     }
   }
@@ -62,7 +62,7 @@ export function TutorialModal({ open, onClose, onConfirm }: TutorialModalProps) 
               backgroundImage: "url('/images/galaxy.webp')",
             }}
           />
-          
+
           {/* Animated space elements */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="absolute orbit-inner">
@@ -120,8 +120,8 @@ export function TutorialModal({ open, onClose, onConfirm }: TutorialModalProps) 
                 <Star className="absolute bottom-1 left-1 w-1 h-1 text-purple-300 animate-pulse" style={{ animationDelay: "1s" }} />
               </div>
             </motion.div>
-            
-            <DialogTitle 
+
+            <DialogTitle
               className="text-xl font-bold text-center text-transparent bg-gradient-to-r from-cyan-300 via-purple-300 to-pink-300 bg-clip-text"
               style={{
                 textShadow: "0 0 20px rgba(147, 197, 253, 0.5), 0 0 40px rgba(168, 85, 247, 0.3)",
@@ -152,14 +152,14 @@ export function TutorialModal({ open, onClose, onConfirm }: TutorialModalProps) 
                     </div>
                     <p className="flex-1 text-sm leading-relaxed">{t('enterName', 'Enter your name and choose an avatar.')}</p>
                   </div>
-                  
+
                   <div className="flex items-start gap-3">
                     <div className="w-5 h-5 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-lg shadow-purple-400/30 flex-shrink-0 mt-0.5">
                       2
                     </div>
                     <p className="flex-1 text-sm leading-relaxed">{t('gameCodeQR', 'Enter the 6-digit game code or scan the QR code.')}</p>
                   </div>
-                  
+
                   <div className="flex items-start gap-3">
                     <div className="w-5 h-5 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-lg shadow-green-400/30 flex-shrink-0 mt-0.5">
                       3
@@ -186,11 +186,11 @@ export function TutorialModal({ open, onClose, onConfirm }: TutorialModalProps) 
                   <Rocket className="h-4 w-4 text-cyan-400" />
                   <h3 className="font-semibold text-cyan-300 text-base">🚀 {t('miniGameGuide', 'Mini-Game Guide')}</h3>
                 </div>
-                
+
                 <p className="text-cyan-200/90 mb-3 text-sm leading-relaxed">
                   {t('afterCorrect', 'After every')} <strong className="text-yellow-300">3 {t('correctAnswers', 'correct answers')}</strong>, {t('enterMiniGame', 'you\'ll enter a mini-game!')}
                 </p>
-                
+
                 <div className="flex justify-center mb-3">
                   <div className="relative">
                     <Image
@@ -203,7 +203,7 @@ export function TutorialModal({ open, onClose, onConfirm }: TutorialModalProps) 
                     <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/10 to-purple-400/10 rounded-lg"></div>
                   </div>
                 </div>
-                
+
                 <ul className="space-y-1.5">
                   <li className="flex items-start gap-2">
                     <Zap className="h-3 w-3 text-yellow-400 mt-0.5 flex-shrink-0" />
@@ -226,8 +226,8 @@ export function TutorialModal({ open, onClose, onConfirm }: TutorialModalProps) 
           <div className="flex justify-between mt-4">
             {step > 1 && (
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={prevStep}
                   className="bg-black/30 border-cyan-400/30 text-cyan-100 hover:bg-cyan-500/30 hover:border-cyan-400 hover:text-white backdrop-blur-sm font-mono text-sm px-3 py-2 h-10 transition-all duration-200"
                 >
@@ -238,8 +238,8 @@ export function TutorialModal({ open, onClose, onConfirm }: TutorialModalProps) 
             <div className="flex gap-2 ml-auto">
               {step < 2 && (
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={handleFinish}
                     className="bg-black/30 border-cyan-400/30 text-cyan-200 hover:bg-cyan-500/30 hover:border-cyan-400 hover:text-white backdrop-blur-sm font-mono text-sm px-3 py-2 h-10 transition-all duration-200"
                   >
@@ -249,7 +249,7 @@ export function TutorialModal({ open, onClose, onConfirm }: TutorialModalProps) 
               )}
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 {step < 2 ? (
-                  <Button 
+                  <Button
                     onClick={nextStep}
                     className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold shadow-lg shadow-cyan-500/30 border border-cyan-400/30 backdrop-blur-sm font-mono relative overflow-hidden text-sm px-3 py-2 h-10"
                     style={{ imageRendering: "pixelated" }}
@@ -259,7 +259,7 @@ export function TutorialModal({ open, onClose, onConfirm }: TutorialModalProps) 
                     <div className="absolute top-1 right-1 w-1 h-1 bg-yellow-300 rounded-full animate-ping"></div>
                   </Button>
                 ) : (
-                  <Button 
+                  <Button
                     onClick={handleFinish}
                     className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-semibold shadow-lg shadow-green-500/30 border border-green-400/30 backdrop-blur-sm font-mono relative overflow-hidden text-sm px-3 py-2 h-10"
                     style={{ imageRendering: "pixelated" }}
