@@ -1,11 +1,8 @@
 "use client";
 
-import { use } from "react";
 import TryoutResultContent from "./TryoutResultContent";
 
-export default function TryoutResultPage({ params }: { params: Promise<{ gameCode: string }> }) {
-  const { gameCode } = use(params);
+export default function TryoutResultPage({ params }: { params: { gameCode: string } }) {
+  const { gameCode } = params;
   return <TryoutResultContent gameCode={gameCode} />;
 }
-
-

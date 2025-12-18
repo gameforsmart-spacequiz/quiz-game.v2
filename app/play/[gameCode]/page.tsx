@@ -1,9 +1,8 @@
 "use client";
 
-import { use } from "react";
 import PlayContent from "./PlayContent";
 
-export default function PlayPage({ params }: { params: Promise<{ gameCode: string }> }) {
-  const { gameCode } = use(params);
+export default function PlayPage({ params }: { params: { gameCode: string } }) {
+  const { gameCode } = params;
   return <PlayContent gameCode={gameCode} />;
 }

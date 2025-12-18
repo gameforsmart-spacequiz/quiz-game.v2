@@ -1,9 +1,8 @@
 "use client";
 
-import { use } from "react";
 import WaitContent from "./WaitContent";
 
-export default function WaitPage({ params }: { params: Promise<{ gameCode: string }> }) {
-  const { gameCode } = use(params);
+export default function WaitPage({ params }: { params: { gameCode: string } }) {
+  const { gameCode } = params;
   return <WaitContent gameCode={gameCode} />;
 }

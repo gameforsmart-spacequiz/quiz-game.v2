@@ -3,11 +3,11 @@ import ResultContent from "./ResultContent";
 import { Suspense } from "react";
 
 interface PageProps {
-  params: Promise<{ gameCode: string }>;
+  params: { gameCode: string };
 }
 
-export default async function ResultPage({ params }: PageProps) {
-  const { gameCode } = await params;   // <-- await di sini
+export default function ResultPage({ params }: PageProps) {
+  const { gameCode } = params;
 
   return (
     <Suspense
@@ -16,7 +16,6 @@ export default async function ResultPage({ params }: PageProps) {
           <p>Loading result...</p>
         </div>
       }
-      // ikan
     >
       <ResultContent gameCode={gameCode} />
     </Suspense>
