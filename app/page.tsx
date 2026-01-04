@@ -267,17 +267,6 @@ function HomePageContent() {
           </div>
         </div>
 
-        <div className="absolute inset-0 flex items-center justify-center cosmic-ring-slow">
-          <div className="w-[80vw] h-[80vw] min-w-[320px] min-h-[320px] max-w-[500px] max-h-[500px] border border-purple-300/10 rounded-full"></div>
-        </div>
-
-        <div
-          className="absolute inset-0 flex items-center justify-center"
-          style={{ animation: "cosmic-ring-orbit 120s linear infinite" }}
-        >
-          <div className="w-[100vw] h-[100vw] min-w-[400px] min-h-[400px] max-w-[700px] max-h-[700px] border border-blue-300/8 rounded-full"></div>
-        </div>
-
         {/* Dark Overlay for text readability */}
         <div className="absolute inset-0 bg-black/30"></div>
       </div>
@@ -294,7 +283,7 @@ function HomePageContent() {
           {/* Logo Image */}
           <div className="relative mb-3 sm:mb-4">
             <img
-              src="/images/logo/spacequiz.webp"
+              src="/images/logo/spacequizv2.webp"
               alt="Space Quiz"
               className="h-auto w-[130px] sm:w-[320px] md:w-[380px] lg:w-[390px] mx-auto object-contain drop-shadow-2xl"
               style={{
@@ -303,13 +292,14 @@ function HomePageContent() {
             />
           </div>
           <p
-            className="text-base sm:text-lg md:text-xl text-cyan-100 max-w-2xl mx-auto px-4"
+            className="text-sm sm:text-lg md:text-xl lg:text-2xl font-bold tracking-wider max-w-full mx-auto px-4 uppercase bg-gradient-to-r from-cyan-300 via-purple-300 to-pink-300 bg-clip-text text-transparent whitespace-nowrap"
             style={{
-              textShadow: "0 0 10px rgba(34, 211, 238, 0.3)",
-              fontFamily: "monospace",
+              textShadow: "0 0 20px rgba(34, 211, 238, 0.6), 0 0 40px rgba(168, 85, 247, 0.4), 0 0 60px rgba(236, 72, 153, 0.3)",
+              fontFamily: "var(--font-orbitron), 'Orbitron', sans-serif",
+              letterSpacing: "0.1em",
             }}
           >
-            {t('subtitle', 'Play a quiz game and with your friends!')}
+            {t('subtitle', 'Explore. Learn. Conquer!')}
           </p>
         </motion.div>
 
@@ -319,47 +309,86 @@ function HomePageContent() {
           transition={{ delay: 0.4, duration: 0.8 }}
           className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:gap-8 w-full max-w-3xl px-4"
         >
-          <motion.div whileHover={{ scale: 1.05, y: -10 }} whileTap={{ scale: 0.95 }} className="group">
+          {/* HOST Button - Transparent Glassmorphism */}
+          <motion.div
+            whileHover={{ scale: 1.03, y: -5 }}
+            whileTap={{ scale: 0.97 }}
+            className="group relative"
+          >
+            {/* Colored glow ring */}
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500 via-rose-500 to-orange-500 rounded-2xl opacity-40 group-hover:opacity-70 blur-sm transition-all duration-500"></div>
+
             <Button
               onClick={handleHostGame}
-              className="w-full h-32 sm:h-36 md:h-40 bg-gradient-to-br from-red-500 to-pink-600 border-2 border-red-400/50 hover:from-red-400 hover:to-pink-500 hover:shadow-xl hover:shadow-red-500/40 transition-all duration-300 flex flex-col items-center justify-center space-y-2 sm:space-y-3 md:space-y-4 text-white font-mono shadow-lg shadow-red-500/30 relative overflow-hidden"
-              style={{ imageRendering: "pixelated" }}
+              className="relative w-full h-32 sm:h-36 md:h-40 bg-white/5 backdrop-blur-md border border-pink-400/40 hover:border-pink-300/70 hover:bg-white/10 transition-all duration-300 flex flex-row items-center justify-center gap-4 sm:gap-5 text-white shadow-xl overflow-hidden rounded-2xl px-6"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-red-400/20 to-pink-400/20 animate-pulse"></div>
-              <div
-                className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-br from-yellow-400 to-orange-500 border-2 border-yellow-300/60 rounded-md flex items-center justify-center group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-yellow-400/40 relative z-10"
-                style={{ imageRendering: "pixelated" }}
+              {/* Subtle gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 via-transparent to-orange-500/5"></div>
+
+              {/* Shimmer effect on hover */}
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"></div>
+              </div>
+
+              {/* Icon container - Left side */}
+              <motion.div
+                className="relative z-10 flex-shrink-0"
+                animate={{ y: [0, -4, 0] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
               >
-                <Play className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-red-600" />
+                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-pink-500 via-rose-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-pink-500/40 border border-pink-400/50 group-hover:shadow-pink-500/60 group-hover:shadow-xl transition-shadow duration-300">
+                  <Play className="w-6 h-6 sm:w-7 sm:h-7 text-white drop-shadow-md" />
+                </div>
+              </motion.div>
+
+              {/* Text - Right side */}
+              <div className="text-left relative z-10">
+                <h2 className="text-xl sm:text-2xl font-bold tracking-wide text-white drop-shadow-lg">{t('host', 'HOST')}</h2>
+                <p className="text-xs sm:text-sm text-white/70 mt-0.5">{t('createGame', 'Create Game')}</p>
               </div>
-              <div className="text-center relative z-10">
-                <h2 className="text-xl sm:text-xl md:text-2xl font-bold mb-1">{t('host', 'HOST')}</h2>
-              </div>
-              <div className="absolute top-2 right-2 w-2 h-2 bg-yellow-300 rounded-full animate-ping"></div>
             </Button>
           </motion.div>
 
-          <motion.div whileHover={{ scale: 1.05, y: -10 }} whileTap={{ scale: 0.95 }} className="group">
+          {/* JOIN Button - Transparent Glassmorphism */}
+          <motion.div
+            whileHover={{ scale: 1.03, y: -5 }}
+            whileTap={{ scale: 0.97 }}
+            className="group relative"
+          >
+            {/* Colored glow ring */}
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 rounded-2xl opacity-40 group-hover:opacity-70 blur-sm transition-all duration-500"></div>
+
             <Button
               onClick={() => {
-
                 setHasUserClickedJoin(true)
                 setShowTutorial(true)
               }}
-              className="w-full h-32 sm:h-36 md:h-40 bg-gradient-to-br from-cyan-500 to-blue-600 border-2 border-cyan-400/50 hover:from-cyan-400 hover:to-blue-500 hover:shadow-xl hover:shadow-cyan-500/40 transition-all duration-300 flex flex-col items-center justify-center space-y-2 sm:space-y-3 md:space-y-4 text-white font-mono shadow-lg shadow-cyan-500/30 relative overflow-hidden"
-              style={{ imageRendering: "pixelated" }}
+              className="relative w-full h-32 sm:h-36 md:h-40 bg-white/5 backdrop-blur-md border border-cyan-400/40 hover:border-cyan-300/70 hover:bg-white/10 transition-all duration-300 flex flex-row items-center justify-center gap-4 sm:gap-5 text-white shadow-xl overflow-hidden rounded-2xl px-6"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/20 to-blue-400/20 animate-pulse"></div>
-              <div
-                className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-br from-yellow-400 to-orange-500 border-2 border-yellow-300/60 rounded-md flex items-center justify-center group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-yellow-400/40 relative z-10"
-                style={{ imageRendering: "pixelated" }}
+              {/* Subtle gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-indigo-500/5"></div>
+
+              {/* Shimmer effect on hover */}
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"></div>
+              </div>
+
+              {/* Icon container - Left side */}
+              <motion.div
+                className="relative z-10 flex-shrink-0"
+                animate={{ y: [0, -4, 0] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
               >
-                <Users className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-cyan-600" />
+                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-cyan-500 via-blue-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/40 border border-cyan-400/50 group-hover:shadow-cyan-500/60 group-hover:shadow-xl transition-shadow duration-300">
+                  <Users className="w-6 h-6 sm:w-7 sm:h-7 text-white drop-shadow-md" />
+                </div>
+              </motion.div>
+
+              {/* Text - Right side */}
+              <div className="text-left relative z-10">
+                <h2 className="text-xl sm:text-2xl font-bold tracking-wide text-white drop-shadow-lg">{t('join', 'JOIN')}</h2>
+                <p className="text-xs sm:text-sm text-white/70 mt-0.5">{t('joinGame', 'Join Game')}</p>
               </div>
-              <div className="text-center relative z-10">
-                <h2 className="text-xl sm:text-xl md:text-2xl font-bold mb-1">{t('join', 'JOIN')}</h2>
-              </div>
-              <div className="absolute top-2 right-2 w-2 h-2 bg-yellow-300 rounded-full animate-ping"></div>
             </Button>
           </motion.div>
         </motion.div>

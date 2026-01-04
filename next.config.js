@@ -15,8 +15,12 @@ const nextConfig = {
   images: { unoptimized: true },
   // Ensure environment variables are available at build time
   env: {
+    // Main Supabase (quizzes, profiles, auth)
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    // Supabase B (participants, sessions - game data)
+    NEXT_PUBLIC_SUPABASE_B_URL: process.env.NEXT_PUBLIC_SUPABASE_B_URL,
+    NEXT_PUBLIC_SUPABASE_B_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_B_ANON_KEY,
   },
   // Add server external packages for better production support
   serverExternalPackages: ['@supabase/supabase-js'],
