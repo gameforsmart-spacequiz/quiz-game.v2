@@ -98,13 +98,18 @@ export function UserProfile() {
     <div className="fixed top-4 left-4 z-50">
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
-          <div className="relative flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full pl-1.5 pr-4 py-1.5 hover:bg-white/15 hover:border-white/30 transition-all duration-300 cursor-pointer shadow-xl">
-            {/* Avatar with Ring */}
-            <div className="relative">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 p-[2px]">
-                <div className="w-full h-full rounded-full bg-gray-900"></div>
-              </div>
-              <Avatar className="h-10 w-10 relative z-10 ring-2 ring-cyan-400/50">
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="relative flex items-center gap-3 bg-white/5 backdrop-blur-md border border-white/20 rounded-2xl pl-2 pr-4 py-2 hover:bg-white/10 hover:border-white/40 transition-all duration-300 cursor-pointer shadow-xl group"
+          >
+            {/* Subtle glow effect */}
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-cyan-500/20 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+            {/* Avatar with Gradient Ring */}
+            <div className="relative z-10">
+              <div className="absolute -inset-1 bg-gradient-to-br from-purple-500 via-pink-500 to-cyan-500 rounded-full opacity-60 blur-sm"></div>
+              <Avatar className="h-10 w-10 relative ring-2 ring-white/30">
                 {avatarUrl && !avatarLoadError ? (
                   <Image
                     src={avatarUrl}
@@ -122,7 +127,7 @@ export function UserProfile() {
                     }}
                   />
                 ) : (
-                  <AvatarFallback className="bg-gradient-to-br from-cyan-400 to-purple-500 text-white text-sm font-bold">
+                  <AvatarFallback className="bg-gradient-to-br from-purple-500 via-pink-500 to-cyan-500 text-white text-sm font-bold">
                     {getInitials(displayName)}
                   </AvatarFallback>
                 )}
@@ -130,35 +135,35 @@ export function UserProfile() {
             </div>
 
             {/* Username */}
-            <span className="text-white font-medium text-sm">
+            <span className="text-white font-medium text-sm relative z-10 drop-shadow-lg">
               {displayName}
             </span>
 
             {/* Chevron with rotation animation */}
             <ChevronDown
-              className={`w-4 h-4 text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : 'rotate-0'}`}
+              className={`w-4 h-4 text-white/70 transition-transform duration-300 relative z-10 ${isOpen ? 'rotate-180' : 'rotate-0'}`}
             />
 
             {/* Loading overlay */}
             {(loading || isSigningOut) && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
-                <div className="w-4 h-4 border-2 border-cyan-400/50 border-t-cyan-400 rounded-full animate-spin"></div>
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-2xl z-20">
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
               </div>
             )}
-          </div>
+          </motion.div>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          className="w-44 bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl rounded-xl mt-2"
+          className="w-48 bg-white/5 backdrop-blur-xl border border-white/20 shadow-2xl rounded-xl mt-2 p-1"
           align="start"
         >
           <DropdownMenuItem
             onClick={handleLogoutClick}
             disabled={loading || isSigningOut}
-            className="text-red-400 hover:bg-red-500/20 cursor-pointer font-medium focus:bg-red-500/20 rounded-lg mx-1 my-1"
+            className="text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer font-medium focus:bg-red-500/10 focus:text-red-300 rounded-lg py-2.5 px-3 transition-all duration-200"
           >
-            <LogOut className="mr-2 h-4 w-4" />
+            <LogOut className="mr-2.5 h-4 w-4" />
             <span>
-              {isSigningOut ? t('signingOut', 'Logging out...') : 'Logout'}
+              {isSigningOut ? t('signingOut', 'Logging out...') : t('logout', 'Logout')}
             </span>
           </DropdownMenuItem>
         </DropdownMenuContent>

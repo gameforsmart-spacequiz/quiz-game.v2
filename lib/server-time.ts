@@ -3,77 +3,86 @@ import { supabase } from "./supabase"
 // Cache server time offset to avoid repeated calls
 let serverTimeOffset: number | null = null
 let lastSyncTime = 0
-const SYNC_INTERVAL = 30000 // Re-sync every 30 seconds
+const SYNC_INTERVAL = 60000 // Re-sync every 60 seconds
 
-export async function getServerTime(): Promise<number> {
+// Base URL for Supabase (extracted from the client)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+
+export async function syncServerTime(): Promise<number> {
   const now = Date.now()
 
-  // Use cached offset if recent
-  if (serverTimeOffset !== null && now - lastSyncTime < SYNC_INTERVAL) {
+  // Use cached offset if valid and recent
+  if (serverTimeOffset !== null && (now - lastSyncTime < SYNC_INTERVAL)) {
     return now + serverTimeOffset
   }
 
   try {
-    // Get server timestamp from Supabase
-    const startTime = Date.now()
-    const { data, error } = await supabase.from("games").select("created_at").limit(1).single()
+    let serverTime = 0
+    const start = Date.now()
 
-    if (error) {
-      console.warn("[v0] Failed to sync server time, using client time:", error)
-      return Date.now()
+    // 1. First priority: Try fetching the HTML header Date from Supabase (Most reliable & lightweight)
+    // This avoids DB overhead and works even if RPC/Tables are missing.
+    try {
+      if (supabaseUrl) {
+        const response = await fetch(`${supabaseUrl}/rest/v1/`, {
+          method: 'HEAD',
+          headers: {
+            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+          }
+        })
+
+        const dateHeader = response.headers.get('Date')
+        if (dateHeader) {
+          serverTime = new Date(dateHeader).getTime()
+        }
+      }
+    } catch (e) {
+      console.warn("[TimeSync] HTTP HEAD sync failed", e)
     }
 
-    const endTime = Date.now()
-    const networkDelay = (endTime - startTime) / 2
+    // 2. Second priority: Try RPC if HTTP header failed
+    if (!serverTime) {
+      const { data, error } = await supabase.rpc("get_server_time")
+      if (!error && data) {
+        serverTime = new Date(data).getTime()
+      }
+    }
 
-    // Calculate server time offset
-    const serverTime = new Date().getTime() // Current server time approximation
-    const clientTime = endTime - networkDelay
+    // 3. Fallback: Just return local time if all else fails
+    if (!serverTime) {
+      console.warn("[TimeSync] All sync methods failed, using local time.")
+      // Don't update offset effectively (assume 0 offset), but update timestamps to prevent retry loops
+      lastSyncTime = now
+      return now
+    }
 
-    serverTimeOffset = serverTime - clientTime
-    lastSyncTime = now
+    const end = Date.now()
+    const networkDelay = (end - start) / 2
 
-    return clientTime + serverTimeOffset
+    // Calculate offset: ServerTime - (ClientEnd - Delay)
+    // Essentially trying to estimate what the server time is NOW
+    const estimatedServerNow = serverTime + networkDelay
+    const newOffset = estimatedServerNow - end
+
+    // Apply smoothing if we already have an offset (to prevent glitching/jumping)
+    if (serverTimeOffset !== null) {
+      // weighted average: 80% old, 20% new
+      serverTimeOffset = (serverTimeOffset * 0.8) + (newOffset * 0.2)
+    } else {
+      serverTimeOffset = newOffset
+    }
+
+    lastSyncTime = end
+    console.log(`[TimeSync] Synced. Offset: ${serverTimeOffset}ms (Latency: ${networkDelay}ms)`)
+
+    return Date.now() + serverTimeOffset
+
   } catch (error) {
-    console.warn("[v0] Server time sync failed, using client time:", error)
-    return Date.now()
+    console.error("[TimeSync] Error during sync:", error)
+    // Return best guess
+    return Date.now() + (serverTimeOffset || 0)
   }
 }
 
-// Simpler version that just uses a single server call for better accuracy
-export async function syncServerTime(): Promise<number> {
-  try {
-    // Try to use the server timestamp function
-    const { data, error } = await supabase.rpc("get_server_time")
-
-    if (error || !data) {
-      console.warn("[v0] Server timestamp RPC failed, using fallback method:", error)
-      // Fallback: use a database query to estimate server time
-      return await getServerTimeFromQuery()
-    }
-
-    return new Date(data).getTime()
-  } catch (error) {
-    console.warn("[v0] Server time sync completely failed, using client time:", error)
-    return Date.now()
-  }
-}
-
-async function getServerTimeFromQuery(): Promise<number> {
-  try {
-    const startTime = Date.now()
-    const { data, error } = await supabase.from("games").select("created_at").limit(1).single()
-
-    if (error || !data) {
-      return Date.now()
-    }
-
-    const endTime = Date.now()
-    const networkDelay = (endTime - startTime) / 2
-
-    // Estimate server time by accounting for network delay
-    return endTime - networkDelay
-  } catch (error) {
-    return Date.now()
-  }
-}
+// Legacy export compatibility
+export const getServerTime = syncServerTime

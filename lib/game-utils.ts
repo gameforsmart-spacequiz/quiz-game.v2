@@ -2,9 +2,9 @@ import { supabase } from "./supabase"
 import type { GameSettings } from "./types"
 import { generateXID } from "./id-generator"
 
-// Generate a unique 6-character game code
+// Generate a unique 6-digit numeric game code
 export function generateGameCode(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+  const chars = "0123456789"
   let result = ""
   for (let i = 0; i < 6; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length))

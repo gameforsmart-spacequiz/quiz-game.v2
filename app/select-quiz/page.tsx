@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useGameStore } from "@/lib/store"
 import { supabase } from "@/lib/supabase"
 import { generateXID } from "@/lib/id-generator"
+import { createGameSession } from "@/lib/sessions-api"
+import { generateGameCode } from "@/lib/game-utils"
 import { Input } from "@/components/ui/input"
 import {
   Search,
@@ -27,7 +29,8 @@ import {
   Building2,
   LayoutGrid,
   Check,
-  ChevronDown
+  ChevronDown,
+  Rocket
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -44,7 +47,6 @@ import {
   TooltipContent,
   TooltipProvider,
 } from "@/components/ui/tooltip"
-import { Portal } from "@radix-ui/react-portal" // ← Tambahan penting!
 import {
   Pagination,
   PaginationContent,
@@ -117,6 +119,7 @@ export default function SelectQuizPage() {
   const [favoriteQuizIds, setFavoriteQuizIds] = useState<string[]>([])
   const [loadingFavorites, setLoadingFavorites] = useState(false)
   const [isCategoryOpen, setIsCategoryOpen] = useState(false)
+  const [isFetchingQuizzes, setIsFetchingQuizzes] = useState(true)
   const itemsPerPage = 15
   const skipNextFetchRef = useRef(false)
 
@@ -174,7 +177,7 @@ export default function SelectQuizPage() {
 
   const fetchQuizzes = useCallback(async () => {
     try {
-
+      setIsFetchingQuizzes(true)
 
       let query = supabase
         .from("quizzes")
@@ -218,6 +221,8 @@ export default function SelectQuizPage() {
     } catch (err) {
       console.error("Unexpected error fetching quizzes:", err)
       alert("An unexpected error occurred while loading quizzes")
+    } finally {
+      setIsFetchingQuizzes(false)
     }
   }, [selectedLevel, activeTab, profile?.id, favoriteQuizIds])
 
@@ -319,36 +324,38 @@ export default function SelectQuizPage() {
         throw new Error(`Cannot select ${settings.questionCount} questions from a quiz with only ${selectedQuiz.questions.length} questions`)
       }
 
-      const gameCode = Math.random().toString(36).substring(2, 8).toUpperCase()
+      // Generate game code and ID
+      const gameCode = generateGameCode()
       const gameId = generateXID()
 
-      const { data, error } = await supabase
-        .from("game_sessions")
-        .insert({
-          id: gameId,
-          game_pin: gameCode,
-          quiz_id: selectedQuiz.id,
-          host_id: "01mdpz2b00100000000p", // nanti diganti kalau pakai auth yang benar
-          status: "waiting",
-          total_time_minutes: settings.timeLimit,
-          question_limit: settings.questionCount.toString(),
-          participants: [],
-          responses: [],
-          current_questions: [],
+      // Create session in Supabase B (sessions table)
+      const session = await createGameSession({
+        id: gameId,
+        game_pin: gameCode,
+        quiz_id: selectedQuiz.id,
+        quiz_title: selectedQuiz.title,
+        host_id: profile?.id || generateXID(), // Use authenticated user ID or generate one
+        status: "waiting",
+        settings: {
+          timeLimit: settings.timeLimit,
+          questionCount: settings.questionCount,
           application: "space-quiz"
-        })
-        .select()
-        .single()
+        },
+        timestamps: {
+          created_at: new Date().toISOString()
+        }
+      })
 
-      if (error) throw error
-      if (!data) throw new Error("No data returned")
+      if (!session) {
+        throw new Error("Failed to create game session in Supabase B")
+      }
 
       setQuizId(selectedQuiz.id)
-      setGameCode(gameCode)
-      setGameId(data.id)
+      setGameCode(session.game_pin)
+      setGameId(session.id)
       setIsHost(true)
 
-      router.push(`/host/${gameCode}`)
+      router.push(`/host/${session.game_pin}`)
       setShowRulesDialog(false)
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Unknown error"
@@ -551,34 +558,75 @@ export default function SelectQuizPage() {
 
         <div className="flex-grow">
 
-          {(isSearching || isTyping) && (
+          {(isSearching || isTyping || isFetchingQuizzes) && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="flex flex-col items-center justify-center py-16 sm:py-20 md:py-24"
             >
-              <div className="flex items-center gap-2">
+              {/* Cosmic Loader - Same as AuthLoadingScreen */}
+              <div className="relative w-28 h-28 sm:w-36 sm:h-36 mx-auto mb-6">
+                {/* Outer ring */}
                 <motion.div
-                  animate={{ y: [0, -12, 0] }}
-                  transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
-                  className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-gradient-to-r from-purple-500 to-purple-600"
-                />
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-0 rounded-full border-2 border-indigo-500/30"
+                >
+                  <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-indigo-400 rounded-full shadow-lg shadow-indigo-400/50" />
+                </motion.div>
+
+                {/* Middle ring */}
                 <motion.div
-                  animate={{ y: [0, -12, 0] }}
-                  transition={{ duration: 0.6, repeat: Infinity, delay: 0.15 }}
-                  className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-gradient-to-r from-purple-600 to-blue-500"
-                />
+                  animate={{ rotate: -360 }}
+                  transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-4 sm:inset-5 rounded-full border-2 border-cyan-500/40"
+                >
+                  <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-cyan-400 rounded-full shadow-lg shadow-cyan-400/50" />
+                </motion.div>
+
+                {/* Inner ring */}
                 <motion.div
-                  animate={{ y: [0, -12, 0] }}
-                  transition={{ duration: 0.6, repeat: Infinity, delay: 0.3 }}
-                  className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-8 sm:inset-10 rounded-full border-2 border-purple-500/50"
+                >
+                  <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-purple-400 rounded-full shadow-lg shadow-purple-400/50" />
+                </motion.div>
+
+                {/* Center glow */}
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="absolute inset-10 sm:inset-12 rounded-full bg-gradient-to-br from-cyan-400 to-indigo-500 shadow-xl shadow-cyan-400/40"
                 />
+
+                {/* Rocket in center */}
+                <motion.div
+                  animate={{
+                    y: [-3, 3, -3],
+                    rotate: [0, 5, -5, 0]
+                  }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="absolute inset-0 flex items-center justify-center"
+                >
+                  <Rocket className="w-8 h-8 sm:w-10 sm:h-10 text-white drop-shadow-lg" />
+                </motion.div>
               </div>
+
+              {/* Loading text */}
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-white/70 text-sm sm:text-base font-medium mb-4"
+              >
+                {isSearching ? "Searching..." : "Loading quizzes..."}
+              </motion.p>
             </motion.div>
           )}
 
           {/* NO QUIZZES FOUND */}
-          {!isSearching && !isTyping && filteredQuizzes.length === 0 && (
+          {!isSearching && !isTyping && !isFetchingQuizzes && filteredQuizzes.length === 0 && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -632,7 +680,7 @@ export default function SelectQuizPage() {
           )}
 
           {/* QUIZ GRID DENGAN TOOLTIP YANG TIDAK TERPOTONG */}
-          {!isSearching && !isTyping && filteredQuizzes.length > 0 && (
+          {!isSearching && !isTyping && !isFetchingQuizzes && filteredQuizzes.length > 0 && (
             <TooltipProvider delayDuration={200}>
               <motion.div
                 initial={{ opacity: 0 }}
@@ -699,18 +747,15 @@ export default function SelectQuizPage() {
                               {quiz.title}
                             </h3>
                           </TooltipTrigger>
-                          <Portal>
-                            <TooltipContent
-                              side="top"
-                              align="center"
-                              sideOffset={12}
-                              avoidCollisions={true}
-                              collisionPadding={16}
-                              className="z-[9999] max-w-sm break-words bg-gradient-to-r from-purple-900/95 to-blue-900/95 backdrop-blur-md border border-purple-500 text-white rounded-lg px-4 py-3 text-sm font-medium shadow-2xl animate-in fade-in-0 zoom-in-95 duration-200"
-                            >
-                              <p>{quiz.title}</p>
-                            </TooltipContent>
-                          </Portal>
+                          <TooltipContent
+                            side="top"
+                            align="center"
+                            sideOffset={12}
+                            avoidCollisions={true}
+                            collisionPadding={16}
+                          >
+                            <p className="leading-relaxed">{quiz.title}</p>
+                          </TooltipContent>
                         </Tooltip>
 
                         {/* Bottom Section */}
@@ -778,7 +823,7 @@ export default function SelectQuizPage() {
         </div>
 
         {/* Pagination */}
-        {!isSearching && !isTyping && filteredQuizzes.length > 0 && (
+        {!isSearching && !isTyping && !isFetchingQuizzes && filteredQuizzes.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

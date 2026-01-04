@@ -10,6 +10,9 @@ import { Progress } from "@/components/ui/progress"
 import SpaceDodge from "@/components/space-dodge"
 import { useGameStore } from "@/lib/store"
 import { supabase } from "@/lib/supabase"
+import { supabaseB } from "@/lib/supabase-b"
+import { getGameSessionByPin } from "@/lib/sessions-api"
+import { getParticipantsByGameId, updateParticipantScore } from "@/lib/participants-api"
 import { generateXID } from "@/lib/id-generator"
 import { syncServerTime } from "@/lib/server-time"
 import type { Quiz, Question } from "@/lib/types"
@@ -68,6 +71,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
   const [storeHydrated, setStoreHydrated] = useState(false)
   const [sessionSeed, setSessionSeed] = useState<number | null>(null)
   const [startedAt, setStartedAt] = useState<string | null>(null)
+  const [isSupabaseBSession, setIsSupabaseBSession] = useState(false)
 
   // Seeded RNG (mulberry32) and Fisher-Yates shuffle for stable per-session randomness
   const createRng = useCallback((seed: number) => {
@@ -142,41 +146,61 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
   useEffect(() => {
     const fetchGame = async () => {
       if (!gameCode || typeof gameCode !== "string") {
-
         toast.error("Invalid game code!");
         router.replace("/");
         return;
       }
 
-      const { data: gameData, error: gameErr } = await supabase
-        .from("game_sessions")
-        .select("id, quiz_id, total_time_minutes, question_limit, status, started_at, current_questions")
-        .eq("game_pin", gameCode.toUpperCase())
-        .single()
+      // Try Supabase B first (new sessions)
+      const sessionFromB = await getGameSessionByPin(gameCode.toUpperCase())
 
-      if (gameErr || !gameData) {
+      let gameDataToUse: any = null
+      let isFromSupabaseB = false
 
-        toast.error("Game not found!");
-        router.replace("/");
-        return;
+      if (sessionFromB) {
+        isFromSupabaseB = true
+        setIsSupabaseBSession(true)
+        gameDataToUse = {
+          id: sessionFromB.id,
+          quiz_id: sessionFromB.quiz_id,
+          total_time_minutes: sessionFromB.settings?.timeLimit || 10,
+          question_limit: sessionFromB.settings?.questionCount?.toString() || '10',
+          status: sessionFromB.status,
+          started_at: sessionFromB.timestamps?.started_at || null,
+          current_questions: null // Supabase B doesn't store current_questions in session
+        }
+      } else {
+        // Fallback to main Supabase (legacy sessions)
+        const { data: gameData, error: gameErr } = await supabase
+          .from("game_sessions")
+          .select("id, quiz_id, total_time_minutes, question_limit, status, started_at, current_questions")
+          .eq("game_pin", gameCode.toUpperCase())
+          .single()
+
+        if (gameErr || !gameData) {
+          toast.error("Game not found!");
+          router.replace("/");
+          return;
+        }
+
+        gameDataToUse = gameData
       }
 
-      setGameId(gameData.id); // Set gameId ke store
+      setGameId(gameDataToUse.id);
       setGameSettings({
-        timeLimit: gameData.total_time_minutes > 100 ? Math.round(gameData.total_time_minutes / 60) : gameData.total_time_minutes, // Handle legacy data
-        questionCount: gameData.question_limit === 'all' ? 999 : parseInt(gameData.question_limit),
+        timeLimit: gameDataToUse.total_time_minutes > 100 ? Math.round(gameDataToUse.total_time_minutes / 60) : gameDataToUse.total_time_minutes,
+        questionCount: gameDataToUse.question_limit === 'all' ? 999 : parseInt(gameDataToUse.question_limit),
       });
-      setTimeLeft(gameData.total_time_minutes * 60); // Convert to seconds for timer
-      setStartedAt(gameData.started_at);
+      setTimeLeft(gameDataToUse.total_time_minutes * 60);
+      setStartedAt(gameDataToUse.started_at);
 
       const { data: quizData, error: quizErr } = await supabase
         .from("quizzes")
         .select("*")
-        .eq("id", gameData.quiz_id)
+        .eq("id", gameDataToUse.quiz_id)
         .single()
 
       if (quizErr || !quizData) {
-
         toast.error("Quiz not found!");
         router.replace("/");
         return;
@@ -184,7 +208,6 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
 
       // Validate quiz data structure
       if (!quizData.questions || !Array.isArray(quizData.questions) || quizData.questions.length === 0) {
-
         toast.error("Quiz has no questions!");
         router.replace("/");
         return;
@@ -193,103 +216,79 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
       setQuiz(quizData as Quiz);
 
       // Use the current_questions from game_sessions if available, otherwise use quiz questions
-      let questionsToUse = gameData.current_questions && gameData.current_questions.length > 0
-        ? gameData.current_questions
+      let questionsToUse = gameDataToUse.current_questions && gameDataToUse.current_questions.length > 0
+        ? gameDataToUse.current_questions
         : quizData.questions;
 
       // Validate questionsToUse structure
       if (!questionsToUse || !Array.isArray(questionsToUse) || questionsToUse.length === 0) {
-
         questionsToUse = quizData.questions;
       }
 
       // Validate each question has required structure
       const validQuestions = questionsToUse.filter((q: any) => {
         if (!q || !q.answers || !Array.isArray(q.answers)) {
-
           return false;
         }
         return true;
       });
 
       if (validQuestions.length === 0) {
-
         toast.error("No valid questions found!");
         router.replace("/");
         return;
       }
 
-
       questionsToUse = validQuestions;
 
       // Build a per-session seed key for HOST-PLAYER mode
-      // Same questions for all players, but different order per player
-      const sessionKey = `session-seed-${gameData.id}-${playerId}-${gameData.started_at || "nostart"}`
+      const sessionKey = `session-seed-${gameDataToUse.id}-${playerId}-${gameDataToUse.started_at || "nostart"}`
       const existingSeed = typeof window !== "undefined" ? localStorage.getItem(sessionKey) : null;
       let seed: number;
 
       if (existingSeed) {
-        // Use existing seed for consistency across refreshes
         seed = parseInt(existingSeed);
         setSessionSeed(seed);
-
       } else {
-        // Create unique seed per player for different question order
-        // Include playerId so each player gets different order of the SAME questions
-        const base = `${gameData.id}-${playerId || 'anonymous'}-${gameData.started_at || Date.now()}`
+        const base = `${gameDataToUse.id}-${playerId || 'anonymous'}-${gameDataToUse.started_at || Date.now()}`
         seed = base.split('').reduce((a: number, b: string) => a + b.charCodeAt(0), 0)
-        // Store the session seed for consistency within the same session
         setSessionSeed(seed);
         if (typeof window !== "undefined") localStorage.setItem(sessionKey, seed.toString());
-
       }
 
       // Generate questions using the seed
-      const shuffled = regenerateQuestionsWithSeed(seed, { questions: questionsToUse }, gameData.question_limit === 'all' ? 999 : parseInt(gameData.question_limit), gameData.id, gameData.started_at);
+      const shuffled = regenerateQuestionsWithSeed(seed, { questions: questionsToUse }, gameDataToUse.question_limit === 'all' ? 999 : parseInt(gameDataToUse.question_limit), gameDataToUse.id, gameDataToUse.started_at);
 
-      // Validate generated questions
       if (!shuffled || shuffled.length === 0) {
-
         toast.error("Failed to load quiz questions!");
         router.replace("/");
         return;
       }
 
-      // Additional validation for each generated question
       const validShuffled = shuffled.filter(q => {
         if (!q || !q.answers || !Array.isArray(q.answers)) {
-
           return false;
         }
         return true;
       });
 
       if (validShuffled.length === 0) {
-
         toast.error("No valid questions after processing!");
         router.replace("/");
         return;
       }
 
-
-
       setAllQuestions(validShuffled);
 
-      // Save questions to database current_questions field
-      const { error: updateError } = await supabase
-        .from("game_sessions")
-        .update({ current_questions: validShuffled })
-        .eq("id", gameData.id);
-
-      if (updateError) {
-
-      } else {
-
+      // Save questions to database (only for legacy sessions)
+      if (!isFromSupabaseB) {
+        const { error: updateError } = await supabase
+          .from("game_sessions")
+          .update({ current_questions: validShuffled })
+          .eq("id", gameDataToUse.id);
       }
 
-
-
-      if (gameData.status === 'active') {
+      if (gameDataToUse.status === 'active') {
         setIsQuizStarted(true);
       } else {
         setIsQuizStarted(false);
@@ -488,30 +487,106 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
   }, [gameId, playerId])
 
   useEffect(() => {
-    if (!gameCode) return;
+    if (!gameCode || !gameId) return;
 
-    const channel = supabase
-      .channel("game-status")
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "game_sessions", filter: `game_pin=eq.${gameCode.toUpperCase()}` },
-        (payload) => {
-          const newStatus = payload.new.status;
+    let channel: any;
 
-          if (newStatus === 'active') {
-            if (!isQuizStarted) setIsQuizStarted(true);
-            if (payload.new.started_at) setStartedAt(payload.new.started_at);
-          } else if (newStatus === 'finished') {
-            router.replace(`/result/${gameCode}`);
-          }
-        },
-      )
-      .subscribe();
+    const handlePayload = (payload: any) => {
+      console.log('[Player] Game status update received:', payload)
+      const newStatus = payload.new.status;
+
+      if (newStatus === 'active') {
+        if (!isQuizStarted) setIsQuizStarted(true);
+        // Handle timestamps from Supabase B or Legacy
+        const newStartedAt = payload.new.timestamps?.started_at || payload.new.started_at;
+        if (newStartedAt) setStartedAt(newStartedAt);
+      } else if (newStatus === 'finished' || newStatus === 'finish') {
+        console.log('[Player] Game finished, redirecting...')
+        router.replace(`/result/${gameCode}`);
+      }
+    }
+
+    if (isSupabaseBSession) {
+      // Supabase B Subscription - Use ID for robustness
+      console.log('[Player] Subscribing to Supabase B session:', gameId)
+      channel = supabaseB
+        .channel(`player-game-status-${gameId}`)
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "sessions", filter: `id=eq.${gameId}` },
+          handlePayload
+        )
+        .subscribe((status) => {
+          console.log('[Player] Supabase B Subscription Status:', status)
+        });
+    } else {
+      // Legacy Subscription for Main Supabase
+      channel = supabase
+        .channel("game-status")
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "game_sessions", filter: `game_pin=eq.${gameCode.toUpperCase()}` },
+          handlePayload
+        )
+        .subscribe();
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      if (isSupabaseBSession) supabaseB.removeChannel(channel);
+      else supabase.removeChannel(channel);
     };
-  }, [gameCode, isQuizStarted, router]);
+  }, [gameCode, gameId, isQuizStarted, router, isSupabaseBSession]);
+
+  // Polling Fallback: Check status manually every 500ms (reduced for faster response)
+  // This ensures players get redirected even if Realtime connection fails (e.g. 406 errors)
+  useEffect(() => {
+    if (!gameId) return;
+
+    // Immediate check on mount
+    const checkStatus = async () => {
+      try {
+        let status = null;
+
+        if (isSupabaseBSession) {
+          const { data } = await supabaseB
+            .from('sessions')
+            .select('status')
+            .eq('id', gameId)
+            .single();
+          status = data?.status;
+        } else {
+          const { data } = await supabase
+            .from('game_sessions')
+            .select('status')
+            .eq('id', gameId)
+            .single();
+          status = data?.status;
+        }
+
+        if (status === 'finished' || status === 'finish') {
+          console.log('[Player] Status check detected finish, redirecting immediately...');
+          router.replace(`/result/${gameCode}`);
+          return true; // Signal that we should stop polling
+        }
+      } catch (error) {
+        console.error('[Player] Error checking status:', error);
+      }
+      return false;
+    };
+
+    // Check immediately
+    checkStatus();
+
+    // Then poll every 500ms for faster response
+    const interval = setInterval(async () => {
+      const shouldStop = await checkStatus();
+      if (shouldStop) {
+        clearInterval(interval);
+      }
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [gameId, isSupabaseBSession, gameCode, router]);
 
   // Timer sinkron dengan server - mulai setelah countdown selesai
   useEffect(() => {
@@ -605,76 +680,119 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
     try {
       // Validasi ID
       if (!gameId || !playerId) {
-
         toast.error("Invalid game or player data!");
         router.replace("/");
         return;
       }
 
-      // Get current game session data
-      const { data: gameSession, error: gameError } = await supabase
-        .from("game_sessions")
-        .select("participants, responses")
-        .eq("id", gameId)
-        .single();
+      if (isSupabaseBSession) {
+        // Supabase B: Update participant score and questions_answered directly
+        const { data: participant, error: getError } = await supabaseB
+          .from("participant")
+          .select("score, questions_answered")
+          .eq("id", playerId)
+          .single()
 
-      if (gameError) {
-
-        throw gameError;
-      }
-
-      // Update participants array with new score
-      const updatedParticipants = gameSession.participants.map((participant: any) => {
-        if (participant.id === playerId) {
-          return {
-            ...participant,
-            score: (participant.score || 0) + earnedPoints,
-            // current_question removed - calculate from responses instead
-          };
+        if (getError) {
+          console.error('[Play] Error getting participant:', getError)
+          // Don't throw - try to continue with just updating score
         }
-        return participant;
-      });
 
-      // Add response to responses array
-      const newResponse = {
-        id: generateXID(),
-        player_id: playerId,
-        question_id: question.id,
-        answer_id: selectedChoiceId,
-        is_correct: correct,
-        points_earned: earnedPoints,
-        created_at: new Date().toISOString()
-      };
+        const currentScore = participant?.score || 0
+        const newScore = currentScore + earnedPoints
+        const currentQuestionsAnswered = participant?.questions_answered ?? 0
+        const newQuestionsAnswered = currentQuestionsAnswered + 1
 
-      const updatedResponses = [...(gameSession.responses || []), newResponse];
+        // Try to update with questions_answered first, fallback to just score
+        const { error: updateError } = await supabaseB
+          .from("participant")
+          .update({
+            score: newScore,
+            questions_answered: newQuestionsAnswered
+          })
+          .eq("id", playerId)
 
-      // Update game session with new data
-      const { error: updateError } = await supabase
-        .from("game_sessions")
-        .update({
-          participants: updatedParticipants,
-          responses: updatedResponses
-        })
-        .eq("id", gameId);
+        if (updateError) {
+          console.warn('[Play] Update with questions_answered failed, trying score only:', updateError)
+          // Fallback: just update score if questions_answered column doesn't exist
+          const { error: scoreOnlyError } = await supabaseB
+            .from("participant")
+            .update({ score: newScore })
+            .eq("id", playerId)
 
-      if (updateError) {
+          if (scoreOnlyError) {
+            console.error('[Play] Error updating score:', scoreOnlyError)
+            // Don't throw - let the game continue
+          }
+        }
 
-        throw updateError;
-      }
+        // Check if all questions are completed - update session status
+        if (currentQuestion + 1 >= gameSettings!.questionCount) {
+          // Player completed all questions - don't change game status here
+          // The host will handle ending the game
+        }
+      } else {
+        // Legacy: Update game_sessions in main Supabase
+        const { data: gameSession, error: gameError } = await supabase
+          .from("game_sessions")
+          .select("participants, responses")
+          .eq("id", gameId)
+          .single();
 
-      // Cek jika semua soal selesai
-      if (currentQuestion + 1 >= gameSettings!.questionCount) {
+        if (gameError) {
+          throw gameError;
+        }
+
+        // Update participants array with new score
+        const updatedParticipants = gameSession.participants.map((participant: any) => {
+          if (participant.id === playerId) {
+            return {
+              ...participant,
+              score: (participant.score || 0) + earnedPoints,
+            };
+          }
+          return participant;
+        });
+
+        // Add response to responses array
+        const newResponse = {
+          id: generateXID(),
+          player_id: playerId,
+          question_id: question.id,
+          answer_id: selectedChoiceId,
+          is_correct: correct,
+          points_earned: earnedPoints,
+          created_at: new Date().toISOString()
+        };
+
+        const updatedResponses = [...(gameSession.responses || []), newResponse];
+
+        // Update game session with new data
         const { error: updateError } = await supabase
           .from("game_sessions")
           .update({
-            status: 'finished',
-            ended_at: new Date().toISOString()
+            participants: updatedParticipants,
+            responses: updatedResponses
           })
           .eq("id", gameId);
 
         if (updateError) {
-
           throw updateError;
+        }
+
+        // Check if all questions completed
+        if (currentQuestion + 1 >= gameSettings!.questionCount) {
+          const { error: statusError } = await supabase
+            .from("game_sessions")
+            .update({
+              status: 'finished',
+              ended_at: new Date().toISOString()
+            })
+            .eq("id", gameId);
+
+          if (statusError) {
+            throw statusError;
+          }
         }
       }
     } catch (error: any) {
@@ -714,7 +832,6 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
     try {
       // Validasi ID
       if (!gameId || !playerId) {
-
         toast.error("Invalid game or player data!");
         router.replace("/");
         return;
@@ -722,64 +839,87 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
 
       // Ensure score is valid
       if (typeof score !== 'number' || isNaN(score) || score < 0) {
-
         toast.error("Invalid mini-game score!");
         return;
       }
 
+      if (isSupabaseBSession) {
+        // Supabase B: Update participant score directly
+        const { data: participant, error: getError } = await supabaseB
+          .from("participant")
+          .select("score")
+          .eq("id", playerId)
+          .single()
 
-
-      // Get current game session data
-      const { data: gameSession, error: fetchError } = await supabase
-        .from("game_sessions")
-        .select("participants, responses")
-        .eq("id", gameId)
-        .single();
-
-      if (fetchError) {
-
-        toast.error("Failed to update score - please try again");
-        return;
-      }
-
-      // Update participants array with mini-game score
-      const updatedParticipants = gameSession.participants.map((participant: any) => {
-        if (participant.id === playerId) {
-          return {
-            ...participant,
-            score: (participant.score || 0) + score
-          };
+        if (getError) {
+          console.error('[Play] Error getting participant:', getError)
+          toast.error("Failed to update score - please try again")
+          return
         }
-        return participant;
-      });
 
-      // Add mini-game response to responses array
-      const miniGameResponse = {
-        id: generateXID(),
-        player_id: playerId,
-        question_id: 'mini-game',
-        answer_id: 'mini-game',
-        is_correct: false, // Mini-game bonus points
-        points_earned: score,
-        created_at: new Date().toISOString()
-      };
+        const newScore = (participant?.score || 0) + score
 
-      const updatedResponses = [...(gameSession.responses || []), miniGameResponse];
+        const { error: updateError } = await supabaseB
+          .from("participant")
+          .update({ score: newScore })
+          .eq("id", playerId)
 
-      // Update game session with new data
-      const { error: updateError } = await supabase
-        .from("game_sessions")
-        .update({
-          participants: updatedParticipants,
-          responses: updatedResponses
-        })
-        .eq("id", gameId);
+        if (updateError) {
+          console.error('[Play] Error updating participant score:', updateError)
+          toast.error("Failed to update game session")
+          return
+        }
+      } else {
+        // Legacy: Update game_sessions in main Supabase
+        const { data: gameSession, error: fetchError } = await supabase
+          .from("game_sessions")
+          .select("participants, responses")
+          .eq("id", gameId)
+          .single();
 
-      if (updateError) {
-        toast.error("Failed to update game session");
-        return;
+        if (fetchError) {
+          toast.error("Failed to update score - please try again");
+          return;
+        }
+
+        // Update participants array with mini-game score
+        const updatedParticipants = gameSession.participants.map((participant: any) => {
+          if (participant.id === playerId) {
+            return {
+              ...participant,
+              score: (participant.score || 0) + score
+            };
+          }
+          return participant;
+        });
+
+        // Add mini-game response to responses array
+        const miniGameResponse = {
+          id: generateXID(),
+          player_id: playerId,
+          question_id: 'mini-game',
+          answer_id: 'mini-game',
+          is_correct: false,
+          points_earned: score,
+          created_at: new Date().toISOString()
+        };
+
+        const updatedResponses = [...(gameSession.responses || []), miniGameResponse];
+
+        // Update game session with new data
+        const { error: updateError } = await supabase
+          .from("game_sessions")
+          .update({
+            participants: updatedParticipants,
+            responses: updatedResponses
+          })
+          .eq("id", gameId);
+
+        if (updateError) {
+          toast.error("Failed to update game session");
+          return;
+        }
       }
-
 
       toast.success(`Mini-game bonus: +${score} points!`);
 

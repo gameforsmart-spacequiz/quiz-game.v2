@@ -24,9 +24,19 @@ import {
   UserX,
   Home,
   RotateCw,
+  LogOut,
+  X,
+  Sparkles,
+  Rocket,
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { useGameStore } from "@/lib/store"
 import { supabase } from "@/lib/supabase"
+import { supabaseB, isSupabaseBAvailable } from "@/lib/supabase-b"
+import { finalizeGame } from "@/lib/sync-manager"
+import { getGameSessionByPin, createGameSession, updateGameSession, subscribeToGameSession } from "@/lib/sessions-api"
+import { getParticipantsByGameId, subscribeToGameParticipants } from "@/lib/participants-api"
+import { generateGameCode } from "@/lib/game-utils"
 import { fetchQuizzes } from "@/lib/dummy-data"
 import { toast, Toaster } from "sonner"
 import Image, { type StaticImageData } from "next/image"
@@ -39,6 +49,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { translations } from "@/lib/locales/translations"
 import { generateXID } from "@/lib/id-generator"
 import { getDisplayName } from "@/lib/player-name"
+import { PodiumLeaderboard, SmartNameDisplay, StableScoreDisplay, type PlayerProgress } from "./leaderboard"
 
 // Fallback translator for non-hook helpers in this module
 const tStatic = (key: keyof typeof translations['en']) => {
@@ -51,18 +62,8 @@ const tStatic = (key: keyof typeof translations['en']) => {
   }
 }
 
-// === TYPES ===
-interface PlayerProgress {
-  id: string
-  name: string
-  avatar: string
-  score: number
-  currentQuestion: number
-  totalQuestions: number
-  isActive: boolean
-  rank: number
-}
 
+// === TYPES ===
 interface HostContentProps {
   gameCode: string
 }
@@ -102,700 +103,6 @@ const StableProgressBar = React.memo(({
 })
 StableProgressBar.displayName = "StableProgressBar"
 
-// === SMART NAME DISPLAY ===
-const SmartNameDisplay = React.memo(({
-  name,
-  maxLength = 12,
-  className = "",
-  multilineClassName = ""
-}: {
-  name: string;
-  maxLength?: number;
-  className?: string;
-  multilineClassName?: string;
-}) => {
-  const { displayName, isBroken } = formatDisplayName(name, maxLength)
-
-  if (isBroken) {
-    return (
-      <span className={`${className} ${multilineClassName} whitespace-pre-line leading-tight`}>
-        {displayName}
-      </span>
-    )
-  }
-
-  return (
-    <span className={className}>
-      {displayName}
-    </span>
-  )
-})
-SmartNameDisplay.displayName = "SmartNameDisplay"
-
-// === STABLE SCORE DISPLAY ===
-const StableScoreDisplay = React.memo(({
-  score,
-  playerId
-}: {
-  score: number;
-  playerId: string;
-}) => {
-  const [displayScore, setDisplayScore] = useState(score)
-
-  useEffect(() => {
-    // Only update if score actually increased (prevents flickering to 0)
-    if (score > displayScore) {
-      setDisplayScore(score)
-    }
-  }, [score, displayScore])
-
-  return (
-    <span className="font-bold">
-      {displayScore}
-    </span>
-  )
-})
-StableScoreDisplay.displayName = "StableScoreDisplay"
-
-// === MAGNIFICENT PODIUM LEADERBOARD ===
-const PodiumLeaderboard = React.memo(
-  ({ players, onAnimationComplete, onRestart, onHome }: {
-    players: PlayerProgress[];
-    onAnimationComplete: () => void;
-    onRestart?: () => void;
-    onHome?: () => void;
-  }) => {
-    const router = useRouter()
-    const [hasAnimated, setHasAnimated] = useState(false)
-    const [showFireworks, setShowFireworks] = useState(false)
-
-    useEffect(() => {
-      if (!hasAnimated) {
-        setHasAnimated(true)
-        setShowFireworks(true)
-        onAnimationComplete()
-        // Hide fireworks after animation
-        setTimeout(() => setShowFireworks(false), 3000)
-      }
-    }, [hasAnimated, onAnimationComplete])
-
-    const sorted = [...players].sort((a, b) => b.score - a.score)
-
-    // Fireworks animation component
-    const Fireworks = () => (
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {Array.from({ length: 12 }).map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-2 h-2 bg-yellow-400 rounded-full"
-            initial={{
-              x: Math.random() * window.innerWidth,
-              y: window.innerHeight,
-              scale: 0,
-              opacity: 1,
-            }}
-            animate={{
-              y: Math.random() * window.innerHeight * 0.3,
-              scale: [0, 1, 0],
-              opacity: [1, 1, 0],
-            }}
-            transition={{
-              duration: 2 + Math.random() * 2,
-              delay: Math.random() * 2,
-              ease: "easeOut",
-            }}
-          />
-        ))}
-        {Array.from({ length: 8 }).map((_, i) => (
-          <motion.div
-            key={`star-${i}`}
-            className="absolute text-2xl"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 50}%`,
-            }}
-            initial={{ scale: 0, rotate: 0, opacity: 0 }}
-            animate={{
-              scale: [0, 1.5, 1, 0],
-              rotate: [0, 180, 360],
-              opacity: [0, 1, 1, 0],
-            }}
-            transition={{
-              duration: 3,
-              delay: Math.random() * 1.5,
-              ease: "easeInOut",
-            }}
-          >
-            ⭐
-          </motion.div>
-        ))}
-      </div>
-    )
-
-    // 1 player - Grand Champion
-    if (sorted.length === 1) {
-      const [onlyPlayer] = sorted
-      return (
-        <div className="min-h-screen relative overflow-hidden">
-          {showFireworks && <Fireworks />}
-
-          {/* Spotlight effect */}
-          <div className="absolute inset-0 bg-gradient-radial from-yellow-400/20 via-transparent to-black/40" />
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1.2 }}
-            className="min-h-screen flex flex-col items-center justify-center p-2 sm:p-4 lg:p-8 font-mono text-white relative z-10"
-          >
-            {/* Home button - Left center */}
-            <motion.button
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 2 }}
-              onClick={onHome || (() => router.push("/"))}
-              className="fixed left-4 sm:left-6 lg:left-8 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-[0_0_20px_rgba(59,130,246,0.5)] transition-all duration-300 hover:scale-110"
-              aria-label="Back to Dashboard"
-            >
-              <Home className="w-6 h-6 sm:w-7 sm:h-7" />
-            </motion.button>
-
-            {/* Restart button - Right center */}
-            <motion.button
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 2 }}
-              onClick={onRestart}
-              className="fixed right-4 sm:right-6 lg:right-8 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-[0_0_20px_rgba(34,197,94,0.5)] transition-all duration-300 hover:scale-110"
-              aria-label="Restart Game"
-            >
-              <RotateCw className="w-6 h-6 sm:w-7 sm:h-7" />
-            </motion.button>
-
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="flex items-center justify-center gap-3 mb-2 sm:mb-4"
-            >
-              <img
-                src="/images/logo/spacequiz.webp"
-                alt="Space Quiz"
-                className="h-8 sm:h-10 md:h-12 lg:h-14 w-auto object-contain"
-              />
-              <span className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white/80">-</span>
-              <Image
-                src="/images/gameforsmartlogo.png"
-                alt="GameForSmart"
-                width={280}
-                height={112}
-                className="w-32 h-auto sm:w-36 md:w-40 lg:w-44 xl:w-48 2xl:w-52 opacity-90 hover:opacity-100 transition-opacity duration-300"
-                priority
-              />
-            </motion.div>
-
-            <motion.h1
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ duration: 0.8, delay: 0.8, type: "spring" }}
-              className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl xl:text-8xl font-bold mb-6 sm:mb-8 lg:mb-12 text-center bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(255,215,0,0.5)] px-2"
-              style={{ textShadow: "0 0 30px rgba(255, 215, 0, 0.8), 0 0 60px rgba(255, 215, 0, 0.4)" }}
-            >
-              CHAMPIONS
-            </motion.h1>
-
-            {/* Champion pedestal */}
-            <motion.div
-              initial={{ y: 100, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 1, delay: 1.2 }}
-              className="relative"
-            >
-              {/* Pedestal base */}
-              <div className="relative bg-gradient-to-b from-yellow-400 via-yellow-500 to-yellow-600 rounded-t-2xl sm:rounded-t-3xl p-1 shadow-[0_0_30px_rgba(255,215,0,0.6)] sm:shadow-[0_0_50px_rgba(255,215,0,0.6)]">
-                <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-t-2xl sm:rounded-t-3xl p-4 sm:p-8 lg:p-12">
-
-                  {/* Glowing ring around avatar */}
-                  <div className="relative">
-                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 blur-lg opacity-75 animate-pulse" />
-                    <div className="relative">
-                      <Image
-                        src={onlyPlayer.avatar || "/placeholder.svg"}
-                        alt={getFirstName(onlyPlayer.name)}
-                        width={200}
-                        height={200}
-                        className="w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 lg:w-48 lg:h-48 rounded-full border-4 sm:border-6 lg:border-8 border-yellow-400 object-cover relative z-10 shadow-[0_0_20px_rgba(255,215,0,0.8)] sm:shadow-[0_0_40px_rgba(255,215,0,0.8)]"
-                      />
-                    </div>
-                  </div>
-
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 1.5 }}
-                    className="text-center mt-6"
-                  >
-                    <h2 className="font-bold text-lg sm:text-2xl md:text-3xl lg:text-4xl mb-2 text-yellow-300 drop-shadow-lg text-center">
-                      <SmartNameDisplay
-                        name={onlyPlayer.name}
-                        maxLength={10}
-                        className="font-bold text-lg sm:text-2xl md:text-3xl lg:text-4xl text-yellow-300 drop-shadow-lg"
-                        multilineClassName="text-base sm:text-xl md:text-2xl lg:text-3xl"
-                      />
-                    </h2>
-                    <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-black px-3 sm:px-6 py-2 sm:py-3 rounded-full font-bold text-base sm:text-xl lg:text-2xl shadow-lg">
-                      <StableScoreDisplay score={onlyPlayer.score} playerId={onlyPlayer.id} /> POINTS
-                    </div>
-                  </motion.div>
-                </div>
-              </div>
-
-              {/* Pedestal steps */}
-              <div className="bg-gradient-to-b from-yellow-600 to-yellow-700 h-6 sm:h-8 w-full rounded-b-lg shadow-lg" />
-              <div className="bg-gradient-to-b from-yellow-700 to-yellow-800 h-4 sm:h-6 w-[110%] -ml-[5%] rounded-b-lg shadow-lg" />
-              <div className="bg-gradient-to-b from-yellow-800 to-yellow-900 h-3 sm:h-4 w-[120%] -ml-[10%] rounded-b-lg shadow-lg" />
-            </motion.div>
-          </motion.div>
-        </div>
-      )
-    }
-
-    // 2 players - Victory Duo
-    if (sorted.length === 2) {
-      const [first, second] = sorted
-      return (
-        <div className="min-h-screen relative overflow-hidden">
-          {showFireworks && <Fireworks />}
-
-          {/* Home button - Left center */}
-          <motion.button
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 1.8 }}
-            onClick={onHome || (() => router.push("/"))}
-            className="fixed left-4 sm:left-6 lg:left-8 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-[0_0_20px_rgba(59,130,246,0.5)] transition-all duration-300 hover:scale-110"
-            aria-label="Back to Dashboard"
-          >
-            <Home className="w-6 h-6 sm:w-7 sm:h-7" />
-          </motion.button>
-
-          {/* Restart button - Right center */}
-          <motion.button
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 1.8 }}
-            onClick={onRestart}
-            className="fixed right-4 sm:right-6 lg:right-8 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-[0_0_20px_rgba(34,197,94,0.5)] transition-all duration-300 hover:scale-110"
-            aria-label="Restart Game"
-          >
-            <RotateCw className="w-6 h-6 sm:w-7 sm:h-7" />
-          </motion.button>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1 }}
-            className="min-h-screen flex flex-col items-center justify-center p-2 sm:p-4 lg:p-8 font-mono text-white relative z-10"
-          >
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="flex items-center justify-center gap-3 mb-2 sm:mb-4"
-            >
-              <img
-                src="/images/logo/spacequiz.webp"
-                alt="Space Quiz"
-                className="h-8 sm:h-10 md:h-12 lg:h-14 w-auto object-contain"
-              />
-              <span className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white/80">-</span>
-              <Image
-                src="/images/gameforsmartlogo.png"
-                alt="GameForSmart"
-                width={280}
-                height={112}
-                className="w-32 h-auto sm:w-36 md:w-40 lg:w-44 xl:w-48 2xl:w-52 opacity-90 hover:opacity-100 transition-opacity duration-300"
-                priority
-              />
-            </motion.div>
-
-            <motion.h1
-              initial={{ y: -50, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-8 sm:mb-12 text-center bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 bg-clip-text text-transparent px-2"
-              style={{ textShadow: "0 0 20px rgba(255, 215, 0, 0.6)" }}
-            >
-              🏆 CHAMPIONS 🏆
-            </motion.h1>
-
-            <div className="flex items-end justify-center gap-4 sm:gap-8 lg:gap-12">
-              {/* Second Place */}
-              <motion.div
-                initial={{ x: -100, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ duration: 0.8, delay: 0.8 }}
-                className="flex flex-col items-center"
-              >
-                {/* Silver Podium */}
-                <div className="relative">
-                  <div className="bg-gradient-to-b from-gray-300 via-gray-400 to-gray-500 rounded-t-xl sm:rounded-t-2xl p-1 shadow-[0_0_20px_rgba(192,192,192,0.5)] sm:shadow-[0_0_30px_rgba(192,192,192,0.5)]">
-                    <div className="bg-gradient-to-b from-gray-700 to-gray-800 rounded-t-xl sm:rounded-t-2xl p-3 sm:p-6 lg:p-8">
-                      <div className="relative flex justify-center">
-                        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-gray-300 to-gray-400 blur-md opacity-60 animate-pulse" />
-                        <Image
-                          src={second.avatar || "/placeholder.svg"}
-                          alt={getFirstName(second.name)}
-                          width={120}
-                          height={120}
-                          className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full border-4 sm:border-6 border-gray-300 object-cover relative z-10 shadow-[0_0_15px_rgba(192,192,192,0.6)] sm:shadow-[0_0_25px_rgba(192,192,192,0.6)]"
-                        />
-                      </div>
-                      <div className="text-center mt-2 sm:mt-4">
-                        <div className="text-lg sm:text-2xl mb-1 sm:mb-2">🥈</div>
-                        <h3 className="font-bold text-sm sm:text-lg lg:text-xl text-gray-300 text-center">
-                          <SmartNameDisplay
-                            name={second.name}
-                            maxLength={7}
-                            className="text-sm sm:text-lg lg:text-xl text-gray-300"
-                            multilineClassName="text-xs sm:text-base lg:text-lg"
-                          />
-                        </h3>
-                        <div className="bg-gradient-to-r from-gray-300 to-gray-400 text-gray-800 px-2 sm:px-4 py-1 sm:py-2 rounded-full font-bold text-xs sm:text-sm lg:text-base mt-1 sm:mt-2">
-                          {second.score} PTS
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-gradient-to-b from-gray-500 to-gray-600 h-12 sm:h-16 w-full rounded-b-lg" />
-                  <div className="bg-gradient-to-b from-gray-600 to-gray-700 h-3 sm:h-4 w-[110%] -ml-[5%] rounded-b-lg" />
-                </div>
-              </motion.div>
-
-              {/* First Place */}
-              <motion.div
-                initial={{ y: 100, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.8, delay: 1.2 }}
-                className="flex flex-col items-center"
-              >
-                {/* Gold Podium */}
-                <div className="relative">
-                  <div className="bg-gradient-to-b from-yellow-400 via-yellow-500 to-yellow-600 rounded-t-2xl sm:rounded-t-3xl p-1 shadow-[0_0_30px_rgba(255,215,0,0.7)] sm:shadow-[0_0_40px_rgba(255,215,0,0.7)]">
-                    <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-t-2xl sm:rounded-t-3xl p-4 sm:p-8 lg:p-10">
-                      <div className="relative">
-                        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-500 blur-lg opacity-70 animate-pulse" />
-                        <Image
-                          src={first.avatar || "/placeholder.svg"}
-                          alt={getFirstName(first.name)}
-                          width={160}
-                          height={160}
-                          className="w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-36 lg:h-36 rounded-full border-4 sm:border-6 lg:border-8 border-yellow-400 object-cover relative z-10 shadow-[0_0_25px_rgba(255,215,0,0.8)] sm:shadow-[0_0_35px_rgba(255,215,0,0.8)]"
-                        />
-                      </div>
-                      <div className="text-center mt-2 sm:mt-4">
-                        <div className="text-2xl sm:text-3xl mb-1 sm:mb-2">🥇</div>
-                        <h3 className="font-bold text-base sm:text-xl lg:text-2xl text-yellow-300 text-center">
-                          <SmartNameDisplay
-                            name={first.name}
-                            maxLength={8}
-                            className="text-base sm:text-xl lg:text-2xl text-yellow-300"
-                            multilineClassName="text-sm sm:text-lg lg:text-xl"
-                          />
-                        </h3>
-                        <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-black px-3 sm:px-6 py-2 sm:py-3 rounded-full font-bold text-sm sm:text-base lg:text-lg mt-1 sm:mt-2">
-                          <StableScoreDisplay score={first.score} playerId={first.id} /> PTS
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-gradient-to-b from-yellow-600 to-yellow-700 h-16 sm:h-20 w-full rounded-b-lg" />
-                  <div className="bg-gradient-to-b from-yellow-700 to-yellow-800 h-4 sm:h-6 w-[110%] -ml-[5%] rounded-b-lg" />
-                  <div className="bg-gradient-to-b from-yellow-800 to-yellow-900 h-3 sm:h-4 w-[120%] -ml-[10%] rounded-b-lg" />
-                </div>
-              </motion.div>
-            </div>
-
-          </motion.div>
-        </div>
-      )
-    }
-
-    // 3+ players - Grand Podium
-    const [first, second, third] = [
-      sorted[0] || { name: "No Player", score: 0, avatar: "/placeholder.svg" },
-      sorted[1] || { name: "No Player", score: 0, avatar: "/placeholder.svg" },
-      sorted[2] || { name: "No Player", score: 0, avatar: "/placeholder.svg" },
-    ]
-    const rest = sorted.slice(3)
-
-    return (
-      <div className="min-h-screen relative overflow-hidden">
-        {showFireworks && <Fireworks />}
-
-        {/* Epic background effects */}
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-radial from-purple-900/30 via-blue-900/20 to-black/60" />
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-gradient-to-b from-yellow-400/10 via-transparent to-transparent" />
-        </div>
-
-        {/* Home button - Left center */}
-        <motion.button
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8, delay: 2.5 }}
-          onClick={onHome || (() => router.push("/"))}
-          className="fixed left-4 sm:left-6 lg:left-8 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-[0_0_20px_rgba(59,130,246,0.5)] transition-all duration-300 hover:scale-110"
-          aria-label="Back to Dashboard"
-        >
-          <Home className="w-6 h-6 sm:w-7 sm:h-7" />
-        </motion.button>
-
-        {/* Restart button - Right center */}
-        <motion.button
-          initial={{ opacity: 0, x: 50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8, delay: 2.5 }}
-          onClick={onRestart}
-          className="fixed right-4 sm:right-6 lg:right-8 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-[0_0_20px_rgba(34,197,94,0.5)] transition-all duration-300 hover:scale-110"
-          aria-label="Restart Game"
-        >
-          <RotateCw className="w-6 h-6 sm:w-7 sm:h-7" />
-        </motion.button>
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1.2 }}
-          className="min-h-screen flex items-center justify-center p-2 sm:p-4 lg:p-8 relative z-10"
-        >
-          <div className="text-center w-full max-w-6xl">
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="flex items-center justify-center gap-3 mb-2 sm:mb-4"
-            >
-              <img
-                src="/images/logo/spacequiz.webp"
-                alt="Space Quiz"
-                className="h-8 sm:h-10 md:h-12 lg:h-14 w-auto object-contain"
-              />
-              <span className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white/80">-</span>
-              <Image
-                src="/images/gameforsmartlogo.png"
-                alt="GameForSmart"
-                width={280}
-                height={112}
-                className="w-32 h-auto sm:w-36 md:w-40 lg:w-44 xl:w-48 2xl:w-52 opacity-90 hover:opacity-100 transition-opacity duration-300"
-                priority
-              />
-            </motion.div>
-
-            <motion.h1
-              initial={{ scale: 0, rotate: -10 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ duration: 1, delay: 0.3, type: "spring", bounce: 0.3 }}
-              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-8xl font-bold mb-8 sm:mb-12 bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 bg-clip-text text-transparent px-2"
-              style={{ textShadow: "0 0 40px rgba(255, 215, 0, 0.8)" }}
-            >
-              🏆 CHAMPIONS 🏆
-            </motion.h1>
-
-            {/* Main Podium */}
-            <div className="flex items-end justify-center gap-2 sm:gap-4 md:gap-6 lg:gap-8 xl:gap-12 mb-6 sm:mb-8">
-              {/* Third Place */}
-              <motion.div
-                initial={{ x: -200, y: 100, opacity: 0 }}
-                animate={{ x: 0, y: 0, opacity: 1 }}
-                transition={{ duration: 1, delay: 0.8, type: "spring" }}
-                className="flex flex-col items-center"
-              >
-                <div className="relative">
-                  <div className="bg-gradient-to-b from-amber-600 via-amber-700 to-amber-800 rounded-t-xl sm:rounded-t-2xl p-1 shadow-[0_0_15px_rgba(217,119,6,0.5)] sm:shadow-[0_0_25px_rgba(217,119,6,0.5)]">
-                    <div className="bg-gradient-to-b from-gray-700 to-gray-800 rounded-t-xl sm:rounded-t-2xl p-2 sm:p-4 lg:p-6">
-                      <div className="relative">
-                        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-600 to-amber-700 blur-md opacity-50 animate-pulse" />
-                        <Image
-                          src={third.avatar || "/placeholder.svg"}
-                          alt={getFirstName(third.name)}
-                          width={100}
-                          height={100}
-                          className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full border-2 sm:border-3 border-amber-600 object-cover relative z-10 shadow-[0_0_10px_rgba(217,119,6,0.6)] sm:shadow-[0_0_15px_rgba(217,119,6,0.6)]"
-                        />
-                      </div>
-                      <div className="text-center mt-2 sm:mt-3">
-                        <div className="text-base sm:text-xl lg:text-2xl mb-1">🥉</div>
-                        <h3 className="font-bold text-xs sm:text-sm lg:text-base text-amber-300 text-center">
-                          <SmartNameDisplay
-                            name={third.name}
-                            maxLength={6}
-                            className="text-xs sm:text-sm lg:text-base text-amber-300"
-                            multilineClassName="text-xs sm:text-xs lg:text-sm"
-                          />
-                        </h3>
-                        <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white px-2 sm:px-3 py-1 rounded-full font-bold text-xs mt-1">
-                          <StableScoreDisplay score={third.score} playerId={third.id} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-gradient-to-b from-amber-800 to-amber-900 h-8 sm:h-12 lg:h-16 w-full rounded-b-lg" />
-                  <div className="bg-gradient-to-b from-amber-900 to-amber-950 h-2 sm:h-3 w-[110%] -ml-[5%] rounded-b-lg" />
-                </div>
-              </motion.div>
-
-              {/* First Place - The Champion */}
-              <motion.div
-                initial={{ y: 150, opacity: 0, scale: 0.8 }}
-                animate={{ y: 0, opacity: 1, scale: 1 }}
-                transition={{ duration: 1.2, delay: 1.2, type: "spring", bounce: 0.2 }}
-                className="flex flex-col items-center relative"
-              >
-
-
-                <div className="relative">
-                  <div className="bg-gradient-to-b from-yellow-400 via-yellow-500 to-yellow-600 rounded-t-2xl sm:rounded-t-3xl p-1 sm:p-2 shadow-[0_0_30px_rgba(255,215,0,0.8)] sm:shadow-[0_0_50px_rgba(255,215,0,0.8)]">
-                    <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-t-2xl sm:rounded-t-3xl p-3 sm:p-6 lg:p-10">
-                      <div className="relative">
-                        {/* Multiple glowing rings */}
-                        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-500 blur-xl opacity-60 animate-pulse" />
-                        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-yellow-300 to-yellow-400 blur-lg opacity-40 animate-pulse" style={{ animationDelay: "0.5s" }} />
-                        <div className="relative">
-                          <Image
-                            src={first.avatar || "/placeholder.svg"}
-                            alt={getFirstName(first.name)}
-                            width={200}
-                            height={200}
-                            className="w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-32 lg:h-32 rounded-full border-3 sm:border-4 lg:border-6 border-yellow-400 object-cover relative z-10 shadow-[0_0_20px_rgba(255,215,0,0.9)] sm:shadow-[0_0_30px_rgba(255,215,0,0.9)]"
-                          />
-                        </div>
-                      </div>
-                      <div className="text-center mt-2 sm:mt-4">
-                        <motion.div
-                          animate={{ scale: [1, 1.1, 1] }}
-                          transition={{ duration: 2, repeat: Infinity }}
-                          className="text-2xl sm:text-4xl lg:text-5xl mb-1 sm:mb-2"
-                        >
-                          🥇
-                        </motion.div>
-                        <h3 className="font-bold text-sm sm:text-xl lg:text-2xl xl:text-3xl text-yellow-300 mb-1 sm:mb-2 text-center">
-                          <SmartNameDisplay
-                            name={first.name}
-                            maxLength={8}
-                            className="text-sm sm:text-xl lg:text-2xl xl:text-3xl text-yellow-300"
-                            multilineClassName="text-xs sm:text-lg lg:text-xl xl:text-2xl"
-                          />
-                        </h3>
-                        <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-black px-3 sm:px-6 py-2 sm:py-3 rounded-full font-bold text-sm sm:text-lg lg:text-xl shadow-[0_0_15px_rgba(255,215,0,0.5)] sm:shadow-[0_0_20px_rgba(255,215,0,0.5)]">
-                          {first.score} PTS
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-gradient-to-b from-yellow-600 to-yellow-700 h-16 sm:h-20 lg:h-24 w-full rounded-b-lg" />
-                  <div className="bg-gradient-to-b from-yellow-700 to-yellow-800 h-4 sm:h-6 w-[110%] -ml-[5%] rounded-b-lg" />
-                  <div className="bg-gradient-to-b from-yellow-800 to-yellow-900 h-3 sm:h-4 w-[120%] -ml-[10%] rounded-b-lg" />
-                </div>
-              </motion.div>
-
-              {/* Second Place */}
-              <motion.div
-                initial={{ x: 200, y: 100, opacity: 0 }}
-                animate={{ x: 0, y: 0, opacity: 1 }}
-                transition={{ duration: 1, delay: 1.0, type: "spring" }}
-                className="flex flex-col items-center"
-              >
-                <div className="relative">
-                  <div className="bg-gradient-to-b from-gray-300 via-gray-400 to-gray-500 rounded-t-xl sm:rounded-t-2xl p-1 shadow-[0_0_20px_rgba(192,192,192,0.6)] sm:shadow-[0_0_30px_rgba(192,192,192,0.6)]">
-                    <div className="bg-gradient-to-b from-gray-700 to-gray-800 rounded-t-xl sm:rounded-t-2xl p-2 sm:p-5 lg:p-7">
-                      <div className="relative flex justify-center">
-                        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-gray-300 to-gray-400 blur-md opacity-60 animate-pulse" />
-                        <Image
-                          src={second.avatar || "/placeholder.svg"}
-                          alt={getFirstName(second.name)}
-                          width={120}
-                          height={120}
-                          className="w-10 h-10 sm:w-16 sm:h-16 md:w-18 md:h-18 lg:w-22 lg:h-22 rounded-full border-2 sm:border-3 lg:border-4 border-gray-300 object-cover relative z-10 shadow-[0_0_12px_rgba(192,192,192,0.7)] sm:shadow-[0_0_20px_rgba(192,192,192,0.7)]"
-                        />
-                      </div>
-                      <div className="text-center mt-2 sm:mt-3">
-                        <div className="text-lg sm:text-2xl lg:text-3xl mb-1">🥈</div>
-                        <h3 className="font-bold text-xs sm:text-base lg:text-lg text-gray-300 text-center">
-                          <SmartNameDisplay
-                            name={second.name}
-                            maxLength={7}
-                            className="text-xs sm:text-base lg:text-lg text-gray-300"
-                            multilineClassName="text-xs sm:text-sm lg:text-base"
-                          />
-                        </h3>
-                        <div className="bg-gradient-to-r from-gray-300 to-gray-400 text-gray-800 px-2 sm:px-4 py-1 sm:py-2 rounded-full font-bold text-xs sm:text-sm lg:text-base mt-1 sm:mt-2">
-                          {second.score} PTS
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-gradient-to-b from-gray-500 to-gray-600 h-10 sm:h-16 lg:h-20 w-full rounded-b-lg" />
-                  <div className="bg-gradient-to-b from-gray-600 to-gray-700 h-2 sm:h-4 w-[110%] -ml-[5%] rounded-b-lg" />
-                </div>
-              </motion.div>
-            </div>
-
-            {/* Other players */}
-            {rest.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 1.8 }}
-                className="mt-4 sm:mt-6 lg:mt-8"
-              >
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 max-w-5xl mx-auto px-2">
-                  {rest.map((p, idx) => (
-                    <motion.div
-                      key={p.id}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.5, delay: 2 + idx * 0.1 }}
-                      className="bg-gradient-to-r from-purple-900/50 to-blue-900/50 border border-purple-500/30 rounded-lg sm:rounded-xl p-2 sm:p-4 backdrop-blur-sm hover:border-purple-400/50 transition-all duration-300"
-                    >
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="bg-gradient-to-r from-purple-500 to-blue-500 text-white w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm">
-                          {idx + 4}
-                        </div>
-                        <Image
-                          src={p.avatar || "/placeholder.svg"}
-                          alt={getFirstName(p.name)}
-                          width={40}
-                          height={40}
-                          className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-purple-400 object-cover"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-white text-xs sm:text-sm">
-                            <SmartNameDisplay
-                              name={p.name}
-                              maxLength={8}
-                              className="text-xs sm:text-sm text-white"
-                              multilineClassName="text-xs leading-tight"
-                            />
-                          </p>
-                          <p className="text-purple-300 text-xs sm:text-sm font-semibold">{p.score} pts</p>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-
-          </div>
-        </motion.div>
-      </div>
-    )
-  },
-)
-PodiumLeaderboard.displayName = "PodiumLeaderboard"
-
 // === HOST CONTENT COMPONENT ===
 export default function HostContent({ gameCode }: HostContentProps) {
   const { t } = useLanguage()
@@ -823,6 +130,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
   const [playerToKick, setPlayerToKick] = useState<{ id: string; name: string } | null>(null)
   const [isStarting, setIsStarting] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [isSupabaseBSession, setIsSupabaseBSession] = useState(false)
   const isExitingRef = useRef(false)
 
   const [countdownLeft, setCountdownLeft] = useState<number | null>(null)
@@ -985,6 +293,53 @@ export default function HostContent({ gameCode }: HostContentProps) {
         return
       }
 
+      // Try Supabase B first (new sessions)
+      let sessionFromB = await getGameSessionByPin(gameCode.toUpperCase())
+
+      if (sessionFromB) {
+        // Session found in Supabase B
+        const sessionQuizId = sessionFromB.quiz_id
+        setGameId(sessionFromB.id)
+        setGameCode(gameCode)
+        setQuizId(sessionQuizId)
+        setHostId(sessionFromB.host_id)
+        setIsSupabaseBSession(true)
+        setGameSettings({
+          timeLimit: sessionFromB.settings?.timeLimit || 10,
+          questionCount: sessionFromB.settings?.questionCount || 10
+        })
+        setIsHost(true)
+        setQuizStarted(sessionFromB.status === 'active')
+        setStartedAt(sessionFromB.timestamps?.started_at || null)
+        setShowLeaderboard(sessionFromB.status === 'finish')
+
+        // Fetch initial players from Supabase B participant table
+        const participants = await getParticipantsByGameId(sessionFromB.id)
+        console.log('[Host] Fetched participants from Supabase B:', participants)
+        const playersData = participants.map((p) => ({
+          id: p.id,
+          name: p.nickname,
+          nickname: p.nickname,
+          avatar: p.avatar || '',
+          score: p.score || 0,
+          joined_at: p.joined_at || new Date().toISOString()
+        }))
+        console.log('[Host] Setting players:', playersData)
+        setPlayers(playersData as any)
+
+        const quizzes = await fetchQuizzes()
+        const found = quizzes.find((q) => q.id === sessionQuizId)
+        if (!found) {
+          toast.error("Quiz not found!")
+          router.replace("/")
+          return
+        }
+        setQuiz(found)
+        setLoading(false)
+        return
+      }
+
+      // Fallback to main Supabase (legacy sessions)
       const { data: gameData, error: gameErr } = await supabase
         .from("game_sessions")
         .select(
@@ -1033,46 +388,39 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
     try {
       // Generate new game code and ID
-      const newGameCode = Math.random().toString(36).substring(2, 8).toUpperCase()
+      const newGameCode = generateGameCode()
       const newGameId = generateXID()
 
-      // Create new game session with same settings
-      const { data, error } = await supabase
-        .from("game_sessions")
-        .insert({
-          id: newGameId,
-          game_pin: newGameCode,
-          quiz_id: quiz.id,
-          host_id: hostId || "01mdpz2b00100000000p",
-          status: "waiting",
-          total_time_minutes: gameSettings.timeLimit,
-          question_limit: gameSettings.questionCount.toString(),
-          participants: [],
-          responses: [],
-          current_questions: [],
+      // Create new game session in Supabase B
+      const session = await createGameSession({
+        id: newGameId,
+        game_pin: newGameCode,
+        quiz_id: quiz.id,
+        quiz_title: quiz.title,
+        host_id: hostId || generateXID(),
+        status: "waiting",
+        settings: {
+          timeLimit: gameSettings.timeLimit,
+          questionCount: gameSettings.questionCount,
           application: "space-quiz"
-        })
-        .select()
-        .single()
+        },
+        timestamps: {
+          created_at: new Date().toISOString()
+        }
+      })
 
-      if (error) {
-
-        toast.error(`Failed to create new game: ${error.message}`)
-        return
-      }
-
-      if (!data) {
+      if (!session) {
         toast.error("Failed to create new game session")
         return
       }
 
       // Update store with new game code
-      setGameCode(newGameCode)
-      setGameId(newGameId)
+      setGameCode(session.game_pin)
+      setGameId(session.id)
       setQuizId(quiz.id)
 
       // Navigate to new game host page
-      router.push(`/host/${newGameCode}`)
+      router.push(`/host/${session.game_pin}`)
       toast.success("New game session created!")
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
@@ -1091,37 +439,59 @@ export default function HostContent({ gameCode }: HostContentProps) {
     isUpdating.current = true
 
     try {
-      // Get game session data with participants and responses
-      const { data: gameSession, error: gameError } = await supabase
-        .from("game_sessions")
-        .select("participants, responses")
-        .eq("id", gameId)
-        .single()
+      let playersData: any[] = []
+      let answers: any[] = []
 
-      if (gameError) {
+      if (isSupabaseBSession) {
+        // Fetch from Supabase B
+        const participants = await getParticipantsByGameId(gameId)
+        playersData = participants.map((p) => ({
+          id: p.id,
+          name: p.nickname,
+          nickname: p.nickname,
+          avatar: p.avatar || '',
+          score: p.score || 0,
+          questions_answered: p.questions_answered || 0,
+          joined_at: p.joined_at || new Date().toISOString()
+        }))
+        answers = []
+      } else {
+        // Get game session data with participants and responses
+        const { data: gameSession, error: gameError } = await supabase
+          .from("game_sessions")
+          .select("participants, responses")
+          .eq("id", gameId)
+          .single()
 
-        return
+        if (gameError) {
+          return
+        }
+
+        playersData = gameSession.participants || []
+        // Filter out mini-game responses
+        answers = (gameSession.responses || []).filter((r: any) => r.question_id !== 'mini-game')
       }
-
-      const participants = gameSession.participants || []
-      const responses = gameSession.responses || []
-
-      // Filter out mini-game responses
-      const answers = responses.filter((r: any) => r.question_id !== 'mini-game')
-      const playersData = participants
 
       const progressMap = new Map<string, PlayerProgress>()
 
       playersData.forEach((player: any) => {
-        const playerAnswers = answers.filter((a: any) => a.player_id === player.id)
-
-        const uniqueQuestionIds = new Set(playerAnswers.map((a: any) => a.question_id))
-        const answeredQuestions = uniqueQuestionIds.size
+        let answeredQuestions = 0
+        let score = player.score || 0
         const totalQuestions = gameSettings.questionCount || 10
 
-        const calculatedScore = playerAnswers.reduce((sum: number, a: any) => sum + (a.points_earned || 0), 0)
-        // Prevent score from flickering to 0 by using the higher value
-        const score = Math.max(player.score || 0, calculatedScore)
+        if (isSupabaseBSession) {
+          // Use questions_answered from Supabase B participant
+          answeredQuestions = player.questions_answered || 0
+        } else {
+          // Calculate from answers for legacy sessions
+          const playerAnswers = answers.filter((a: any) => a.player_id === player.id)
+          const uniqueQuestionIds = new Set(playerAnswers.map((a: any) => a.question_id))
+          answeredQuestions = uniqueQuestionIds.size
+
+          const calculatedScore = playerAnswers.reduce((sum: number, a: any) => sum + (a.points_earned || 0), 0)
+          // Prevent score from flickering to 0 by using the higher value
+          score = Math.max(player.score || 0, calculatedScore)
+        }
 
         progressMap.set(player.id, {
           id: player.id,
@@ -1186,41 +556,70 @@ export default function HostContent({ gameCode }: HostContentProps) {
           const allPlayersAnsweredEnough = activePlayers.every((p) => p.currentQuestion >= minQuestionsRequired)
 
           if (!allPlayersAnsweredEnough) {
-
             return
           }
-          // Additional safety check: ensure quiz has been running for at least 30 seconds
-          const quizStartTime = await supabase
-            .from("game_sessions")
-            .select("started_at")
-            .eq("id", gameId)
-            .single()
 
-          if (quizStartTime.data?.started_at) {
-            const startTime = new Date(quizStartTime.data.started_at).getTime()
+          // Additional safety check: ensure quiz has been running for at least 30 seconds
+          let quizStartedAt: string | null = null
+
+          if (isSupabaseBSession) {
+            // Fetch from Supabase B
+            const { data } = await supabaseB
+              .from("sessions")
+              .select("timestamps")
+              .eq("id", gameId)
+              .single()
+            quizStartedAt = data?.timestamps?.started_at || null
+          } else {
+            // Fetch from main Supabase
+            const { data } = await supabase
+              .from("game_sessions")
+              .select("started_at")
+              .eq("id", gameId)
+              .single()
+            quizStartedAt = data?.started_at || null
+          }
+
+          if (quizStartedAt) {
+            const startTime = new Date(quizStartedAt).getTime()
             const currentTime = Date.now()
             const quizDuration = currentTime - startTime
 
             // Only auto-finish if quiz has been running for at least 30 seconds
             if (quizDuration > 30000) { // 30 seconds
+              if (isSupabaseBSession) {
+                // Get current timestamps and merge
+                const { data: currentSession } = await supabaseB
+                  .from("sessions")
+                  .select("timestamps")
+                  .eq("id", gameId)
+                  .single()
 
-              await supabase.from("game_sessions").update({ status: 'finished', ended_at: new Date().toISOString() }).eq("id", gameId)
+                const currentTimestamps = currentSession?.timestamps || {}
+
+                await supabaseB
+                  .from("sessions")
+                  .update({
+                    status: 'finish',
+                    timestamps: {
+                      ...currentTimestamps,
+                      ended_at: new Date().toISOString()
+                    }
+                  })
+                  .eq("id", gameId)
+              } else {
+                await supabase
+                  .from("game_sessions")
+                  .update({ status: 'finished', ended_at: new Date().toISOString() })
+                  .eq("id", gameId)
+              }
               setShowLeaderboard(true)
-
-            } else {
-
             }
-          } else {
-
           }
         } else if (quizManuallyEnded) {
-
         } else if (activePlayers.length === 0) {
-
         } else if (hasPlayersStillActive) {
-
         } else if (!allActivePlayersCompleted) {
-
         }
       }
     } catch (error) {
@@ -1228,48 +627,67 @@ export default function HostContent({ gameCode }: HostContentProps) {
     } finally {
       isUpdating.current = false
     }
-  }, [gameId, quiz, showLeaderboard, gameSettings.questionCount, quizStarted])
+  }, [gameId, quiz, showLeaderboard, gameSettings.questionCount, quizStarted, isSupabaseBSession])
 
   const fetchPlayers = useCallback(async () => {
     if (!gameId) return
 
     try {
+      let playersData: any[] = []
+      let answers: any[] = []
 
-      // Get game session data with participants and responses
-      const { data: gameSession, error: gameError } = await supabase
-        .from("game_sessions")
-        .select("participants, responses")
-        .eq("id", gameId)
-        .single()
+      if (isSupabaseBSession) {
+        // Fetch from Supabase B
+        const participants = await getParticipantsByGameId(gameId)
+        playersData = participants.map((p) => ({
+          id: p.id,
+          name: p.nickname,
+          nickname: p.nickname,
+          avatar: p.avatar || '',
+          score: p.score || 0,
+          questions_answered: p.questions_answered || 0,
+          joined_at: p.joined_at || new Date().toISOString()
+        }))
+        answers = []
+      } else {
+        // Fetch from main Supabase (legacy)
+        const { data: gameSession, error: gameError } = await supabase
+          .from("game_sessions")
+          .select("participants, responses")
+          .eq("id", gameId)
+          .single()
 
-      if (gameError) {
+        if (gameError) {
+          return
+        }
 
-        return
+        playersData = gameSession.participants || []
+        answers = (gameSession.responses || []).filter((r: any) => r.question_id !== 'mini-game')
       }
 
-      const playersResult = { data: gameSession.participants || [] }
-      const answersResult = { data: (gameSession.responses || []).filter((r: any) => r.question_id !== 'mini-game') }
-
-      const playersData = playersResult.data || []
-      const answers = answersResult.data || []
-
-
       setPlayers(playersData || [])
-      if (playersData) {
+
+      if (playersData && playersData.length > 0) {
         const progressMap = new Map<string, PlayerProgress>()
-        playersData.forEach((player: Player) => {
-          // Calculate actual progress from answers
-          const playerAnswers = answers.filter((a: any) => a.player_id === player.id && a.question_index >= 0)
-          const uniqueQuestionIndices = new Set(playerAnswers.map((a: any) => a.question_index))
-          const answeredQuestions = uniqueQuestionIndices.size
+        playersData.forEach((player: any) => {
+          let answeredQuestions = 0
+          let score = player.score || 0
 
-
+          if (isSupabaseBSession) {
+            // Use questions_answered from Supabase B participant
+            answeredQuestions = player.questions_answered || 0
+          } else {
+            // Calculate from answers for legacy sessions
+            const playerAnswers = answers.filter((a: any) => a.player_id === player.id && a.question_index >= 0)
+            const uniqueQuestionIndices = new Set(playerAnswers.map((a: any) => a.question_index))
+            answeredQuestions = uniqueQuestionIndices.size
+          }
 
           progressMap.set(player.id, {
             id: player.id,
-            name: player.name,
+            name: player.name || player.nickname,
             avatar: player.avatar || "/placeholder.svg?height=40&width=40&text=Player",
-            score: player.score || 0,
+            score,
             currentQuestion: answeredQuestions,
             totalQuestions: gameSettings.questionCount || 10,
             isActive: answeredQuestions < (gameSettings.questionCount || 10),
@@ -1290,9 +708,9 @@ export default function HostContent({ gameCode }: HostContentProps) {
         })
       }
     } catch (error) {
-
+      console.error('[Host] Error fetching players:', error)
     }
-  }, [gameId, gameSettings.questionCount])
+  }, [gameId, gameSettings.questionCount, isSupabaseBSession])
 
   // Reset pagination when players change
   useEffect(() => {
@@ -1338,91 +756,174 @@ export default function HostContent({ gameCode }: HostContentProps) {
   useEffect(() => {
     if (!gameId) return
 
-    const gameSubscription = supabase
-      .channel("game_status")
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "game_sessions", filter: `id=eq.${gameId}` },
-        (payload) => {
+    // Game status subscription - use appropriate database
+    let gameSubscription: ReturnType<typeof supabase.channel>
 
-          const newStatus = payload.new.status;
+    if (isSupabaseBSession) {
+      // Subscribe to Supabase B sessions table
+      gameSubscription = supabaseB
+        .channel(`host-game-status-${gameId}`)
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "sessions", filter: `id=eq.${gameId}` },
+          (payload) => {
+            const newGameData = payload.new as any;
+            const newStatus = newGameData.status;
 
-          // Use if/else if to ensure state transitions are mutually exclusive.
-          // This prevents a 'finished' status from being immediately overwritten by an 'active' or 'countdown' check.
-          if (newStatus === 'finished') {
-            setQuizStarted(false)
-            setShowLeaderboard(true)
-          } else if (newStatus === 'active') {
-            setQuizStarted(true)
-            setShowLeaderboard(false)
-            if (payload.new.started_at) {
-              setStartedAt(payload.new.started_at)
+            if (newStatus === 'finish') {
+              setQuizStarted(false)
+              setShowLeaderboard(true)
+            } else if (newStatus === 'active') {
+              setQuizStarted(true)
+              // Don't force close leaderboard on active updates to prevent race conditions during finish transition
+              // setShowLeaderboard(false) 
+              if (newGameData.timestamps?.started_at) {
+                setStartedAt(newGameData.timestamps.started_at)
+              }
             }
-          } else if (payload.new.countdown_started_at) {
-            // This handles the UI change for the pre-start countdown.
-            setQuizStarted(true)
-            setShowLeaderboard(false)
+          },
+        )
+        .subscribe()
+    } else {
+      // Legacy: Subscribe to main Supabase game_sessions table  
+      gameSubscription = supabase
+        .channel("game_status")
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "game_sessions", filter: `id=eq.${gameId}` },
+          (payload) => {
+            const newStatus = payload.new.status;
+
+            // Use if/else if to ensure state transitions are mutually exclusive.
+            if (newStatus === 'finished' || newStatus === 'finish') {
+              setQuizStarted(false)
+              setShowLeaderboard(true)
+            } else if (newStatus === 'active') {
+              setQuizStarted(true)
+              setShowLeaderboard(false)
+              // Handle Supabase B nested timestamps
+              if (payload.new.timestamps?.started_at) {
+                setStartedAt(payload.new.timestamps.started_at)
+              } else if (payload.new.started_at) {
+                setStartedAt(payload.new.started_at)
+              }
+            } else if (newStatus === 'waiting' && (payload.new.timestamps?.countdown_started_at || payload.new.countdown_started_at)) {
+              // This strictly handles Waiting + Countdown combo
+              setQuizStarted(true)
+              setShowLeaderboard(false)
+            }
+          },
+        )
+        .subscribe()
+    }
+
+    // Players subscription - use Supabase B for new sessions, main Supabase for legacy
+    let playersSubscription: ReturnType<typeof supabase.channel> | null = null
+
+    if (isSupabaseBSession) {
+      // Subscribe to Supabase B participant table
+      playersSubscription = supabaseB
+        .channel(`host-participants-${gameId}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "participant", filter: `game_id=eq.${gameId}` },
+          async () => {
+            // Refresh participants list from Supabase B and update progress
+            const participants = await getParticipantsByGameId(gameId)
+            const playersData = participants.map((p) => ({
+              id: p.id,
+              name: p.nickname,
+              nickname: p.nickname,
+              avatar: p.avatar || '',
+              score: p.score || 0,
+              questions_answered: p.questions_answered || 0,
+              joined_at: p.joined_at || new Date().toISOString()
+            }))
+            setPlayers(playersData as any)
+
+            // Update player progress with new data
+            const progressMap = new Map<string, PlayerProgress>()
+            playersData.forEach((player) => {
+              const answeredQuestions = player.questions_answered || 0
+              const totalQuestions = gameSettings.questionCount || 10
+
+              progressMap.set(player.id, {
+                id: player.id,
+                name: player.name || player.nickname,
+                avatar: player.avatar || "/placeholder.svg?height=40&width=40&text=Player",
+                score: player.score || 0,
+                currentQuestion: answeredQuestions,
+                totalQuestions,
+                isActive: answeredQuestions < totalQuestions,
+                rank: 0,
+              })
+            })
+
+            const sorted = Array.from(progressMap.values()).sort((a, b) => b.score - a.score)
+            const ranked = sorted.map((p, idx) => ({ ...p, rank: idx + 1 }))
+            setPlayerProgress(ranked)
+
+            // AUTO-FINISH CHECK FOR REALTIME UPDATES
+            console.log('[Host] Checking auto-finish. Started:', quizStarted, 'ShowLeaderboard:', showLeaderboard, 'Ranked:', ranked.length)
+
+            if (quizStarted && !showLeaderboard && ranked.length > 0) {
+              const activePlayers = ranked.filter(p => p.currentQuestion > 0)
+              const allCompleted = activePlayers.length > 0 && activePlayers.every(p => p.currentQuestion >= p.totalQuestions)
+
+              console.log('[Host] Active Players:', activePlayers.length, 'All Completed:', allCompleted)
+
+              if (allCompleted) {
+                // Double check duration to prevent premature finish on fast clicks (min 10s safety)
+                if (startedAt) {
+                  const startTime = new Date(startedAt).getTime()
+                  const duration = Date.now() - startTime
+                  console.log('[Host] Game Duration:', duration, 'ms')
+
+                  if (duration > 1000) { // Reduced to 1 second to avoid delay
+                    console.log('[Host] Auto-finishing game via Realtime...')
+
+                    // Use Sync Manager to sync to main DB and update status
+                    await finalizeGame(gameId)
+
+                    setQuizStarted(false)
+                    setShowLeaderboard(true)
+                  } else {
+                    console.log('[Host] Game too short to auto-finish')
+                  }
+                } else {
+                  console.log('[Host] startedAt is missing, cannot check duration')
+                }
+              }
+            }
           }
-        },
-      )
-      .subscribe()
-
-    const playersSubscription = supabase
-      .channel(`players-${gameId}`)
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "game_sessions", filter: `id=eq.${gameId}` },
-        async (payload) => {
-
-
-          // Check if participants array has changed
-          if (payload.new.participants) {
-            const participants = payload.new.participants;
-
-
-            // Update players state
-            setPlayers(participants);
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('[Host] Subscribed to Supabase B participants')
           }
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "game_sessions", filter: `id=eq.${gameId}` },
-        async (payload) => {
-
-
-          // Check if participants array has changed
-          if (payload.new.participants) {
-            const participants = payload.new.participants;
-
-
-            // Update players state
-            setPlayers(participants);
+        })
+    } else {
+      // Legacy: Subscribe to main Supabase game_sessions for participant updates
+      playersSubscription = supabase
+        .channel(`players-${gameId}`)
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "game_sessions", filter: `id=eq.${gameId}` },
+          async (payload) => {
+            // Check if participants array has changed
+            if (payload.new.participants) {
+              const participants = payload.new.participants;
+              // Update players state
+              setPlayers(participants);
+            }
+          },
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('[Host] Subscribed to main Supabase participants')
           }
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "game_sessions", filter: `id=eq.${gameId}` },
-        async (payload) => {
-
-
-          // Check if participants array has changed
-          if (payload.new.participants) {
-            const participants = payload.new.participants;
-
-
-            // Update players state
-            setPlayers(participants);
-          }
-        },
-      )
-      .subscribe((status) => {
-
-        if (status === 'SUBSCRIBED') {
-
-        }
-      })
+        })
+    }
 
     // Debounced updatePlayerProgress to prevent flickering
     const debouncedUpdatePlayerProgress = () => {
@@ -1466,8 +967,18 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
 
     return () => {
-      supabase.removeChannel(gameSubscription)
-      supabase.removeChannel(playersSubscription)
+      if (isSupabaseBSession) {
+        supabaseB.removeChannel(gameSubscription)
+      } else {
+        supabase.removeChannel(gameSubscription)
+      }
+      if (playersSubscription) {
+        if (isSupabaseBSession) {
+          supabaseB.removeChannel(playersSubscription)
+        } else {
+          supabase.removeChannel(playersSubscription)
+        }
+      }
       supabase.removeChannel(responsesSubscription)
 
       // Cleanup debounced update
@@ -1475,62 +986,110 @@ export default function HostContent({ gameCode }: HostContentProps) {
         clearTimeout(debouncedUpdateProgress.current)
       }
     }
-  }, [gameId, fetchPlayers, updatePlayerProgress])
+  }, [gameId, fetchPlayers, updatePlayerProgress, isSupabaseBSession, quizStarted, showLeaderboard, startedAt, gameSettings])
 
   useEffect(() => {
     if (!quizStarted || !gameSettings?.timeLimit) return
 
     let unsub = () => { }
+    let timerInterval: NodeJS.Timeout | null = null
+    let clientOffset = 0
 
     // Start timer logic when startedAt is available
     const startTimer = async () => {
       if (!startedAt) return
 
-      // Get server time offset to sync with player timer
+      // Get server time offset ONCE to sync with player timer
       const serverNow = await syncServerTime()
-      const clientOffset = serverNow - Date.now()
+      clientOffset = serverNow - Date.now()
 
       const start = new Date(startedAt).getTime()
       const limitMs = gameSettings.timeLimit * 60 * 1000 // Convert minutes to milliseconds
 
-      const tick = async () => {
+      // Track last time to prevent backwards movement
+      let lastTimeLeft = Infinity
+
+      const tick = () => {
         const now = Date.now() + clientOffset
         const remain = Math.max(0, start + limitMs - now)
-        setQuizTimeLeft(Math.floor(remain / 1000))
+        const newTimeLeft = Math.floor(remain / 1000)
+
+        // Only update if time decreased (prevents glitch going backwards)
+        if (newTimeLeft <= lastTimeLeft) {
+          lastTimeLeft = newTimeLeft
+          setQuizTimeLeft(newTimeLeft)
+        }
 
         if (remain <= 0 && !hasFinishedGame.current) {
           hasFinishedGame.current = true
           setIsTimerActive(false)
 
+          // Clear interval before async operations
+          if (timerInterval) {
+            clearInterval(timerInterval)
+            timerInterval = null
+          }
 
           // Update game status to finished
-          try {
-            const { error } = await supabase
-              .from("game_sessions")
-              .update({
-                status: 'finished',
-                ended_at: new Date().toISOString()
-              })
-              .eq("id", gameId)
+          (async () => {
+            try {
+              const endedAt = new Date().toISOString()
 
-            if (error) {
+              if (isSupabaseBSession) {
+                const { data: currentSession } = await supabaseB
+                  .from("sessions")
+                  .select("timestamps")
+                  .eq("id", gameId)
+                  .single()
 
-            } else {
+                const currentTimestamps = currentSession?.timestamps || {}
 
-              // Show leaderboard on host page (no navigation)
-              setQuizStarted(false)
-              setShowLeaderboard(true)
+                await supabaseB
+                  .from("sessions")
+                  .update({
+                    status: 'finish',
+                    timestamps: {
+                      ...currentTimestamps,
+                      ended_at: endedAt
+                    }
+                  })
+                  .eq("id", gameId)
+
+                // Success for Supabase B
+                setQuizStarted(false)
+                setShowLeaderboard(true)
+              } else {
+                const { error } = await supabase
+                  .from("game_sessions")
+                  .update({
+                    status: 'finished',
+                    ended_at: endedAt
+                  })
+                  .eq("id", gameId)
+
+                if (!error) {
+                  // Show leaderboard on host page (no navigation)
+                  setQuizStarted(false)
+                  setShowLeaderboard(true)
+                }
+              }
+            } catch (err) {
+              console.error("Error ending game on timer:", err)
             }
-          } catch (err) {
-
-          }
+          })()
         }
       }
 
+      // Run first tick immediately
       tick()
-      const iv = setInterval(tick, 1000)
+
+      // Then run every second
+      timerInterval = setInterval(tick, 1000)
+
       unsub = () => {
-        clearInterval(iv)
+        if (timerInterval) {
+          clearInterval(timerInterval)
+        }
       }
     }
 
@@ -1542,41 +1101,124 @@ export default function HostContent({ gameCode }: HostContentProps) {
   useEffect(() => {
     if (!quizStarted || !gameId) return
 
-    const tick = async () => {
+    let countdownInterval: NodeJS.Timeout | null = null
+    let countdownServerOffset = 0
+    let countdownStartTime: number | null = null
+    let lastCountdownValue = Infinity
+
+    const initCountdown = async () => {
       try {
-        const { data } = await supabase.from("game_sessions").select("countdown_started_at, started_at").eq("id", gameId).single()
-        if (!data?.countdown_started_at) return
+        let countdownStartedAt: string | null = null
+        let sessionStartedAt: string | null = null
 
-        const start = new Date(data.countdown_started_at).getTime()
-        const serverTime = await syncServerTime()
-        const elapsed = Math.floor((serverTime - start) / 1000)
-        const left = Math.max(0, 10 - elapsed)
-
-        if (left >= 0 && left <= 10) {
-          setCountdownLeft(left)
-        } else {
-          setCountdownLeft(0)
-        }
-
-        // Set started_at when countdown finishes (left === 0) and it hasn't been set yet
-        if (left === 0 && !data.started_at) {
-
-          const startedAt = new Date(serverTime).toISOString()
-          await supabase
-            .from("game_sessions")
-            .update({ started_at: startedAt, status: 'active' })
+        if (isSupabaseBSession) {
+          // Fetch from Supabase B
+          const { data } = await supabaseB
+            .from("sessions")
+            .select("timestamps")
             .eq("id", gameId)
+            .single()
+          countdownStartedAt = data?.timestamps?.countdown_started_at || null
+          sessionStartedAt = data?.timestamps?.started_at || null
+        } else {
+          // Fetch from main Supabase
+          const { data } = await supabase
+            .from("game_sessions")
+            .select("countdown_started_at, started_at")
+            .eq("id", gameId)
+            .single()
+          countdownStartedAt = data?.countdown_started_at || null
+          sessionStartedAt = data?.started_at || null
         }
+
+        if (!countdownStartedAt) return
+
+        // Get server time offset ONCE
+        const serverTime = await syncServerTime()
+        countdownServerOffset = serverTime - Date.now()
+        countdownStartTime = new Date(countdownStartedAt).getTime()
+
+        // Synchronous tick function - no async operations
+        const tick = () => {
+          if (!countdownStartTime) return
+
+          const now = Date.now() + countdownServerOffset
+          const elapsed = Math.floor((now - countdownStartTime) / 1000)
+          const left = Math.max(0, 10 - elapsed)
+
+          // Only update if countdown decreased (prevents going backwards)
+          if (left <= lastCountdownValue && left >= 0 && left <= 10) {
+            lastCountdownValue = left
+            setCountdownLeft(left)
+          }
+
+          // Handle countdown finish
+          if (left === 0) {
+            if (countdownInterval) {
+              clearInterval(countdownInterval)
+              countdownInterval = null
+            }
+
+            // Set started_at when countdown finishes
+            if (!sessionStartedAt) {
+              const newStartedAt = new Date(Date.now() + countdownServerOffset).toISOString();
+
+              (async () => {
+                try {
+                  if (isSupabaseBSession) {
+                    // Get current timestamps and merge
+                    const { data: currentSession } = await supabaseB
+                      .from("sessions")
+                      .select("timestamps")
+                      .eq("id", gameId)
+                      .single()
+
+                    const currentTimestamps = currentSession?.timestamps || {}
+
+                    await supabaseB
+                      .from("sessions")
+                      .update({
+                        timestamps: {
+                          ...currentTimestamps,
+                          started_at: newStartedAt
+                        }
+                      })
+                      .eq("id", gameId)
+
+                    setStartedAt(newStartedAt)
+                  } else {
+                    await supabase
+                      .from("game_sessions")
+                      .update({ started_at: newStartedAt, status: 'active' })
+                      .eq("id", gameId)
+                  }
+                } catch (err) {
+                  console.error("[HOST] Error setting started_at:", err)
+                }
+              })()
+            }
+          }
+        }
+
+        // Run first tick immediately
+        tick()
+
+        // Then tick every 100ms for smoother countdown (sync with player)
+        countdownInterval = setInterval(tick, 100)
       } catch (error) {
-        console.error("[HOST] Error in countdown tick:", error)
+        console.error("[HOST] Error initializing countdown:", error)
         setCountdownLeft(0)
       }
     }
 
-    tick()
-    const iv = setInterval(tick, 200)
-    return () => clearInterval(iv)
-  }, [quizStarted, gameId])
+    initCountdown()
+
+    return () => {
+      if (countdownInterval) {
+        clearInterval(countdownInterval)
+      }
+    }
+  }, [quizStarted, gameId, isSupabaseBSession])
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(joinUrl)
@@ -1599,15 +1241,42 @@ export default function HostContent({ gameCode }: HostContentProps) {
     hasFinishedGame.current = false // Reset flag when starting new game
     try {
       const startAt = new Date().toISOString()
-      await supabase
-        .from("game_sessions")
-        .update({
-          status: 'active',
-          countdown_started_at: startAt,
-          // started_at will be set after countdown finishes
-        })
-        .eq("id", gameId)
+
+      if (isSupabaseBSession) {
+        // Update Supabase B sessions table with proper JSONB merge
+        // First get current timestamps
+        const { data: currentSession } = await supabaseB
+          .from("sessions")
+          .select("timestamps")
+          .eq("id", gameId)
+          .single()
+
+        const currentTimestamps = currentSession?.timestamps || {}
+
+        await supabaseB
+          .from("sessions")
+          .update({
+            status: 'active',
+            timestamps: {
+              ...currentTimestamps,
+              countdown_started_at: startAt
+            }
+          })
+          .eq("id", gameId)
+      } else {
+        // Legacy: Update main Supabase game_sessions table
+        await supabase
+          .from("game_sessions")
+          .update({
+            status: 'active',
+            countdown_started_at: startAt,
+            // started_at will be set after countdown finishes
+          })
+          .eq("id", gameId)
+      }
+
       toast.success("🚀 Quiz started!")
+      setQuizStarted(true)
     } catch {
       toast.error("❌ Failed to start quiz")
     } finally {
@@ -1664,26 +1333,56 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
   const endQuiz = async () => {
     if (hasFinishedGame.current) {
-
       return
     }
 
-    try {
-      hasFinishedGame.current = true // Set flag to prevent loops
-      await supabase
-        .from("game_sessions")
-        .update({
-          status: 'finished',
-          ended_at: new Date().toISOString(),
-        })
-        .eq("id", gameId)
+    // Set flag and update UI IMMEDIATELY (don't wait for database)
+    hasFinishedGame.current = true
+    setQuizStarted(false)
+    setShowLeaderboard(true)
+    setQuizManuallyEnded(true)
 
-      setQuizStarted(false)
-      setShowLeaderboard(true)
-      setQuizManuallyEnded(true) // Mark quiz as manually ended
-    } catch {
-      toast.error("❌ Failed to end quiz")
+    // Update database in background (non-blocking)
+    const updateDatabase = async () => {
+      try {
+        const endedAt = new Date().toISOString()
+
+        if (isSupabaseBSession) {
+          const { data: currentSession } = await supabaseB
+            .from("sessions")
+            .select("timestamps")
+            .eq("id", gameId)
+            .single()
+
+          const currentTimestamps = currentSession?.timestamps || {}
+
+          await supabaseB
+            .from("sessions")
+            .update({
+              status: 'finish',
+              timestamps: {
+                ...currentTimestamps,
+                ended_at: endedAt,
+              }
+            })
+            .eq("id", gameId)
+        } else {
+          await supabase
+            .from("game_sessions")
+            .update({
+              status: 'finished',
+              ended_at: endedAt,
+            })
+            .eq("id", gameId)
+        }
+      } catch (error) {
+        console.error("Failed to update database on end quiz:", error)
+        // Don't show error toast since UI already updated successfully
+      }
     }
+
+    // Fire and forget - don't await
+    updateDatabase()
   }
 
   const handleExitGame = async () => {
@@ -1692,19 +1391,42 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
     if (gameId) {
       try {
-        await supabase
-          .from("game_sessions")
-          .update({
-            status: 'finished',
-            ended_at: new Date().toISOString(),
-          })
-          .eq("id", gameId)
+        const endedAt = new Date().toISOString()
 
-        // Clear participants array
-        await supabase
-          .from("game_sessions")
-          .update({ participants: [] })
-          .eq("id", gameId)
+        if (isSupabaseBSession) {
+          const { data: currentSession } = await supabaseB
+            .from("sessions")
+            .select("timestamps")
+            .eq("id", gameId)
+            .single()
+
+          const currentTimestamps = currentSession?.timestamps || {}
+
+          await supabaseB
+            .from("sessions")
+            .update({
+              status: 'finish',
+              timestamps: {
+                ...currentTimestamps,
+                ended_at: endedAt,
+              }
+            })
+            .eq("id", gameId)
+        } else {
+          await supabase
+            .from("game_sessions")
+            .update({
+              status: 'finished',
+              ended_at: endedAt,
+            })
+            .eq("id", gameId)
+
+          // Clear participants array
+          await supabase
+            .from("game_sessions")
+            .update({ participants: [] })
+            .eq("id", gameId)
+        }
       } catch {
         // Silent fail - we're already navigating away
       }
@@ -1756,9 +1478,137 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
   if (loading)
     return (
-      <div className="fixed inset-0 bg-black flex items-center justify-center font-mono text-white">
-        {mounted && <StaticBackground />}
-        <div className="relative z-10 text-white font-mono text-lg">Loading quiz...</div>
+      <div className="min-h-screen fixed inset-0 overflow-hidden flex items-center justify-center">
+        {/* Cosmic background */}
+        <div className="fixed inset-0 z-0">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a1a] via-[#1a1a3a] to-[#0a0a2a]" />
+
+          {/* Galaxy background image */}
+          <div
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-60"
+            style={{
+              backgroundImage: "url('/images/galaxy.webp')",
+            }}
+          />
+
+          {/* Dark overlay */}
+          <div className="absolute inset-0 bg-black/40" />
+        </div>
+
+        {/* Animated stars background */}
+        <div className="fixed inset-0 z-[1] overflow-hidden">
+          {[...Array(25)].map((_, i) => (
+            <motion.div
+              key={i}
+              initial={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                scale: Math.random() * 0.5 + 0.5,
+                opacity: 0
+              }}
+              animate={{
+                opacity: [0, 1, 0],
+                scale: [0.5, 1.5, 0.5],
+              }}
+              transition={{
+                duration: Math.random() * 2 + 2,
+                repeat: Infinity,
+                delay: Math.random() * 2,
+              }}
+              className="absolute w-1 h-1 bg-white rounded-full"
+            />
+          ))}
+        </div>
+
+        {/* Main content */}
+        <div className="relative z-10 text-center">
+          {/* Cosmic loader */}
+          <div className="relative w-36 h-36 sm:w-44 sm:h-44 mx-auto mb-8">
+            {/* Outer ring */}
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+              className="absolute inset-0 rounded-full border-2 border-indigo-500/30"
+            >
+              <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-indigo-400 rounded-full shadow-lg shadow-indigo-400/50" />
+            </motion.div>
+
+            {/* Middle ring */}
+            <motion.div
+              animate={{ rotate: -360 }}
+              transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+              className="absolute inset-5 rounded-full border-2 border-cyan-500/40"
+            >
+              <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-cyan-400 rounded-full shadow-lg shadow-cyan-400/50" />
+            </motion.div>
+
+            {/* Inner ring */}
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+              className="absolute inset-10 rounded-full border-2 border-purple-500/50"
+            >
+              <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-purple-400 rounded-full shadow-lg shadow-purple-400/50" />
+            </motion.div>
+
+            {/* Center glow */}
+            <motion.div
+              animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="absolute inset-14 sm:inset-16 rounded-full bg-gradient-to-br from-cyan-400 to-indigo-500 shadow-xl shadow-cyan-400/40"
+            />
+
+            {/* Rocket in center */}
+            <motion.div
+              animate={{
+                y: [-3, 3, -3],
+                rotate: [0, 5, -5, 0]
+              }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="absolute inset-0 flex items-center justify-center"
+            >
+              <Play className="w-10 h-10 sm:w-12 sm:h-12 text-white drop-shadow-lg" />
+            </motion.div>
+          </div>
+
+          {/* Text */}
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-cyan-300 via-indigo-300 to-purple-300 bg-clip-text text-transparent mb-3"
+          >
+            {t('loadingQuiz', 'Loading Quiz...')}
+          </motion.h2>
+
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="text-gray-400 text-sm sm:text-base mb-6"
+          >
+            Preparing game session...
+          </motion.p>
+
+          {/* Progress dots */}
+          <div className="flex justify-center gap-3">
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                animate={{
+                  scale: [1, 1.5, 1],
+                  opacity: [0.3, 1, 0.3]
+                }}
+                transition={{
+                  duration: 1,
+                  repeat: Infinity,
+                  delay: i * 0.2
+                }}
+                className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-cyan-400 to-indigo-400 shadow-lg shadow-cyan-400/30"
+              />
+            ))}
+          </div>
+        </div>
       </div>
     )
 
@@ -1775,23 +1625,128 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
   if (countdownLeft !== null && countdownLeft > 0) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+      <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
+        {/* Galaxy background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a1a] via-[#1a1a3a] to-[#0a0a2a]" />
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40"
+          style={{ backgroundImage: "url('/images/galaxy.webp')" }}
+        />
+        <div className="absolute inset-0 bg-black/50" />
+
+        {/* Animated stars */}
+        <div className="absolute inset-0 overflow-hidden">
+          {[...Array(30)].map((_, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0 }}
+              animate={{
+                opacity: [0, 1, 0],
+                scale: [0.5, 1.5, 0.5],
+              }}
+              transition={{
+                duration: Math.random() * 2 + 1.5,
+                repeat: Infinity,
+                delay: Math.random() * 2,
+              }}
+              className="absolute w-1 h-1 bg-white rounded-full"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Main countdown container */}
         <motion.div
-          initial={{ scale: 0.5, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="bg-black/90 border-4 border-white p-12 rounded-lg text-center font-mono text-white"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: "spring", stiffness: 200, damping: 20 }}
+          className="relative z-10"
         >
-          <p className="text-3xl mb-4 font-bold">{t('quizStarting')}</p>
-          <motion.div
-            key={countdownLeft}
-            initial={{ scale: 1.5, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.4, type: "spring" }}
-            className="text-9xl font-bold text-yellow-300"
-            style={{ textShadow: "4px 4px 0px #000" }}
-          >
-            {countdownLeft}
-          </motion.div>
+          {/* Glass card */}
+          <div className="relative bg-gradient-to-br from-[#1a1a2e]/90 via-[#16213e]/90 to-[#0f0f23]/90 backdrop-blur-xl border border-purple-500/30 rounded-3xl p-8 sm:p-12 md:p-16 shadow-2xl shadow-purple-900/40">
+            {/* Gradient border lines */}
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-400/50 to-transparent" />
+            <div className="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-cyan-400/30 to-transparent" />
+            <div className="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-purple-400/30 to-transparent" />
+
+            {/* Corner glows */}
+            <div className="absolute -top-4 -left-4 w-20 h-20 bg-cyan-500/20 rounded-full blur-2xl" />
+            <div className="absolute -bottom-4 -right-4 w-20 h-20 bg-purple-500/20 rounded-full blur-2xl" />
+
+            {/* Content */}
+            <div className="relative z-10 text-center">
+              {/* Title with gradient */}
+              <motion.h2
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 sm:mb-8"
+              >
+                <span className="bg-gradient-to-r from-cyan-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
+                  {t('quizStarting')}
+                </span>
+              </motion.h2>
+
+              {/* Countdown number with orbital rings */}
+              <div className="relative w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56 mx-auto">
+                {/* Outer orbital ring */}
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-0 rounded-full border-2 border-cyan-500/30"
+                >
+                  <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-cyan-400 rounded-full shadow-lg shadow-cyan-400/60" />
+                </motion.div>
+
+                {/* Middle orbital ring */}
+                <motion.div
+                  animate={{ rotate: -360 }}
+                  transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-4 sm:inset-5 rounded-full border-2 border-purple-500/40"
+                >
+                  <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-purple-400 rounded-full shadow-lg shadow-purple-400/60" />
+                </motion.div>
+
+                {/* Inner glow circle */}
+                <motion.div
+                  animate={{ scale: [1, 1.05, 1], opacity: [0.6, 1, 0.6] }}
+                  transition={{ duration: 1, repeat: Infinity }}
+                  className="absolute inset-8 sm:inset-10 rounded-full bg-gradient-to-br from-purple-600/30 via-indigo-600/20 to-cyan-600/30 backdrop-blur-sm"
+                />
+
+                {/* Countdown number */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <motion.span
+                    key={countdownLeft}
+                    initial={{ scale: 1.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.4, type: "spring", stiffness: 300 }}
+                    className="text-7xl sm:text-8xl md:text-9xl font-black bg-gradient-to-b from-yellow-300 via-orange-400 to-yellow-500 bg-clip-text text-transparent drop-shadow-2xl"
+                    style={{
+                      textShadow: "0 0 40px rgba(251, 191, 36, 0.5), 0 0 80px rgba(251, 191, 36, 0.3)",
+                      WebkitTextStroke: "1px rgba(251, 191, 36, 0.3)",
+                    }}
+                  >
+                    {countdownLeft}
+                  </motion.span>
+                </div>
+              </div>
+
+              {/* Subtitle */}
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="mt-6 sm:mt-8 text-gray-400 text-sm sm:text-base font-medium"
+              >
+                Preparing the quiz for all players...
+              </motion.p>
+            </div>
+          </div>
         </motion.div>
       </div>
     )
@@ -2134,14 +2089,49 @@ export default function HostContent({ gameCode }: HostContentProps) {
         ) : !quizStarted ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8">
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
-              <div className="bg-white/10 border-2 border-white/20 p-4 sm:p-6 rounded-lg backdrop-blur-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <img
-                    src="/images/logo/spacequiz.webp"
-                    alt="Space Quiz"
-                    className="h-16 sm:h-20 md:h-24 w-auto object-contain"
+              {/* Left Panel - QR Code & Game Info */}
+              <div className="bg-gradient-to-br from-[#0f0f1a] via-[#1a1a2e] to-[#16162a] border border-indigo-500/20 p-4 sm:p-6 rounded-2xl relative overflow-hidden">
+                {/* Galaxy background effects */}
+                <div className="absolute inset-0 overflow-hidden rounded-2xl">
+                  {/* Nebula gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-tr from-purple-900/20 via-transparent to-blue-900/20"></div>
+                  <div className="absolute inset-0 bg-gradient-to-bl from-pink-900/10 via-transparent to-indigo-900/15"></div>
+
+                  {/* Twinkling stars */}
+                  {[...Array(12)].map((_, i) => (
+                    <motion.div
+                      key={i}
+                      className="absolute w-0.5 h-0.5 bg-white rounded-full"
+                      style={{
+                        left: `${8 + (i * 8)}%`,
+                        top: `${5 + ((i * 17) % 90)}%`,
+                      }}
+                      animate={{
+                        opacity: [0.2, 0.8, 0.2],
+                      }}
+                      transition={{
+                        duration: 2 + (i * 0.2),
+                        repeat: Infinity,
+                        delay: i * 0.3,
+                      }}
+                    />
+                  ))}
+
+                  {/* Subtle shooting star */}
+                  <motion.div
+                    className="absolute w-16 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent"
+                    style={{ top: '25%', left: '-5%' }}
+                    animate={{ x: [0, 400], opacity: [0, 0.6, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity, delay: 4, repeatDelay: 6 }}
                   />
-                  {/* GameForSmart Logo */}
+                </div>
+
+                <div className="relative z-10 flex items-center justify-between mb-4">
+                  <img
+                    src="/images/logo/spacequizv2.webp"
+                    alt="Space Quiz"
+                    className="h-8 sm:h-10 md:h-12 w-auto object-contain"
+                  />
                   <Image
                     src="/images/gameforsmartlogo.png"
                     alt="GameForSmart"
@@ -2152,77 +2142,127 @@ export default function HostContent({ gameCode }: HostContentProps) {
                   />
                 </div>
 
-                <div className="flex flex-wrap gap-2 sm:gap-4 justify-center mb-4">
-                  <div className="flex items-center gap-1 sm:gap-2 bg-blue-100 text-blue-800 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
-                    <Timer className="w-3 h-3 sm:w-4 sm:h-4" />
-                    {formatTimeMinutes(gameSettings.timeLimit)}
+                <div className="relative z-10 flex flex-wrap gap-2 sm:gap-4 justify-center mb-4">
+                  <div className="flex items-center gap-1.5 sm:gap-2 bg-cyan-500/10 border border-cyan-400/30 text-cyan-200 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm">
+                    <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="font-medium">{formatTimeMinutes(gameSettings.timeLimit)}</span>
                   </div>
-                  <div className="flex items-center gap-1 sm:gap-2 bg-green-100 text-green-800 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
-                    <HelpCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                    {gameSettings.questionCount} {t('questions')}
+                  <div className="flex items-center gap-1.5 sm:gap-2 bg-green-500/10 border border-green-400/30 text-green-200 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm">
+                    <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="font-medium">{gameSettings.questionCount} {t('questions')}</span>
                   </div>
                 </div>
 
-                <div className="text-center">
-                  <div className="relative inline-block w-full max-w-sm sm:max-w-md">
-                    <div className="text-2xl sm:text-3xl lg:text-7xl font-mono font-bold bg-white text-black rounded-lg py-4 sm:py-6 lg:py-8 px-6 sm:px-8 lg:px-12 mb-1 pr-8 sm:pr-12 lg:pr-16 w-full">
-                      {gameCode}
+                <div className="relative z-10 text-center">
+                  {/* Game Code Display */}
+                  <motion.div
+                    className="relative inline-block w-full max-w-sm sm:max-w-md mb-4"
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <div className="relative bg-white rounded-xl py-4 sm:py-6 lg:py-8 px-6 sm:px-8 lg:px-12 w-full">
+                      <span className="text-3xl sm:text-4xl lg:text-7xl font-mono font-bold tracking-widest text-slate-800">
+                        {gameCode}
+                      </span>
+                      <motion.button
+                        onClick={handleCopyCode}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        className="absolute top-2 right-2 p-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                        title="Copy game code"
+                      >
+                        {copied ? (
+                          <Check className="w-5 h-5 text-green-600" />
+                        ) : (
+                          <Copy className="w-5 h-5 text-slate-600" />
+                        )}
+                      </motion.button>
                     </div>
-                    <button
-                      onClick={handleCopyCode}
-                      className="absolute top-2 right-2 p-2 hover:bg-gray-100 rounded transition-colors"
-                      title="Copy game code"
-                    >
-                      {copied ? (
-                        <Check className="w-5 h-5 text-green-600" />
-                      ) : (
-                        <Copy className="w-5 h-5 text-gray-600" />
-                      )}
-                    </button>
-                  </div>
+                  </motion.div>
 
-                  <div className="relative inline-block mb-4 w-full max-w-sm sm:max-w-md">
-                    <div className="bg-white text-black rounded-lg py-4 sm:py-6 lg:py-8 px-4 sm:px-8 lg:px-12 w-full flex flex-col justify-center items-center relative">
-                      {/* Maximize button in top-right corner */}
-                      <button
+                  {/* QR Code Display */}
+                  <motion.div
+                    className="relative inline-block w-full max-w-sm sm:max-w-md"
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <div className="bg-white rounded-xl py-4 sm:py-6 lg:py-8 px-4 sm:px-8 lg:px-12 w-full flex flex-col justify-center items-center relative">
+                      <motion.button
                         onClick={() => setShowQRModal(true)}
-                        className="absolute top-2 right-2 p-2 hover:bg-gray-100 rounded transition-colors z-10"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        className="absolute top-2 right-2 p-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors z-10"
                         title="Click to enlarge QR code"
                       >
-                        <Maximize2 className="w-5 h-5 text-gray-600" />
-                      </button>
+                        <Maximize2 className="w-5 h-5 text-slate-600" />
+                      </motion.button>
 
                       <div className="mb-4 py-1">
                         <QRCodeSVG value={joinUrl} size={120} className="sm:w-[140px] sm:h-[140px] lg:w-[335px] lg:h-[335px]" />
                       </div>
                       <div className="w-full">
-
-                        <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-2 sm:p-3">
-                          <span className="text-xs sm:text-sm font-mono break-all flex-1 text-gray-900">{joinUrl}</span>
-                          <button
+                        <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-2 sm:p-3">
+                          <span className="text-xs sm:text-sm font-mono break-all flex-1 text-slate-700">{joinUrl}</span>
+                          <motion.button
                             onClick={handleCopyLink}
-                            className="p-2 hover:bg-gray-200 rounded transition-colors flex-shrink-0"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            className="p-2 bg-slate-200 hover:bg-slate-300 rounded-lg transition-colors flex-shrink-0"
                             title="Copy join link"
                           >
                             {linkCopied ? (
                               <Check className="w-4 h-4 text-green-600" />
                             ) : (
-                              <Copy className="w-4 h-4 text-gray-600" />
+                              <Copy className="w-4 h-4 text-slate-600" />
                             )}
-                          </button>
+                          </motion.button>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 </div>
               </div>
             </motion.div>
 
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-              <div className="bg-white/10 border-2 border-white/20 p-4 sm:p-6 rounded-lg backdrop-blur-sm">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-                  <h2 className="text-base sm:text-lg font-bold flex items-center gap-2">
-                    <Users className="w-4 h-4 sm:w-5 sm:h-5" /> {t('playersLabel')} ({players.length})
+              {/* Right Panel - Players */}
+              <div className="bg-gradient-to-br from-[#0f0f1a] via-[#1a1a2e] to-[#16162a] border border-purple-500/20 p-4 sm:p-6 rounded-2xl relative overflow-hidden">
+                {/* Galaxy background effects */}
+                <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+                  {/* Nebula gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-bl from-purple-900/20 via-transparent to-pink-900/15"></div>
+                  <div className="absolute inset-0 bg-gradient-to-tr from-indigo-900/15 via-transparent to-violet-900/20"></div>
+
+                  {/* Twinkling stars */}
+                  {[...Array(10)].map((_, i) => (
+                    <motion.div
+                      key={i}
+                      className="absolute w-0.5 h-0.5 bg-white rounded-full"
+                      style={{
+                        right: `${5 + (i * 10)}%`,
+                        top: `${8 + ((i * 13) % 85)}%`,
+                      }}
+                      animate={{
+                        opacity: [0.2, 0.7, 0.2],
+                      }}
+                      transition={{
+                        duration: 2.5 + (i * 0.15),
+                        repeat: Infinity,
+                        delay: i * 0.2,
+                      }}
+                    />
+                  ))}
+                </div>
+
+                <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+                  <h2 className="text-base sm:text-lg font-bold flex items-center gap-2 text-white">
+                    <div className="w-8 h-8 bg-purple-500/20 border border-purple-400/30 rounded-lg flex items-center justify-center">
+                      <Users className="w-4 h-4 sm:w-5 sm:h-5 text-purple-300" />
+                    </div>
+                    {t('playersLabel')}
+                    <span className="text-purple-300">({players.length})</span>
                   </h2>
                   <div className="flex gap-2 sm:gap-3">
                     <PixelButton color="red" size="sm" onClick={() => setShowExitModal(true)}>
@@ -2235,10 +2275,48 @@ export default function HostContent({ gameCode }: HostContentProps) {
                 </div>
 
                 {players.length === 0 ? (
-                  <div className="text-center py-12 text-white/60">
-                    <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg">{t('waitingForPlayersToJoin')}</p>
-                  </div>
+                  <motion.div
+                    className="text-center py-12"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    {/* Animated waiting icon */}
+                    <motion.div
+                      className="relative inline-block mb-4"
+                      animate={{ y: [-5, 5, -5] }}
+                      transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      <div className="w-16 h-16 bg-purple-500/10 border border-purple-400/30 rounded-2xl flex items-center justify-center mx-auto">
+                        <Users className="w-8 h-8 text-purple-300/70" />
+                      </div>
+                    </motion.div>
+
+                    <p className="text-lg text-white/60 font-medium mb-4">{t('waitingForPlayersToJoin')}</p>
+
+                    {/* Loading dots - simple */}
+                    <motion.div
+                      className="flex justify-center gap-2"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.5 }}
+                    >
+                      {[0, 1, 2].map((i) => (
+                        <motion.div
+                          key={i}
+                          className="w-2 h-2 rounded-full bg-purple-400/60"
+                          animate={{
+                            opacity: [0.3, 1, 0.3]
+                          }}
+                          transition={{
+                            duration: 1.2,
+                            repeat: Infinity,
+                            delay: i * 0.2
+                          }}
+                        />
+                      ))}
+                    </motion.div>
+                  </motion.div>
                 ) : (
                   <>
                     <div className="relative overflow-hidden">
@@ -2259,26 +2337,32 @@ export default function HostContent({ gameCode }: HostContentProps) {
                               initial={{ opacity: 0, scale: 0.8 }}
                               animate={{ opacity: 1, scale: 1 }}
                               transition={{ delay: index * 0.05 }}
-                              className="bg-white/10 rounded-lg p-2 sm:p-3 md:p-4 flex flex-col items-center justify-between backdrop-blur-sm relative min-h-[110px] sm:min-h-[130px]"
+                              whileHover={{ scale: 1.03 }}
+                              className="bg-gradient-to-br from-white/10 to-white/5 rounded-xl p-2 sm:p-3 md:p-4 flex flex-col items-center justify-between backdrop-blur-sm relative min-h-[110px] sm:min-h-[130px] border border-white/10 hover:border-cyan-400/30 transition-all duration-300"
                             >
-                              {/* Kick Button - Made smaller */}
-                              <button
+                              {/* Kick Button */}
+                              <motion.button
                                 onClick={() => confirmKickPlayer(player.id, player.name)}
-                                className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors duration-200 z-10 flex items-center justify-center"
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 bg-red-500/80 hover:bg-red-500 text-white rounded-full transition-colors duration-200 z-10 flex items-center justify-center"
                                 style={{ width: '24px', height: '24px', padding: '0', minWidth: '24px', minHeight: '24px' }}
                                 title={`Kick ${player.name}`}
                               >
                                 <UserX size={12} style={{ width: '12px', height: '12px' }} />
-                              </button>
+                              </motion.button>
 
                               <div className="flex-shrink-0 mt-1">
-                                <Image
-                                  src={player.avatar || "/placeholder.svg?height=48&width=48&text=Player"}
-                                  alt={getFirstName(player.name)}
-                                  width={48}
-                                  height={48}
-                                  className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full border-2 border-white/30 object-cover"
-                                />
+                                <div className="relative">
+                                  <div className="absolute -inset-1 bg-gradient-to-br from-cyan-500/30 to-purple-500/30 rounded-full blur-sm"></div>
+                                  <Image
+                                    src={player.avatar || "/placeholder.svg?height=48&width=48&text=Player"}
+                                    alt={getFirstName(player.name)}
+                                    width={48}
+                                    height={48}
+                                    className="relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full border-2 border-white/30 object-cover"
+                                  />
+                                </div>
                               </div>
 
                               <div className="text-center w-full px-1 mt-2 flex-shrink-0 pb-1">
@@ -2322,8 +2406,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
                 <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
                     <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <img src="/images/logo/spacequiz.webp" alt="Space Quiz" className="h-6 sm:h-8 w-auto object-contain" />
+                      <img src="/images/logo/spacequizv2.webp" alt="Space Quiz" className="h-6 sm:h-8 w-auto object-contain" />
                       <span className="text-sm sm:text-lg">-</span>
                       <Image
                         src="/images/gameforsmartlogo.png"
@@ -2574,26 +2657,140 @@ export default function HostContent({ gameCode }: HostContentProps) {
               onClick={() => setShowExitModal(false)}
             >
               <motion.div
-                initial={{ scale: 0.8, opacity: 0, y: 20 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.8, opacity: 0, y: 20 }}
-                transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                className="bg-[#1a1a2e] border-4 border-white font-mono text-white p-4 sm:p-8 rounded-lg shadow-[8px_8px_0px_#000] max-w-sm sm:max-w-md w-full mx-4 backdrop-blur-sm"
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                className="relative mx-4 w-full max-w-sm sm:max-w-md"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="text-center">
-                  <div className="text-2xl sm:text-4xl mb-4">⚠️</div>
-                  <h2 className="text-lg sm:text-xl mb-4 font-bold">{t('exitGameQuestion')}</h2>
-                  <p className="text-xs sm:text-sm mb-6 text-white/80">
-                    {tStatic('exitGameWarning')}
-                  </p>
-                  <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-4">
-                    <PixelButton color="gray" onClick={() => setShowExitModal(false)} className="text-xs sm:text-sm">
-                      {tStatic('cancel')}
-                    </PixelButton>
-                    <PixelButton color="red" onClick={handleExitGame} className="text-xs sm:text-sm">
-                      {tStatic('endSession')}
-                    </PixelButton>
+                {/* Main Card */}
+                <div className="relative bg-gradient-to-br from-[#1a1a2e]/95 via-[#16213e]/95 to-[#0f0f23]/95 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl shadow-purple-900/30">
+
+                  {/* Floating stars background */}
+                  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    {[...Array(8)].map((_, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0 }}
+                        animate={{
+                          opacity: [0, 0.8, 0],
+                          scale: [0.5, 1.2, 0.5],
+                        }}
+                        transition={{
+                          duration: Math.random() * 2 + 2,
+                          repeat: Infinity,
+                          delay: Math.random() * 2,
+                        }}
+                        className="absolute w-1 h-1 bg-white rounded-full"
+                        style={{
+                          left: `${Math.random() * 100}%`,
+                          top: `${Math.random() * 100}%`,
+                        }}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Gradient overlay lines */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-400/30 to-transparent" />
+                  </div>
+
+                  {/* Content */}
+                  <div className="relative z-10 p-6 sm:p-8">
+                    {/* Close button */}
+                    <button
+                      onClick={() => setShowExitModal(false)}
+                      className="absolute right-4 top-4 w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-200"
+                    >
+                      <X className="h-4 w-4" />
+                      <span className="sr-only">{tStatic('close')}</span>
+                    </button>
+
+                    <div className="mb-6">
+                      {/* Cosmic Icon with orbital rings */}
+                      <div className="mb-5 flex justify-center">
+                        <div className="relative w-20 h-20">
+                          {/* Outer ring */}
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                            className="absolute inset-0 rounded-full border border-red-500/30"
+                          >
+                            <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-red-400 rounded-full shadow-lg shadow-red-400/50" />
+                          </motion.div>
+
+                          {/* Middle ring */}
+                          <motion.div
+                            animate={{ rotate: -360 }}
+                            transition={{ duration: 7, repeat: Infinity, ease: "linear" }}
+                            className="absolute inset-2 rounded-full border border-orange-500/40"
+                          >
+                            <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-orange-400 rounded-full shadow-lg shadow-orange-400/50" />
+                          </motion.div>
+
+                          {/* Center icon */}
+                          <motion.div
+                            animate={{ scale: [1, 1.1, 1] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                            className="absolute inset-4 rounded-full bg-gradient-to-br from-red-500 to-orange-600 shadow-xl shadow-orange-500/40 flex items-center justify-center"
+                          >
+                            <LogOut className="w-6 h-6 text-white" />
+                          </motion.div>
+                        </div>
+                      </div>
+
+                      <h2 className="text-xl sm:text-2xl font-bold text-center">
+                        <span className="bg-gradient-to-r from-red-300 via-orange-300 to-yellow-300 bg-clip-text text-transparent">
+                          {t('exitGameQuestion')}
+                        </span>
+                      </h2>
+                    </div>
+
+                    <div className="space-y-6">
+                      {/* Warning Message */}
+                      <div className="text-center px-2">
+                        <p className="text-white text-lg sm:text-xl font-medium leading-relaxed">
+                          Are you sure? The game session will end.
+                        </p>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        {/* Cancel Button */}
+                        <motion.div
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="flex-1"
+                        >
+                          <Button
+                            onClick={() => setShowExitModal(false)}
+                            variant="outline"
+                            className="w-full h-11 sm:h-12 bg-white/5 backdrop-blur-lg border-white/20 text-white hover:bg-white/15 hover:border-white/30 transition-all duration-300 rounded-xl font-medium"
+                          >
+                            <Sparkles className="w-4 h-4 mr-2 text-cyan-400" />
+                            {tStatic('cancel')}
+                          </Button>
+                        </motion.div>
+
+                        {/* Logout Button */}
+                        <motion.div
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="flex-1"
+                        >
+                          <Button
+                            onClick={handleExitGame}
+                            className="w-full h-11 sm:h-12 bg-gradient-to-r from-red-600 via-orange-600 to-red-600 hover:from-red-500 hover:via-orange-500 hover:to-red-500 text-white font-semibold rounded-xl shadow-lg shadow-red-500/25 hover:shadow-red-500/40 flex items-center justify-center gap-2 transition-all duration-300 relative overflow-hidden group"
+                          >
+                            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                            <Rocket className="w-4 h-4 group-hover:-rotate-45 transition-transform duration-300" />
+                            <span className="relative z-10">{tStatic('endSession')}</span>
+                          </Button>
+                        </motion.div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -2674,33 +2871,147 @@ export default function HostContent({ gameCode }: HostContentProps) {
               }}
             >
               <motion.div
-                initial={{ scale: 0.8, opacity: 0, y: 20 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.8, opacity: 0, y: 20 }}
-                transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                className="bg-[#1a1a2e] border-4 border-white font-mono text-white p-4 sm:p-8 rounded-lg shadow-[8px_8px_0px_#000] max-w-sm sm:max-w-md w-full mx-4 backdrop-blur-sm"
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                className="relative mx-4 w-full max-w-sm sm:max-w-md"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="text-center">
-                  <div className="text-2xl sm:text-4xl mb-4">🚫</div>
-                  <h2 className="text-lg sm:text-xl mb-4 font-bold">Kick Player?</h2>
-                  <p className="text-xs sm:text-sm mb-6 text-white/80">
-                    Are you sure you want to kick <span className="font-bold text-red-400">{playerToKick.name}</span> from the game?
-                  </p>
-                  <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-4">
-                    <PixelButton
-                      color="gray"
+                {/* Main Card */}
+                <div className="relative bg-gradient-to-br from-[#1a1a2e]/95 via-[#16213e]/95 to-[#0f0f23]/95 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl shadow-red-900/30">
+
+                  {/* Floating stars background */}
+                  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    {[...Array(8)].map((_, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0 }}
+                        animate={{
+                          opacity: [0, 0.8, 0],
+                          scale: [0.5, 1.2, 0.5],
+                        }}
+                        transition={{
+                          duration: Math.random() * 2 + 2,
+                          repeat: Infinity,
+                          delay: Math.random() * 2,
+                        }}
+                        className="absolute w-1 h-1 bg-white rounded-full"
+                        style={{
+                          left: `${Math.random() * 100}%`,
+                          top: `${Math.random() * 100}%`,
+                        }}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Gradient overlay lines */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-400/30 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-400/30 to-transparent" />
+                  </div>
+
+                  {/* Content */}
+                  <div className="relative z-10 p-6 sm:p-8">
+                    {/* Close button */}
+                    <button
                       onClick={() => {
                         setShowKickModal(false)
                         setPlayerToKick(null)
                       }}
-                      className="text-xs sm:text-sm"
+                      className="absolute right-4 top-4 w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-200"
                     >
-                      {tStatic('cancel')}
-                    </PixelButton>
-                    <PixelButton color="red" onClick={executeKickPlayer} className="text-xs sm:text-sm">
-                      🚫 Kick Player
-                    </PixelButton>
+                      <X className="h-4 w-4" />
+                      <span className="sr-only">{tStatic('close')}</span>
+                    </button>
+
+                    <div className="mb-6">
+                      {/* Cosmic Icon with orbital rings */}
+                      <div className="mb-5 flex justify-center">
+                        <div className="relative w-20 h-20">
+                          {/* Outer ring */}
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                            className="absolute inset-0 rounded-full border border-red-500/30"
+                          >
+                            <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-red-400 rounded-full shadow-lg shadow-red-400/50" />
+                          </motion.div>
+
+                          {/* Middle ring */}
+                          <motion.div
+                            animate={{ rotate: -360 }}
+                            transition={{ duration: 7, repeat: Infinity, ease: "linear" }}
+                            className="absolute inset-2 rounded-full border border-orange-500/40"
+                          >
+                            <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-orange-400 rounded-full shadow-lg shadow-orange-400/50" />
+                          </motion.div>
+
+                          {/* Center icon */}
+                          <motion.div
+                            animate={{ scale: [1, 1.1, 1] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                            className="absolute inset-4 rounded-full bg-gradient-to-br from-red-500 to-orange-600 shadow-xl shadow-orange-500/40 flex items-center justify-center"
+                          >
+                            <UserX className="w-6 h-6 text-white" />
+                          </motion.div>
+                        </div>
+                      </div>
+
+                      <h2 className="text-xl sm:text-2xl font-bold text-center">
+                        <span className="bg-gradient-to-r from-red-300 via-orange-300 to-yellow-300 bg-clip-text text-transparent">
+                          Kick Player?
+                        </span>
+                      </h2>
+                    </div>
+
+                    <div className="space-y-6">
+                      {/* Warning Message */}
+                      <div className="text-center px-2">
+                        <p className="text-gray-300 text-sm sm:text-base leading-relaxed">
+                          Are you sure you want to kick <span className="font-bold text-red-400">{playerToKick.name}</span> from the game?
+                        </p>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        {/* Cancel Button */}
+                        <motion.div
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="flex-1"
+                        >
+                          <Button
+                            onClick={() => {
+                              setShowKickModal(false)
+                              setPlayerToKick(null)
+                            }}
+                            variant="outline"
+                            className="w-full h-11 sm:h-12 bg-white/5 backdrop-blur-lg border-white/20 text-white hover:bg-white/15 hover:border-white/30 transition-all duration-300 rounded-xl font-medium"
+                          >
+                            <Sparkles className="w-4 h-4 mr-2 text-cyan-400" />
+                            {tStatic('cancel')}
+                          </Button>
+                        </motion.div>
+
+                        {/* Kick Button */}
+                        <motion.div
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="flex-1"
+                        >
+                          <Button
+                            onClick={executeKickPlayer}
+                            className="w-full h-11 sm:h-12 bg-gradient-to-r from-red-600 via-orange-600 to-red-600 hover:from-red-500 hover:via-orange-500 hover:to-red-500 text-white font-semibold rounded-xl shadow-lg shadow-red-500/25 hover:shadow-red-500/40 flex items-center justify-center gap-2 transition-all duration-300 relative overflow-hidden group"
+                          >
+                            {/* Shimmer effect */}
+                            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                            <UserX className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
+                            <span className="relative z-10">Kick Player</span>
+                          </Button>
+                        </motion.div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </motion.div>

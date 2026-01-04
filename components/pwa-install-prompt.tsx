@@ -188,51 +188,120 @@ export function PWAInstallPrompt() {
           }}
           className="fixed bottom-4 right-4 z-[100] w-80 max-w-[calc(100vw-2rem)]"
         >
-          <div className="bg-black/80 backdrop-blur-xl border-2 border-cyan-400/50 rounded-lg shadow-2xl p-3 relative overflow-hidden">
-            {/* Background glow effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-pink-500/10 animate-pulse"></div>
+          {/* Outer glow ring */}
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl blur-sm opacity-50"></div>
+
+          {/* Main container - Dark Galaxy Theme */}
+          <div className="relative bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/30 rounded-2xl shadow-2xl p-4 overflow-hidden">
+
+            {/* Nebula gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 via-transparent to-cyan-600/10"></div>
+            <div className="absolute inset-0 bg-gradient-to-tr from-pink-600/5 via-transparent to-blue-600/5"></div>
+
+            {/* Animated floating stars */}
+            <div className="absolute inset-0 overflow-hidden">
+              {[...Array(8)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute w-1 h-1 bg-white rounded-full"
+                  style={{
+                    left: `${10 + (i * 12)}%`,
+                    top: `${15 + (i * 10) % 70}%`,
+                  }}
+                  animate={{
+                    opacity: [0.2, 0.8, 0.2],
+                    scale: [0.8, 1.2, 0.8],
+                  }}
+                  transition={{
+                    duration: 2 + (i * 0.3),
+                    repeat: Infinity,
+                    delay: i * 0.2,
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Shooting star animation */}
+            <motion.div
+              className="absolute w-10 h-0.5 bg-gradient-to-r from-transparent via-white to-transparent rounded-full"
+              initial={{ x: -50, y: 10, opacity: 0 }}
+              animate={{
+                x: [null, 350],
+                y: [null, 60],
+                opacity: [0, 1, 0]
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                repeatDelay: 5,
+                ease: "easeOut"
+              }}
+            />
 
             {/* Close button */}
-            <button
+            <motion.button
               onClick={handleDismiss}
-              className="absolute top-1.5 right-1.5 text-white/70 hover:text-white transition-colors z-10"
+              whileHover={{ scale: 1.1, rotate: 90 }}
+              whileTap={{ scale: 0.9 }}
+              className="absolute top-3 right-3 w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white transition-all duration-200 z-20"
               aria-label="Close"
             >
               <X className="w-3.5 h-3.5" />
-            </button>
+            </motion.button>
 
             <div className="relative z-10">
               {/* Icon and Title */}
-              <div className="flex items-start space-x-2.5 mb-2.5">
-                <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-cyan-400 to-purple-500 rounded-lg flex items-center justify-center">
-                  <Download className="w-4 h-4 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-white font-bold text-sm mb-0.5 leading-tight">
+              <div className="flex items-start space-x-3 mb-4">
+                {/* Animated Rocket Icon */}
+                <motion.div
+                  className="flex-shrink-0 relative"
+                  animate={{
+                    y: [0, -5, 0],
+                    rotate: [0, 5, -5, 0]
+                  }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  {/* Rocket glow */}
+                  <div className="absolute -inset-1 bg-gradient-to-br from-cyan-400 via-blue-500 to-purple-500 rounded-xl blur-sm opacity-70"></div>
+                  <div className="relative w-10 h-10 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-xl flex items-center justify-center shadow-lg border border-white/20">
+                    <Download className="w-5 h-5 text-white" />
+                  </div>
+                  {/* Rocket flame effect */}
+                  <motion.div
+                    className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-gradient-to-b from-orange-400 to-transparent rounded-full blur-sm"
+                    animate={{ opacity: [0.5, 1, 0.5], scale: [0.8, 1.2, 0.8] }}
+                    transition={{ duration: 0.5, repeat: Infinity }}
+                  />
+                </motion.div>
+
+                <div className="flex-1 min-w-0 pt-0.5">
+                  <h3 className="text-white font-bold text-sm  leading-tight drop-shadow-lg">
                     {t('installSpaceQuiz', 'Install Space-Quiz now!')}
                   </h3>
-                  <p className="text-white/70 text-xs leading-tight">
-                    {t('installDescription', 'Get faster access and better experience')}
-                  </p>
+                  
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-2 mt-3">
-                <Button
-                  onClick={handleInstallClick}
-                  className="flex-1 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white font-semibold text-xs h-8 shadow-lg hover:shadow-xl transition-all duration-300"
-                >
-                  <Download className="w-3.5 h-3.5 mr-1.5" />
-                  {t('install', 'Install')}
-                </Button>
-                <Button
-                  onClick={handleDismiss}
-                  variant="outline"
-                  className="flex-1 border-cyan-400/50 bg-transparent text-cyan-300/90 hover:bg-cyan-500/20 hover:text-cyan-200 hover:border-cyan-400/70 text-xs h-8"
-                >
-                  {t('later', 'Later')}
-                </Button>
+              <div className="flex gap-3">
+                <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button
+                    onClick={handleInstallClick}
+                    className="w-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 hover:from-cyan-400 hover:via-blue-400 hover:to-purple-400 text-white font-semibold text-xs h-9 shadow-lg hover:shadow-cyan-500/30 transition-all duration-300 rounded-xl border-0"
+                  >
+                    <Download className="w-3.5 h-3.5 mr-2" />
+                    {t('install', 'Install')}
+                  </Button>
+                </motion.div>
+                <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button
+                    onClick={handleDismiss}
+                    variant="outline"
+                    className="w-full border-indigo-400/30 bg-indigo-950/50 text-indigo-200 hover:bg-indigo-900/50 hover:text-white hover:border-indigo-400/50 text-xs h-9 rounded-xl transition-all duration-300"
+                  >
+                    {t('later', 'Later')}
+                  </Button>
+                </motion.div>
               </div>
             </div>
           </div>

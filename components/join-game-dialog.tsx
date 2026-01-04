@@ -17,10 +17,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { X, Users, Gamepad2, Sparkles, Star, Camera, CameraOff } from "lucide-react"
 import { useGameStore } from "@/lib/store"
 import { supabase } from "@/lib/supabase"
+import { getGameSessionByPin } from "@/lib/sessions-api"
+import { createParticipant } from "@/lib/participants-api"
 import { generateXID } from "@/lib/id-generator"
 import { useLanguage } from "@/contexts/language-context"
 import { useAuth } from "@/contexts/auth-context"
 import { Html5Qrcode } from "html5-qrcode"
+// penanda
 // penanda
 // penanda
 const ANIMAL_AVATARS = [
@@ -375,8 +378,77 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
   }
 
   const onSubmit = async (data: JoinGameForm) => {
+    console.log('[JoinGame] Form submitted with data:', { name: data.name, gameCode: data.gameCode, avatar: selectedAvatar })
     setIsLoading(true)
     try {
+      // Try Supabase B first (new sessions)
+      const sessionFromB = await getGameSessionByPin(data.gameCode.toUpperCase())
+
+      if (sessionFromB) {
+        // Session found in Supabase B
+        if (sessionFromB.status === "finish") {
+          form.setError("gameCode", { message: "Game has ended. Host has left the session." })
+          setIsLoading(false)
+          return
+        }
+
+        if (sessionFromB.status !== "waiting") {
+          form.setError("gameCode", { message: t('error', 'Game has already started or ended') })
+          setIsLoading(false)
+          return
+        }
+
+        // Check if player nickname already exists by fetching participants from Supabase B
+        const { getParticipantsByGameId } = await import("@/lib/participants-api")
+        const existingParticipants = await getParticipantsByGameId(sessionFromB.id)
+        const existingPlayer = existingParticipants.find((p) => p.nickname === data.name)
+
+        if (existingPlayer) {
+          form.setError("name", { message: "Nama sudah digunakan oleh player lain. Silakan gunakan nama yang berbeda." })
+          setIsLoading(false)
+          return
+        }
+
+        const playerId = generateXID()
+
+        // Add participant to Supabase B
+        const newParticipant = await createParticipant({
+          id: playerId,
+          game_id: sessionFromB.id,
+          user_id: profile?.id || null,
+          nickname: data.name,
+          avatar: selectedAvatar,
+          score: 0
+        })
+
+        if (!newParticipant) {
+          form.setError("gameCode", { message: "Failed to join game. Please try again." })
+          setIsLoading(false)
+          return
+        }
+
+        setPlayer(playerId, data.name, selectedAvatar)
+        setGameCode(data.gameCode.toUpperCase())
+        setGameId(sessionFromB.id)
+        setQuizId(sessionFromB.quiz_id)
+        setIsHost(false)
+
+        // Save to localStorage before redirect
+        localStorage.setItem(
+          "player",
+          JSON.stringify({
+            id: playerId,
+            name: data.name,
+            avatar: selectedAvatar,
+          }),
+        )
+
+        router.push(`/wait/${data.gameCode.toUpperCase()}`)
+        onOpenChange(false)
+        return
+      }
+
+      // Fallback to main Supabase (legacy sessions)
       const { data: game, error: gameError } = await supabase
         .from("game_sessions")
         .select("*")
@@ -449,6 +521,8 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
       router.push(`/wait/${data.gameCode.toUpperCase()}`)
       onOpenChange(false)
     } catch (error) {
+      console.error('[JoinGame] Error joining game:', error)
+      form.setError("gameCode", { message: "Failed to join game. Please try again." })
     } finally {
       setIsLoading(false)
     }
@@ -456,7 +530,7 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`${isScanning && !isMobile ? 'max-w-6xl' : 'max-w-md'} p-0 border-0 bg-transparent transition-all duration-300`}>
+      <DialogContent className={`${isScanning && !isMobile ? 'max-w-6xl' : 'max-w-[92vw] xs:max-w-sm sm:max-w-md'} p-0 border-0 bg-transparent transition-all duration-300 mx-auto`}>
         {/* Mobile optimization styles */}
         <style jsx global>{`
           @media (max-width: 768px) {
@@ -510,7 +584,7 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
           }
         `}</style>
         {/* Optimized Background */}
-        <div className="fixed inset-0 z-0 overflow-hidden">
+        <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
           {/* Lightweight CSS gradient background */}
           <div
             className="absolute inset-0"
@@ -551,54 +625,93 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
           <div className="absolute inset-0 bg-black/40"></div>
         </div>
 
-        {/* Glass morphism dialog content */}
-        <div className="relative z-10 bg-black/20 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-2xl">
-          <button
+        {/* Glass morphism dialog content - Dark Galaxy Theme */}
+        <div className="relative z-10 bg-gradient-to-br from-slate-900/95 via-indigo-950/95 to-slate-900/95 backdrop-blur-xl border border-white/20 rounded-2xl xs:rounded-3xl p-4 xs:p-5 sm:p-6 shadow-2xl overflow-hidden">
+
+          {/* Animated background effects */}
+          <div className="absolute inset-0 overflow-hidden rounded-2xl xs:rounded-3xl pointer-events-none">
+            {/* Nebula gradients */}
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 via-transparent to-cyan-600/10"></div>
+            <div className="absolute inset-0 bg-gradient-to-tr from-pink-600/5 via-transparent to-blue-600/5"></div>
+
+            {/* Floating stars */}
+            {!isMobile && [...Array(6)].map((_, i) => (
+              <motion.div
+                key={i}
+                className="absolute w-1 h-1 bg-white rounded-full"
+                style={{
+                  left: `${10 + (i * 15)}%`,
+                  top: `${8 + (i * 12) % 85}%`,
+                }}
+                animate={{
+                  opacity: [0.2, 0.7, 0.2],
+                  scale: [0.8, 1.2, 0.8],
+                }}
+                transition={{
+                  duration: 2 + (i * 0.3),
+                  repeat: Infinity,
+                  delay: i * 0.3,
+                }}
+              />
+            ))}
+          </div>
+          {/* Close button */}
+          <motion.button
             onClick={handleClose}
-            className={`absolute right-4 top-4 rounded-sm ring-offset-background transition-all focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground z-20 text-white hover:text-cyan-300 ${isScanning && isMobile
-                ? 'opacity-50 hover:opacity-100 bg-black/40 backdrop-blur-sm p-2 rounded-full border border-white/20'
-                : 'opacity-70 hover:opacity-100'
+            whileHover={{ scale: 1.1, rotate: 90 }}
+            whileTap={{ scale: 0.9 }}
+            className={`absolute right-3 top-3 xs:right-4 xs:top-4 w-7 h-7 xs:w-8 xs:h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white transition-all duration-200 z-20 ${isScanning && isMobile
+              ? 'opacity-50 hover:opacity-100'
+              : ''
               }`}
             disabled={isScanning && isMobile}
             title={isScanning && isMobile ? 'Stop scanning first to close' : 'Close'}
           >
             <X className="h-4 w-4" />
             <span className="sr-only">{t('close', 'Close')}</span>
-          </button>
+          </motion.button>
 
-          <DialogHeader className={`mb-6 ${isScanning && isMobile ? 'opacity-30 blur-sm pointer-events-none transition-all duration-300' : ''}`}>
+          <DialogHeader className={`mb-4 xs:mb-5 sm:mb-6 relative z-10 ${isScanning && isMobile ? 'opacity-30 blur-sm pointer-events-none transition-all duration-300' : ''}`}>
             <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
               transition={{
-                delay: isMobile ? 0 : 0.2,
+                delay: isMobile ? 0 : 0.1,
                 type: "spring",
-                stiffness: isMobile ? 200 : 150
+                stiffness: 200,
+                damping: 15
               }}
-              className="mb-4 flex justify-center"
+              className="mb-2 xs:mb-3 flex justify-center"
             >
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-500/30 to-cyan-500/30 backdrop-blur-xl rounded-2xl flex items-center justify-center border-2 border-white/40 shadow-lg shadow-purple-500/20 relative overflow-hidden">
-                <div className={`absolute inset-0 bg-gradient-to-br from-purple-400/10 to-cyan-400/10 ${isMobile ? '' : 'animate-pulse'}`}></div>
-                <Users className="w-8 h-8 text-white relative z-10" />
-                <Sparkles className={`absolute top-1 right-1 w-3 h-3 text-cyan-300 ${isMobile ? '' : 'animate-pulse'}`} />
-                <Star className={`absolute bottom-1 left-1 w-2 h-2 text-purple-300 ${isMobile ? '' : 'animate-pulse'}`} style={isMobile ? {} : { animationDelay: "1s" }} />
+              <div className="relative">
+                {/* Glow effect */}
+                <div className="absolute -inset-1 bg-gradient-to-br from-purple-500 via-pink-500 to-cyan-500 rounded-xl blur-sm opacity-60"></div>
+                <div className="relative w-12 h-12 xs:w-14 xs:h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-xl flex items-center justify-center border border-white/30 shadow-lg">
+                  <motion.div
+                    animate={{ rotate: [0, 10, -10, 0] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <Users className="w-6 h-6 xs:w-7 xs:h-7 sm:w-8 sm:h-8 text-white" />
+                  </motion.div>
+                </div>
               </div>
             </motion.div>
 
-            <DialogTitle
-              className="text-2xl font-bold text-center text-transparent bg-gradient-to-r from-cyan-300 via-purple-300 to-pink-300 bg-clip-text"
-              style={{
-                textShadow: "0 0 20px rgba(147, 197, 253, 0.5), 0 0 40px rgba(168, 85, 247, 0.3)",
-                fontFamily: "monospace",
-                imageRendering: "pixelated",
-              }}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
             >
-              {initialGameCode ? t('joinGame', 'Join With QR') : t('joinGame', 'Join Game')}
-            </DialogTitle>
+              <DialogTitle className="text-lg xs:text-xl sm:text-2xl font-bold text-center text-white drop-shadow-lg">
+                {initialGameCode ? t('joinGame', 'Join With QR') : t('joinGame', 'Join Game')}
+              </DialogTitle>
+            </motion.div>
           </DialogHeader>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
+            <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
+              console.log('[JoinGame] Form validation failed:', errors)
+            })}>
               {/* Mobile: Camera Focus Mode - When scanning, blur form and focus on camera */}
               {isScanning && isMobile ? (
                 <motion.div
@@ -662,17 +775,17 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
                       name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-cyan-100 font-mono">
+                          <FormLabel className="text-white/80 text-sm xs:text-base">
                             {t('username', 'Username')}
                           </FormLabel>
                           <FormControl>
                             <Input
                               placeholder={t('enterUsername', 'Choose a username')}
                               {...field}
-                              className="bg-black/30 border-cyan-400/30 text-white placeholder:text-cyan-200/60 backdrop-blur-sm focus:border-cyan-400 focus:ring-cyan-400/20 font-mono"
+                              className="bg-white/5 border-white/20 text-white placeholder:text-white/40 backdrop-blur-sm focus:border-cyan-400 focus:ring-cyan-400/20 rounded-xl h-10 xs:h-11 text-sm xs:text-base"
                             />
                           </FormControl>
-                          <FormMessage className="text-red-300" />
+                          <FormMessage className="text-red-300 text-xs xs:text-sm" />
                         </FormItem>
                       )}
                     />
@@ -735,7 +848,7 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
                     />
 
                     <div>
-                      <Label className="text-sm font-medium mb-3 block text-cyan-100 font-mono">
+                      <Label className="text-sm xs:text-base font-medium mb-2 xs:mb-3 block text-white/80">
                         {t('chooseAvatar', 'Choose Your Avatar')}
                         {user && profile && (
                           <span className="text-xs text-green-400 ml-2">
@@ -743,18 +856,18 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
                           </span>
                         )}
                       </Label>
-                      <div className="grid grid-cols-4 gap-3 mb-3">
+                      <div className="grid grid-cols-5 xs:grid-cols-5 gap-2 xs:gap-2.5 sm:gap-3 mb-3">
                         {/* Google Avatar (if logged in) - Only load when dialog is open */}
                         {user && profile && avatarLoaded && (
                           <motion.button
                             key="google-avatar"
                             type="button"
                             whileHover={isMobile ? {} : { scale: 1.1 }}
-                            whileTap={isMobile ? {} : { scale: 0.9 }}
+                            whileTap={{ scale: 0.95 }}
                             onClick={() => setSelectedAvatar(googleAvatarUrl || ANIMAL_AVATARS[0])}
-                            className={`relative w-16 h-16 rounded-full overflow-hidden border-2 transition-all backdrop-blur-sm ${selectedAvatar === googleAvatarUrl
-                                ? "border-green-400 ring-2 ring-green-400/30 shadow-lg shadow-green-400/20"
-                                : "border-green-400/30 hover:border-green-400/60 hover:shadow-lg hover:shadow-green-400/10"
+                            className={`relative w-12 h-12 xs:w-14 xs:h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 transition-all ${selectedAvatar === googleAvatarUrl
+                              ? "border-green-400 ring-2 ring-green-400/30 shadow-lg shadow-green-400/20"
+                              : "border-white/20 hover:border-green-400/60"
                               }`}
                           >
                             {googleAvatarUrl ? (
@@ -771,17 +884,21 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
                               />
                             ) : (
                               <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
-                                <span className="text-white text-lg font-bold">
+                                <span className="text-white text-sm xs:text-base font-bold">
                                   {profile?.fullname?.charAt(0).toUpperCase() || profile?.username?.charAt(0).toUpperCase() || 'G'}
                                 </span>
                               </div>
                             )}
                             {selectedAvatar === googleAvatarUrl && (
-                              <div className={`absolute inset-0 bg-green-400/20 ${isMobile ? '' : 'animate-pulse'}`}></div>
+                              <motion.div
+                                className="absolute inset-0 bg-green-400/20"
+                                animate={{ opacity: [0.2, 0.5, 0.2] }}
+                                transition={{ duration: 1.5, repeat: Infinity }}
+                              />
                             )}
                             {/* Google icon indicator */}
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                              <span className="text-white text-xs font-bold">G</span>
+                            <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center border border-white/30">
+                              <span className="text-white text-[8px] font-bold">G</span>
                             </div>
                           </motion.button>
                         )}
@@ -792,11 +909,14 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
                             key={index}
                             type="button"
                             whileHover={isMobile ? {} : { scale: 1.1 }}
-                            whileTap={isMobile ? {} : { scale: 0.9 }}
+                            whileTap={{ scale: 0.95 }}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: index * 0.03 }}
                             onClick={() => setSelectedAvatar(avatarUrl)}
-                            className={`relative w-16 h-16 rounded-full overflow-hidden border-2 transition-all backdrop-blur-sm ${selectedAvatar === avatarUrl
-                                ? "border-cyan-400 ring-2 ring-cyan-400/30 shadow-lg shadow-cyan-400/20"
-                                : "border-cyan-400/30 hover:border-cyan-400/60 hover:shadow-lg hover:shadow-cyan-400/10"
+                            className={`relative w-12 h-12 xs:w-14 xs:h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 transition-all ${selectedAvatar === avatarUrl
+                              ? "border-cyan-400 ring-2 ring-cyan-400/30 shadow-lg shadow-cyan-400/20"
+                              : "border-white/20 hover:border-cyan-400/60"
                               }`}
                           >
                             <img
@@ -805,31 +925,46 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
                               className="w-full h-full object-cover"
                             />
                             {selectedAvatar === avatarUrl && (
-                              <div className={`absolute inset-0 bg-cyan-400/20 ${isMobile ? '' : 'animate-pulse'}`}></div>
+                              <motion.div
+                                className="absolute inset-0 bg-cyan-400/20"
+                                animate={{ opacity: [0.2, 0.5, 0.2] }}
+                                transition={{ duration: 1.5, repeat: Infinity }}
+                              />
                             )}
                           </motion.button>
                         ))}
                       </div>
                     </div>
 
-                    <motion.div
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className={`${isScanning && !isMobile ? 'flex justify-start' : 'w-full'}`}
-                    >
+                    <div className={`${isScanning && !isMobile ? 'flex justify-start' : 'w-full'} mt-2`}>
                       <Button
-                        type="submit"
+                        type="button"
                         disabled={isLoading}
-                        className={`${isScanning && !isMobile ? 'w-auto min-w-[200px]' : 'w-full'} bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold py-3 px-6 rounded-xl shadow-lg shadow-cyan-500/30 border border-cyan-400/30 backdrop-blur-sm font-mono relative overflow-hidden transition-all duration-300`}
-                        style={{ imageRendering: "pixelated" }}
+                        onClick={async (e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          console.log('[JoinGame] Button clicked!')
+                          console.log('[JoinGame] Current form values:', form.getValues())
+
+                          // Manually trigger validation
+                          const isValid = await form.trigger()
+                          console.log('[JoinGame] Form is valid:', isValid)
+
+                          if (!isValid) {
+                            console.log('[JoinGame] Validation errors:', form.formState.errors)
+                            return
+                          }
+
+                          // If valid, call onSubmit directly
+                          const values = form.getValues()
+                          await onSubmit(values)
+                        }}
+                        className={`${isScanning && !isMobile ? 'w-auto min-w-[200px]' : 'w-full'} bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold py-2.5 xs:py-3 px-6 rounded-xl shadow-lg shadow-cyan-500/30 border-0 text-sm xs:text-base transition-all duration-300 h-10 xs:h-11 hover:scale-[1.02] active:scale-[0.98]`}
                       >
-                        <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/20 to-blue-400/20 animate-pulse"></div>
-                        <span className="relative z-10">
-                          {isLoading ? t('loading', 'Joining...') : t('joinGame', 'Join Game')}
-                        </span>
-                        <div className="absolute top-2 right-2 w-2 h-2 bg-yellow-300 rounded-full animate-ping"></div>
+                        <Users className="w-4 h-4 mr-2" />
+                        {isLoading ? t('loading', 'Joining...') : t('joinGame', 'Join Game')}
                       </Button>
-                    </motion.div>
+                    </div>
                   </div>
 
                   {/* Right Column: QR Scanner Area (only visible when scanning on desktop) */}

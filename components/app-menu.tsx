@@ -1,7 +1,7 @@
 "use client"
 
 import { useLanguage } from '@/contexts/language-context'
-import { Maximize, Minimize, Download, Menu } from 'lucide-react'
+import { Maximize, Minimize, Download } from 'lucide-react'
 import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import {
@@ -58,6 +58,7 @@ export function AppMenu() {
   const [canInstall, setCanInstall] = useState(false)
   const [isDevelopment, setIsDevelopment] = useState(false)
   const [isLanguageSubmenuOpen, setIsLanguageSubmenuOpen] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   const languages = [
     {
@@ -226,23 +227,41 @@ export function AppMenu() {
 
   return (
     <div className="fixed top-4 right-4 z-50">
-      <DropdownMenu modal={false}>
+      <DropdownMenu modal={false} open={isMenuOpen} onOpenChange={setIsMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button
-            className="w-12 h-12 bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20 transition-all duration-300 shadow-lg flex items-center justify-center rounded-lg"
+            className="group relative w-11 h-11 bg-white/5 backdrop-blur-md border border-white/20 text-white hover:bg-white/10 hover:border-white/40 transition-all duration-300 shadow-xl flex items-center justify-center rounded-xl overflow-hidden"
             aria-label="App Menu"
           >
-            <Menu className="w-5 h-5 text-cyan-300" />
+            {/* Subtle glow on hover */}
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-cyan-500/20 rounded-xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+            {/* Animated Hamburger/X Icon */}
+            <div className="relative z-10 w-5 h-4 flex flex-col justify-between items-center">
+              <span
+                className={`block h-0.5 w-5 bg-white/80 group-hover:bg-white rounded-full transition-all duration-300 ease-out origin-center ${isMenuOpen ? 'rotate-45 translate-y-[7px]' : ''
+                  }`}
+              />
+              <span
+                className={`block h-0.5 w-5 bg-white/80 group-hover:bg-white rounded-full transition-all duration-300 ease-out ${isMenuOpen ? 'opacity-0 scale-x-0' : 'opacity-100 scale-x-100'
+                  }`}
+              />
+              <span
+                className={`block h-0.5 w-5 bg-white/80 group-hover:bg-white rounded-full transition-all duration-300 ease-out origin-center ${isMenuOpen ? '-rotate-45 -translate-y-[7px]' : ''
+                  }`}
+              />
+            </div>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          className="w-56 bg-black/40 backdrop-blur-xl border border-cyan-400/30 shadow-2xl rounded-lg"
+          className="w-56 bg-white/5 backdrop-blur-xl border border-white/20 shadow-2xl rounded-xl p-1.5 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200"
           align="end"
+          sideOffset={8}
         >
-          <DropdownMenuLabel className="text-cyan-300 font-mono text-xs">
+          <DropdownMenuLabel className="text-white/50 font-medium text-xs uppercase tracking-wider px-2 py-1.5">
             {t('settings', 'Settings')}
           </DropdownMenuLabel>
-          <DropdownMenuSeparator className="bg-cyan-400/20" />
+          <DropdownMenuSeparator className="bg-white/10 my-1" />
 
           {/* Language Selector - Toggle to show languages */}
           <DropdownMenuItem
@@ -250,24 +269,26 @@ export function AppMenu() {
               e.preventDefault()
               setIsLanguageSubmenuOpen(!isLanguageSubmenuOpen)
             }}
-            className="text-white hover:bg-cyan-500/20 cursor-pointer focus:bg-cyan-500/20 rounded-md focus:text-white"
+            className="text-white hover:bg-white/10 cursor-pointer focus:bg-white/10 rounded-lg focus:text-white py-2.5 px-2 transition-all duration-200 group/item"
           >
             <div className="flex items-center justify-between w-full">
-              <div className="flex items-center space-x-2">
-                <FlagDisplay
-                  flagImage={currentLanguageData.flagImage}
-                  fallback={currentLanguageData.flagFallback}
-                  className=""
-                />
-                <span>{t('language', 'Language')}</span>
+              <div className="flex items-center space-x-3">
+                <div className="w-6 h-6 rounded-md bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                  <FlagDisplay
+                    flagImage={currentLanguageData.flagImage}
+                    fallback={currentLanguageData.flagFallback}
+                    className=""
+                  />
+                </div>
+                <span className="group-hover/item:text-white transition-colors">{t('language', 'Language')}</span>
               </div>
-              <span className="ml-auto text-xs">{isLanguageSubmenuOpen ? '▼' : '▶'}</span>
+              <span className={`text-white/50 text-xs transition-transform duration-200 ${isLanguageSubmenuOpen ? 'rotate-90' : ''}`}>▶</span>
             </div>
           </DropdownMenuItem>
 
           {/* Language Options - Shown when clicked */}
           {isLanguageSubmenuOpen && (
-            <>
+            <div className="ml-2 mt-1 mb-1 border-l-2 border-white/10 pl-2 space-y-0.5 animate-in slide-in-from-top-1 duration-150">
               {languages.map((language) => (
                 <DropdownMenuItem
                   key={language.code}
@@ -276,10 +297,10 @@ export function AppMenu() {
                     changeLanguage(language.code)
                     setIsLanguageSubmenuOpen(false)
                   }}
-                  className={`text-white hover:bg-cyan-500/20 cursor-pointer focus:bg-cyan-500/20 rounded-md focus:text-white pl-8 ${currentLanguage === language.code ? 'bg-cyan-500/30' : ''
+                  className={`text-white hover:bg-white/10 cursor-pointer focus:bg-white/10 rounded-lg focus:text-white py-2 px-2 transition-all duration-200 ${currentLanguage === language.code ? 'bg-white/10 border-l-2 border-purple-400' : ''
                     }`}
                 >
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-3">
                     <FlagDisplay
                       flagImage={language.flagImage}
                       fallback={language.flagFallback}
@@ -287,15 +308,18 @@ export function AppMenu() {
                     />
                     <div className="flex flex-col">
                       <span className="text-white font-medium text-sm">{language.nativeName}</span>
-                      <span className="text-white/70 text-xs">{language.name}</span>
+                      <span className="text-white/50 text-xs">{language.name}</span>
                     </div>
+                    {currentLanguage === language.code && (
+                      <span className="ml-auto text-purple-400 text-sm">✓</span>
+                    )}
                   </div>
                 </DropdownMenuItem>
               ))}
-            </>
+            </div>
           )}
 
-          <DropdownMenuSeparator className="bg-cyan-400/20" />
+          <DropdownMenuSeparator className="bg-white/10 my-1" />
 
           {/* Fullscreen Toggle */}
           <DropdownMenuItem
@@ -303,17 +327,21 @@ export function AppMenu() {
               e.preventDefault()
               toggleFullscreen()
             }}
-            className="text-white hover:bg-cyan-500/20 cursor-pointer focus:bg-cyan-500/20 rounded-md focus:text-white"
+            className="text-white hover:bg-white/10 cursor-pointer focus:bg-white/10 rounded-lg focus:text-white py-2.5 px-2 transition-all duration-200 group/item"
           >
             {isFullscreen ? (
               <>
-                <Minimize className="mr-2 h-4 w-4 text-cyan-300" />
-                <span>{t('exitFullscreen', 'Exit Fullscreen')}</span>
+                <div className="w-6 h-6 rounded-md bg-gradient-to-br from-orange-500/20 to-yellow-500/20 flex items-center justify-center mr-3">
+                  <Minimize className="h-4 w-4 text-orange-400" />
+                </div>
+                <span className="group-hover/item:text-white transition-colors">{t('exitFullscreen', 'Exit Fullscreen')}</span>
               </>
             ) : (
               <>
-                <Maximize className="mr-2 h-4 w-4 text-cyan-300" />
-                <span>{t('enterFullscreen', 'Enter Fullscreen')}</span>
+                <div className="w-6 h-6 rounded-md bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center mr-3">
+                  <Maximize className="h-4 w-4 text-cyan-400" />
+                </div>
+                <span className="group-hover/item:text-white transition-colors">{t('enterFullscreen', 'Enter Fullscreen')}</span>
               </>
             )}
           </DropdownMenuItem>
@@ -321,17 +349,19 @@ export function AppMenu() {
           {/* Install App - Only show if can install and not installed */}
           {!isInstalled && (canInstall || isDevelopment) && (
             <>
-              <DropdownMenuSeparator className="bg-cyan-400/20" />
+              <DropdownMenuSeparator className="bg-white/10 my-1" />
               <DropdownMenuItem
                 onSelect={(e) => {
                   e.preventDefault()
                   handleInstallClick()
                 }}
                 disabled={!deferredPrompt && !canInstall}
-                className="text-white hover:bg-cyan-500/20 cursor-pointer focus:bg-cyan-500/20 rounded-md focus:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                className="text-white hover:bg-white/10 cursor-pointer focus:bg-white/10 rounded-lg focus:text-white py-2.5 px-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group/item"
               >
-                <Download className="mr-2 h-4 w-4 text-cyan-300" />
-                <span>{t('installApp', 'Install App')}</span>
+                <div className="w-6 h-6 rounded-md bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center mr-3">
+                  <Download className="h-4 w-4 text-green-400" />
+                </div>
+                <span className="group-hover/item:text-white transition-colors">{t('installApp', 'Install App')}</span>
               </DropdownMenuItem>
             </>
           )}

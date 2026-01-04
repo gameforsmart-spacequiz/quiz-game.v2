@@ -51,6 +51,7 @@ export type TranslationKey =
   | 'errorDescription' | 'errorDetails' | 'retry' | 'backToHome' | 'or' | 'alreadyHaveAccount' | 'signIn'
   | 'fullName' | 'username' | 'email' | 'password' | 'confirmPassword' | 'enterFullName' | 'enterUsername' | 'enterEmail' | 'enterPassword' | 'enterPasswordLogin' | 'confirmPasswordPlaceholder'
   | 'usernameRequired' | 'usernameMinLength' | 'emailRequired' | 'emailInvalid' | 'passwordRequired' | 'passwordMinLength' | 'passwordMismatch' | 'fullnameRequired'
+  | 'forgotPassword' | 'noAccount' | 'createOne'
   | 'checkingAuth'
   | 'enterFullscreen' | 'exitFullscreen' | 'installApp' | 'install' | 'later' | 'installSpaceQuiz' | 'installDescription'
 
@@ -58,7 +59,7 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
   en: {
     // Main page
     title: 'SPACE QUIZ',
-    subtitle: 'Play a quiz game and with your friends!',
+    subtitle: 'Explore - Learn - Conquer',
     host: 'HOST',
     tryout: 'TRYOUT',
     join: 'JOIN',
@@ -244,7 +245,7 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     signOut: 'Sign out',
     signingOut: 'Signing out...',
     confirmLogout: 'Confirm Logout',
-    logoutWarning: 'Are you sure you want to logout? You\'ll need to sign in again to continue your space adventure.',
+    logoutWarning: 'Are you sure you want to logout?',
     loggingOut: 'Logging out...',
     logout: 'Logout',
     profile: 'Profile',
@@ -289,6 +290,9 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     passwordMinLength: 'Password must be at least 6 characters',
     passwordMismatch: 'Passwords do not match',
     fullnameRequired: 'Full name is required',
+    forgotPassword: 'Forgot password?',
+    noAccount: 'Don\'t have an account?',
+    createOne: 'Create one now',
     checkingAuth: 'Checking Authentication...',
     enterFullscreen: 'Enter Fullscreen',
     exitFullscreen: 'Exit Fullscreen',
@@ -301,7 +305,7 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
   id: {
     // Main page
     title: 'KUIS RUANG ANGKASA',
-    subtitle: 'Mainkan permainan kuis bersama teman-temanmu!',
+    subtitle: 'Jelajahi. Pelajari. Taklukkan!',
     host: 'HOST',
     tryout: 'COBA',
     join: 'GABUNG',
@@ -487,7 +491,7 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     signOut: 'Keluar',
     signingOut: 'Sedang keluar...',
     confirmLogout: 'Konfirmasi Logout',
-    logoutWarning: 'Apakah Anda yakin ingin logout? Anda perlu masuk kembali untuk melanjutkan petualangan luar angkasa Anda.',
+    logoutWarning: 'Apakah Anda yakin ingin logout?',
     loggingOut: 'Sedang logout...',
     logout: 'Logout',
     profile: 'Profil',
@@ -532,6 +536,9 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     passwordMinLength: 'Kata sandi minimal 6 karakter',
     passwordMismatch: 'Kata sandi tidak cocok',
     fullnameRequired: 'Nama lengkap wajib diisi',
+    forgotPassword: 'Lupa kata sandi?',
+    noAccount: 'Belum punya akun?',
+    createOne: 'Buat sekarang',
     checkingAuth: 'Memeriksa Autentikasi...',
     enterFullscreen: 'Masuk Layar Penuh',
     exitFullscreen: 'Keluar Layar Penuh',
@@ -544,7 +551,7 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
   zh: {
     // Main page
     title: '太空问答',
-    subtitle: '和你的朋友一起玩问答游戏！',
+    subtitle: '探索。学习。征服！',
     host: '主持',
     tryout: '试玩',
     join: '加入',
@@ -730,7 +737,7 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     signOut: '退出',
     signingOut: '正在退出...',
     confirmLogout: '确认退出',
-    logoutWarning: '您确定要退出吗？您需要重新登录才能继续您的太空冒险。',
+    logoutWarning: '您确定要退出吗？',
     loggingOut: '正在退出...',
     logout: '退出',
     profile: '个人资料',
@@ -775,6 +782,9 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     passwordMinLength: '密码至少6个字符',
     passwordMismatch: '密码不匹配',
     fullnameRequired: '全名是必需的',
+    forgotPassword: '忘记密码？',
+    noAccount: '没有账户？',
+    createOne: '立即创建',
     checkingAuth: '正在检查身份验证...',
     enterFullscreen: '进入全屏',
     exitFullscreen: '退出全屏',

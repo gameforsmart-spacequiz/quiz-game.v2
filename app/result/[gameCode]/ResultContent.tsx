@@ -7,6 +7,9 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useGameStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
+import { supabaseB } from "@/lib/supabase-b";
+import { getGameSessionByPin } from "@/lib/sessions-api";
+import { getParticipantsByGameId } from "@/lib/participants-api";
 import { toast } from "sonner";
 import { Trophy, Medal, Crown, Star } from "lucide-react";
 import { getFirstName, formatDisplayName } from "@/lib/utils";
@@ -23,8 +26,8 @@ interface PlayerResult {
 }
 
 // === SMART NAME DISPLAY ===
-const SmartNameDisplay = React.memo(({ 
-  name, 
+const SmartNameDisplay = React.memo(({
+  name,
   maxLength = 8,
   className = "",
   multilineClassName = ""
@@ -35,7 +38,7 @@ const SmartNameDisplay = React.memo(({
   multilineClassName?: string;
 }) => {
   const { displayName, isBroken } = formatDisplayName(name, maxLength)
-  
+
   if (isBroken) {
     return (
       <span className={`${className} ${multilineClassName} whitespace-pre-line leading-tight text-center block`}>
@@ -43,7 +46,7 @@ const SmartNameDisplay = React.memo(({
       </span>
     )
   }
-  
+
   return (
     <span className={className}>
       {displayName}
@@ -55,11 +58,26 @@ SmartNameDisplay.displayName = "SmartNameDisplay"
 function Background() {
   return (
     <div className="fixed inset-0 z-0 overflow-hidden">
+      {/* Base dark gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a1a] via-[#1a1a3a] to-[#0a0a2a]" />
+
+      {/* Galaxy image */}
       <div
-        className="absolute inset-0 bg-[url('/images/space_bg.jpg')]"
-        style={{ backgroundSize: "cover", imageRendering: "pixelated" }}
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-50"
+        style={{ backgroundImage: "url('/images/galaxy.webp')" }}
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 via-transparent to-blue-900/20" />
+
+      {/* Nebula overlay gradients */}
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0f0f1f]/80 via-transparent to-[#0f0f1f]/60" />
+      <div className="absolute inset-0 bg-gradient-to-bl from-purple-900/20 via-transparent to-indigo-900/20" />
+      <div className="absolute inset-0 bg-gradient-to-tr from-cyan-900/10 via-transparent to-pink-900/10" />
+
+      {/* Vignette effect */}
+      <div className="absolute inset-0 bg-radial-gradient pointer-events-none"
+        style={{
+          background: 'radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.4) 100%)'
+        }}
+      />
     </div>
   );
 }
@@ -113,38 +131,71 @@ export default function ResultContent({ gameCode }: { gameCode: string }) {
   useEffect(() => {
     const fetchResults = async () => {
       try {
-        const { data: gameData, error: gameErr } = await supabase
-          .from("game_sessions")
-          .select("id, participants")
-          .eq("game_pin", gameCode.toUpperCase())
-          .single();
+        // Try Supabase B first (new sessions)
+        const sessionFromB = await getGameSessionByPin(gameCode.toUpperCase())
 
-        if (gameErr || !gameData) {
-          toast.error("Game not found");
-          router.push("/");
-          return;
-        }
+        let gameId: string | null = null
+        let players: any[] = []
 
-        const gameId = gameData.id;
-        // Update player score in participants array if needed
-        if (playerId && score) {
-          const updatedParticipants = gameData.participants.map((p: any) => 
-            p.id === playerId ? { ...p, score } : p
-          );
-          await supabase
+        if (sessionFromB) {
+          // Supabase B session - fetch participants from participant table
+          gameId = sessionFromB.id
+          const participants = await getParticipantsByGameId(gameId)
+
+          // Update player score if needed
+          if (playerId && score) {
+            await supabaseB
+              .from("participant")
+              .update({ score })
+              .eq("id", playerId)
+          }
+
+          players = participants
+            .map((p) => ({
+              id: p.id,
+              name: p.nickname,
+              nickname: p.nickname,
+              avatar: p.avatar || "/default-avatar.png",
+              score: p.score || 0,
+            }))
+            .sort((a, b) => b.score - a.score)
+        } else {
+          // Fallback to main Supabase (legacy sessions)
+          const { data: gameData, error: gameErr } = await supabase
             .from("game_sessions")
-            .update({ participants: updatedParticipants })
-            .eq("id", gameId);
+            .select("id, participants")
+            .eq("game_pin", gameCode.toUpperCase())
+            .single();
+
+          if (gameErr || !gameData) {
+            toast.error("Game not found");
+            router.push("/");
+            return;
+          }
+
+          gameId = gameData.id;
+
+          // Update player score in participants array if needed
+          if (playerId && score) {
+            const updatedParticipants = gameData.participants.map((p: any) =>
+              p.id === playerId ? { ...p, score } : p
+            );
+            await supabase
+              .from("game_sessions")
+              .update({ participants: updatedParticipants })
+              .eq("id", gameId);
+          }
+
+          players = (gameData.participants || [])
+            .sort((a: any, b: any) => (b.score || 0) - (a.score || 0));
         }
 
-        const players = (gameData.participants || [])
-          .sort((a: any, b: any) => (b.score || 0) - (a.score || 0));
-
-        if (!players) setPlayerResults([]);
-        else {
+        if (!players || players.length === 0) {
+          setPlayerResults([]);
+        } else {
           const results = players.map((p: any, idx: number) => ({
             id: p.id,
-            name: p.name || "Unknown",
+            name: p.name || p.nickname || "Unknown",
             avatar: p.avatar || "/default-avatar.png",
             score: p.score || 0,
             position: idx + 1,
@@ -188,13 +239,17 @@ export default function ResultContent({ gameCode }: { gameCode: string }) {
           className="max-w-4xl mx-auto"
         >
           <div className="text-center mb-8">
-            <motion.div 
+            <motion.div
               className="flex items-center justify-center gap-3 mb-2"
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <h2 className="text-xl font-bold text-white/80">{t('spaceQuiz')}</h2>
+              <img
+                src="/images/logo/spacequizv2.webp"
+                alt="Space Quiz"
+                className="h-8 w-auto object-contain"
+              />
               <span className="text-xl font-bold text-white/80">-</span>
               <Image
                 src="/images/gameforsmartlogo.png"
@@ -205,7 +260,7 @@ export default function ResultContent({ gameCode }: { gameCode: string }) {
                 priority
               />
             </motion.div>
-            <motion.h1 
+            <motion.h1
               className="text-5xl font-bold text-white mb-2 flex items-center justify-center gap-3"
               initial={{ scale: 0.8 }}
               animate={{ scale: 1 }}
@@ -232,17 +287,17 @@ export default function ResultContent({ gameCode }: { gameCode: string }) {
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-3">
                         {style.icon}
-                        <img 
-                          src={player.avatar} 
+                        <img
+                          src={player.avatar}
                           alt={getFirstName(player.name)}
                           className="w-14 h-14 rounded-full object-cover border-2 border-white"
                         />
                       </div>
-                      
+
                       <div className="flex-1">
                         <h3 className="text-white font-bold text-xl mb-1 drop-shadow-[2px_2px_0px_#000]">
-                          <SmartNameDisplay 
-                            name={player.name} 
+                          <SmartNameDisplay
+                            name={player.name}
                             maxLength={8}
                             className="text-white font-bold text-xl"
                             multilineClassName="text-lg leading-tight"
@@ -250,7 +305,7 @@ export default function ResultContent({ gameCode }: { gameCode: string }) {
                         </h3>
                         <p className="text-white/70 text-sm">Score</p>
                       </div>
-                      
+
                       <div className="text-right">
                         <p className={`text-4xl font-bold ${style.text} mb-1 drop-shadow-[2px_2px_0px_#000]`}>
                           {player.score.toLocaleString()}
@@ -264,7 +319,7 @@ export default function ResultContent({ gameCode }: { gameCode: string }) {
             })}
           </div>
 
-          <motion.div 
+          <motion.div
             className="text-center mt-8"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -287,93 +342,196 @@ export default function ResultContent({ gameCode }: { gameCode: string }) {
     <>
       <Background />
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
-          animate={{ opacity: 1, scale: 1, rotate: 0 }}
-          transition={{ type: "spring", stiffness: 200, damping: 20 }}
-          className="max-w-md w-full"
-        >
-          <div className="bg-black/70 border-4 border-white p-8 rounded-lg shadow-[8px_8px_0px_#000] font-mono text-white text-center space-y-6">
-            <motion.div 
-              className="flex items-center justify-center gap-2 mb-2"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <h2 className="text-lg font-bold text-white/80">{t('spaceQuiz')}</h2>
-              <span className="text-lg font-bold text-white/80">-</span>
-              <Image
-                src="/images/gameforsmartlogo.png"
-                alt="GameForSmart"
-                width={220}
-                height={88}
-                className="w-24 h-auto sm:w-28 md:w-32 lg:w-36 xl:w-40 opacity-90 hover:opacity-100 transition-opacity duration-300"
-                priority
-              />
-            </motion.div>
+        {/* Floating stars overlay */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+          {[...Array(20)].map((_, i) => (
             <motion.div
-              animate={{ 
-                scale: [1, 1.05, 1],
-                rotate: [0, 5, -5, 0]
+              key={i}
+              initial={{ opacity: 0 }}
+              animate={{
+                opacity: [0, 1, 0],
+                scale: [0.5, 1.5, 0.5],
               }}
-              transition={{ 
-                duration: 2, 
+              transition={{
+                duration: Math.random() * 2 + 2,
                 repeat: Infinity,
-                repeatType: "reverse"
+                delay: Math.random() * 2,
               }}
-              className="relative inline-block"
-            >
-              <img
-                src={playerAvatar || "/default-avatar.png"}
-                alt={getFirstName(playerName)}
-                className="w-32 h-32 rounded-full mx-auto object-cover border-4 border-white"
-              />
-            </motion.div>
+              className="absolute w-1 h-1 bg-white rounded-full"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+              }}
+            />
+          ))}
+        </div>
 
-            <div>
-              <h1 className="text-3xl font-bold text-white mb-2 drop-shadow-[2px_2px_0px_#000]">
-                <SmartNameDisplay 
-                  name={playerName || "Unknown Player"} 
-                  maxLength={10}
-                  className="text-3xl font-bold text-white"
-                  multilineClassName="text-2xl leading-tight"
-                />
-              </h1>
-              <div className="space-y-2">
-                <motion.p 
-                  className="text-6xl font-bold text-yellow-300 drop-shadow-[4px_4px_0px_#000]"
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", delay: 0.2 }}
-                >
-                  {score || 0}
-                </motion.p>
-                <p className="text-white/70 text-lg">points</p>
-              </div>
-            </div>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 200, damping: 20 }}
+          className="max-w-md w-full relative z-10"
+        >
+          {/* Main Card with glassmorphism */}
+          <div className="relative bg-gradient-to-br from-[#1a1a2e]/95 via-[#16213e]/95 to-[#0f0f23]/95 backdrop-blur-xl border border-purple-500/30 rounded-3xl shadow-2xl shadow-purple-900/40 overflow-hidden">
+            {/* Gradient border lines */}
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-400/50 to-transparent" />
+            <div className="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-cyan-400/30 to-transparent" />
+            <div className="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-purple-400/30 to-transparent" />
 
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="space-y-4"
-            >
-              <div className="bg-black/50 border-2 border-white p-4 rounded-lg">
-                <p className="text-white/70 text-sm mb-1">Your Position</p>
-                <p className="text-3xl font-bold text-yellow-300 drop-shadow-[2px_2px_0px_#000]">#{userPosition || "N/A"}</p>
-              </div>
-              
-              <button
-                onClick={() => {
-                  resetGame();
-                  router.push("/");
-                }}
-                className="w-full bg-purple-500 hover:bg-purple-600 border-2 border-purple-700 px-4 py-3 rounded-lg text-white font-bold shadow-[4px_4px_0px_#000] text-lg transition-all duration-200 hover:shadow-[6px_6px_0px_#000] hover:-translate-y-1"
+            {/* Corner glows */}
+            <div className="absolute -top-10 -left-10 w-32 h-32 bg-cyan-500/20 rounded-full blur-3xl" />
+            <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl" />
+
+            <div className="relative z-10 p-8 text-center space-y-6">
+              {/* Logo Section */}
+              <motion.div
+                className="flex items-center justify-center gap-2 mb-4"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
               >
-                <Star className="w-5 h-5 mr-2 inline" />
-                Play Again
-              </button>
-            </motion.div>
+                <img
+                  src="/images/logo/spacequizv2.webp"
+                  alt="Space Quiz"
+                  className="h-8 w-auto object-contain"
+                />
+                <span className="text-lg font-bold text-white/60">-</span>
+                <Image
+                  src="/images/gameforsmartlogo.png"
+                  alt="GameForSmart"
+                  width={220}
+                  height={88}
+                  className="w-24 h-auto sm:w-28 md:w-32 lg:w-36 xl:w-40 opacity-80 hover:opacity-100 transition-opacity duration-300"
+                  priority
+                />
+              </motion.div>
+
+              {/* Avatar Section with orbital rings */}
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", delay: 0.2 }}
+                className="relative w-36 h-36 mx-auto"
+              >
+                {/* Outer orbital ring */}
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-0 rounded-full border-2 border-cyan-500/30"
+                >
+                  <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-cyan-400 rounded-full shadow-lg shadow-cyan-400/60" />
+                </motion.div>
+
+                {/* Middle orbital ring */}
+                <motion.div
+                  animate={{ rotate: -360 }}
+                  transition={{ duration: 7, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-3 rounded-full border-2 border-purple-500/40"
+                >
+                  <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-purple-400 rounded-full shadow-lg shadow-purple-400/60" />
+                </motion.div>
+
+                {/* Avatar glow */}
+                <motion.div
+                  animate={{ scale: [1, 1.1, 1], opacity: [0.5, 0.8, 0.5] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="absolute inset-5 rounded-full bg-gradient-to-br from-purple-500/30 via-cyan-500/20 to-purple-500/30"
+                />
+
+                {/* Avatar image */}
+                <div className="absolute inset-6 rounded-full overflow-hidden border-3 border-white/30 shadow-xl shadow-purple-500/30">
+                  <img
+                    src={playerAvatar || "/default-avatar.png"}
+                    alt={getFirstName(playerName)}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </motion.div>
+
+              {/* Player Name & Score */}
+              <div>
+                <motion.h1
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-2xl sm:text-3xl font-bold mb-4"
+                >
+                  <span className="bg-gradient-to-r from-cyan-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
+                    <SmartNameDisplay
+                      name={playerName || "Unknown Player"}
+                      maxLength={10}
+                      className="bg-gradient-to-r from-cyan-300 via-purple-300 to-pink-300 bg-clip-text text-transparent"
+                      multilineClassName="text-xl leading-tight"
+                    />
+                  </span>
+                </motion.h1>
+
+                <div className="space-y-1">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", delay: 0.4 }}
+                    className="relative inline-block"
+                  >
+                    <span
+                      className="text-6xl sm:text-7xl font-black bg-gradient-to-b from-yellow-300 via-orange-400 to-yellow-500 bg-clip-text text-transparent"
+                      style={{
+                        textShadow: "0 0 40px rgba(251, 191, 36, 0.4)",
+                      }}
+                    >
+                      {score || 0}
+                    </span>
+                  </motion.div>
+                </div>
+              </div>
+
+              {/* Position Card */}
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="space-y-4"
+              >
+                <div className="relative bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm border border-white/20 rounded-2xl p-5 overflow-hidden">
+                  {/* Subtle gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-transparent to-cyan-500/5" />
+
+                  <div className="relative z-10">
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", delay: 0.6 }}
+                      className="flex items-center justify-center"
+                    >
+                      <span className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-yellow-300 to-orange-400 bg-clip-text text-transparent">
+                        #{userPosition || "N/A"}
+                      </span>
+                    </motion.div>
+                  </div>
+                </div>
+
+                {/* Play Again Button */}
+                <motion.button
+                  onClick={() => {
+                    resetGame();
+                    router.push("/");
+                  }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full relative bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:from-purple-500 hover:via-purple-400 hover:to-indigo-500 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 transition-all duration-300 overflow-hidden group"
+                >
+                  {/* Shimmer effect */}
+                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+                  <span className="relative z-10 flex items-center justify-center gap-2">
+                    <Star className="w-5 h-5" />
+                    <span>{t('playAgain') || 'Play Again'}</span>
+                  </span>
+                </motion.button>
+              </motion.div>
+            </div>
           </div>
         </motion.div>
       </div>
