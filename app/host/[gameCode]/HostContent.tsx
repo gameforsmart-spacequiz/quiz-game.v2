@@ -2589,7 +2589,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
                                         : "text-yellow-300"
                                     }`}
                                 >
-                                  {player.score} points
+                                  {player.score}
                                 </motion.p>
                               </div>
 

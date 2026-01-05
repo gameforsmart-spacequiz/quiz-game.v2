@@ -288,7 +288,7 @@ const PodiumLeaderboardInner = ({ players, onAnimationComplete, onRestart, onHom
                                         />
                                     </h2>
                                     <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-black px-3 sm:px-6 py-2 sm:py-3 rounded-full font-bold text-base sm:text-xl lg:text-2xl shadow-lg">
-                                        <StableScoreDisplay score={onlyPlayer.score} playerId={onlyPlayer.id} /> POINTS
+                                        <StableScoreDisplay score={onlyPlayer.score} playerId={onlyPlayer.id} />
                                     </div>
                                 </motion.div>
                             </div>
