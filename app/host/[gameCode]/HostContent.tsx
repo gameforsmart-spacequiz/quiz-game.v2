@@ -33,7 +33,7 @@ import { Button } from "@/components/ui/button"
 import { useGameStore } from "@/lib/store"
 import { supabase } from "@/lib/supabase"
 import { supabaseB, isSupabaseBAvailable } from "@/lib/supabase-b"
-import { finalizeGame } from "@/lib/sync-manager"
+import { finalizeGame, syncGameToMainDatabase } from "@/lib/sync-manager"
 import { getGameSessionByPin, createGameSession, updateGameSession, subscribeToGameSession } from "@/lib/sessions-api"
 import { getParticipantsByGameId, subscribeToGameParticipants } from "@/lib/participants-api"
 import { generateGameCode } from "@/lib/game-utils"
@@ -596,17 +596,32 @@ export default function HostContent({ gameCode }: HostContentProps) {
                   .single()
 
                 const currentTimestamps = currentSession?.timestamps || {}
+                let parsedTimestamps = currentTimestamps;
+                if (typeof parsedTimestamps === 'string') {
+                  try {
+                    parsedTimestamps = JSON.parse(parsedTimestamps);
+                    if (typeof parsedTimestamps === 'string') parsedTimestamps = JSON.parse(parsedTimestamps);
+                  } catch (e) {
+                    console.error("Failed to parse timestamps in auto-finish", e);
+                    if (typeof parsedTimestamps === 'string') parsedTimestamps = {};
+                  }
+                }
 
                 await supabaseB
                   .from("sessions")
                   .update({
                     status: 'finish',
                     timestamps: {
-                      ...currentTimestamps,
+                      ...parsedTimestamps,
                       ended_at: new Date().toISOString()
                     }
                   })
                   .eq("id", gameId)
+
+                // Sync to main database
+                if (gameId) syncGameToMainDatabase(gameId).catch(err =>
+                  console.error("[Host] Auto-finish sync failed:", err)
+                )
               } else {
                 await supabase
                   .from("game_sessions")
@@ -1043,17 +1058,32 @@ export default function HostContent({ gameCode }: HostContentProps) {
                   .single()
 
                 const currentTimestamps = currentSession?.timestamps || {}
+                let parsedTimestamps = currentTimestamps;
+                if (typeof parsedTimestamps === 'string') {
+                  try {
+                    parsedTimestamps = JSON.parse(parsedTimestamps);
+                    if (typeof parsedTimestamps === 'string') parsedTimestamps = JSON.parse(parsedTimestamps);
+                  } catch (e) {
+                    console.error("Failed to parse timestamps in timer-end", e);
+                    if (typeof parsedTimestamps === 'string') parsedTimestamps = {};
+                  }
+                }
 
                 await supabaseB
                   .from("sessions")
                   .update({
                     status: 'finish',
                     timestamps: {
-                      ...currentTimestamps,
+                      ...parsedTimestamps,
                       ended_at: endedAt
                     }
                   })
                   .eq("id", gameId)
+
+                // Sync to main database
+                if (gameId) syncGameToMainDatabase(gameId).catch(err =>
+                  console.error("[Host] Timer-end sync failed:", err)
+                )
 
                 // Success for Supabase B
                 setQuizStarted(false)
@@ -1221,7 +1251,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
   }, [quizStarted, gameId, isSupabaseBSession])
 
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(joinUrl)
+    navigator.clipboard.writeText(gameCode)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -1251,7 +1281,15 @@ export default function HostContent({ gameCode }: HostContentProps) {
           .eq("id", gameId)
           .single()
 
-        const currentTimestamps = currentSession?.timestamps || {}
+        let currentTimestamps = currentSession?.timestamps || {}
+        if (typeof currentTimestamps === 'string') {
+          try {
+            currentTimestamps = JSON.parse(currentTimestamps);
+          } catch (e) {
+            console.error("Failed to parse existing timestamps in startQuiz", e);
+            currentTimestamps = {};
+          }
+        }
 
         await supabaseB
           .from("sessions")
@@ -1354,7 +1392,16 @@ export default function HostContent({ gameCode }: HostContentProps) {
             .eq("id", gameId)
             .single()
 
-          const currentTimestamps = currentSession?.timestamps || {}
+          let currentTimestamps = currentSession?.timestamps || {}
+
+          if (typeof currentTimestamps === 'string') {
+            try {
+              currentTimestamps = JSON.parse(currentTimestamps);
+            } catch (e) {
+              console.error("Error parsing timestamps in host end flow", e);
+              currentTimestamps = {};
+            }
+          }
 
           await supabaseB
             .from("sessions")
@@ -1366,6 +1413,11 @@ export default function HostContent({ gameCode }: HostContentProps) {
               }
             })
             .eq("id", gameId)
+
+          // Sync data to main database (background, non-blocking)
+          if (gameId) syncGameToMainDatabase(gameId).catch(err =>
+            console.error("[Host] Failed to sync to main database:", err)
+          )
         } else {
           await supabase
             .from("game_sessions")
@@ -1401,17 +1453,32 @@ export default function HostContent({ gameCode }: HostContentProps) {
             .single()
 
           const currentTimestamps = currentSession?.timestamps || {}
+          let parsedTimestamps = currentTimestamps;
+          if (typeof parsedTimestamps === 'string') {
+            try {
+              parsedTimestamps = JSON.parse(parsedTimestamps);
+              if (typeof parsedTimestamps === 'string') parsedTimestamps = JSON.parse(parsedTimestamps);
+            } catch (e) {
+              console.error("Failed to parse timestamps in exit-cleanup", e);
+              if (typeof parsedTimestamps === 'string') parsedTimestamps = {};
+            }
+          }
 
           await supabaseB
             .from("sessions")
             .update({
               status: 'finish',
               timestamps: {
-                ...currentTimestamps,
+                ...parsedTimestamps,
                 ended_at: endedAt,
               }
             })
             .eq("id", gameId)
+
+          // Sync to main database before exit
+          if (gameId) await syncGameToMainDatabase(gameId).catch(err =>
+            console.error("[Host] Exit sync failed:", err)
+          )
         } else {
           await supabase
             .from("game_sessions")
@@ -2078,7 +2145,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
         ))}
       </div>
 
-      <div className="relative z-10 container mx-auto px-2 sm:px-4 py-4 sm:py-8 min-h-screen font-mono text-white">
+      <div className="relative z-10 container mx-auto py-4 sm:py-8 min-h-screen font-mono text-white">
         {showLeaderboard && !isExitingRef.current ? (
           <PodiumLeaderboard
             players={playerProgress}
@@ -2087,7 +2154,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
             onHome={handleHome}
           />
         ) : !quizStarted ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
               {/* Left Panel - QR Code & Game Info */}
               <div className="bg-gradient-to-br from-[#0f0f1a] via-[#1a1a2e] to-[#16162a] border border-indigo-500/20 p-4 sm:p-6 rounded-2xl relative overflow-hidden">
@@ -2373,7 +2440,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
                                       <SmartNameDisplay
                                         name={displayName}
                                         maxLength={15}
-                                        className="text-white text-sm sm:text-base md:text-lg font-bold"
+                                        className="text-white text-sm sm:text-base md:text-lg font-bold line-clamp-2"
                                         multilineClassName="text-white text-sm sm:text-base leading-tight"
                                       />
                                     ) : (
@@ -2457,35 +2524,19 @@ export default function HostContent({ gameCode }: HostContentProps) {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
                     {getPaginatedProgress(playerProgress, currentProgressPage).sort((a, b) => a.rank - b.rank)
                       .map((player, index) => (
-                        <motion.div
+                        <div
                           key={player.id}
-                          initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                          animate={{
-                            opacity: 1,
-                            y: 0,
-                            scale: 1
-                          }}
-                          exit={{ opacity: 0, y: -20, scale: 0.9 }}
-                          transition={{
-                            duration: 0.6,
-                            delay: Math.min(index * 0.05, 1.0),
-                            ease: [0.25, 0.46, 0.45, 0.94]
-                          }}
-                          whileHover={{
-                            scale: 1.02,
-                            transition: { duration: 0.2 }
-                          }}
-                          className={`relative overflow-hidden rounded-lg p-3 sm:p-4 border-2 transition-all duration-500 ${player.rank === 1
+                          className={`relative overflow-hidden rounded-lg p-3 sm:p-4 border-2 transition-all duration-300 ease-out ${player.rank === 1
                             ? "border-yellow-400/70 shadow-lg shadow-yellow-400/20"
                             : player.rank === 2
                               ? "border-gray-300/70 shadow-lg shadow-gray-300/20"
                               : player.rank === 3
                                 ? "border-amber-600/70 shadow-lg shadow-amber-600/20"
                                 : "border-white/30 shadow-md shadow-white/10"
-                            }`}
+                            } hover:scale-[1.02]`}
                         >
                           {/* Galaxy background with stars */}
                           <div className="absolute inset-0 bg-gradient-to-br from-purple-900/30 via-blue-900/20 to-indigo-900/25 rounded-lg" />
@@ -2512,18 +2563,12 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
                           {/* Ranking change indicator */}
                           {player.rank <= 3 && (
-                            <motion.div
-                              initial={{ opacity: 0, scale: 0 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0 }}
-                              transition={{ duration: 0.5, delay: 0.2 }}
-                              className="absolute top-2 right-2 z-20"
-                            >
+                            <div className="absolute top-2 right-2 z-20">
                               <div className={`w-3 h-3 rounded-full ${player.rank === 1 ? 'bg-yellow-400' :
                                 player.rank === 2 ? 'bg-gray-300' :
                                   'bg-amber-600'
                                 } animate-pulse`} />
-                            </motion.div>
+                            </div>
                           )}
 
                           {/* Content wrapper with backdrop blur */}
@@ -2531,30 +2576,18 @@ export default function HostContent({ gameCode }: HostContentProps) {
                             {/* Header with rank and avatar */}
                             <div className="flex items-center gap-2 sm:gap-3 mb-3">
                               {/* Rank number */}
-                              <motion.div
-                                key={`${player.id}-rank-${player.rank}`}
-                                initial={{ scale: 0.8, rotate: -10 }}
-                                animate={{
-                                  scale: 1,
-                                  rotate: 0,
-                                  boxShadow: player.rank <= 3 ? "0 0 20px rgba(255, 215, 0, 0.5)" : "0 0 10px rgba(255, 255, 255, 0.2)"
-                                }}
-                                transition={{
-                                  duration: 0.6,
-                                  ease: "easeOut",
-                                  boxShadow: { duration: 0.3 }
-                                }}
-                                className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-sm sm:text-base font-bold ${player.rank === 1
-                                  ? "bg-yellow-400 text-black"
+                              <div
+                                className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-sm sm:text-base font-bold transition-all duration-300 ${player.rank === 1
+                                  ? "bg-yellow-400 text-black shadow-[0_0_15px_rgba(255,215,0,0.4)]"
                                   : player.rank === 2
-                                    ? "bg-gray-300 text-black"
+                                    ? "bg-gray-300 text-black shadow-[0_0_10px_rgba(192,192,192,0.3)]"
                                     : player.rank === 3
-                                      ? "bg-amber-600 text-white"
+                                      ? "bg-amber-600 text-white shadow-[0_0_10px_rgba(217,119,6,0.3)]"
                                       : "bg-white/20 text-white"
                                   }`}
                               >
                                 {player.rank}
-                              </motion.div>
+                              </div>
 
                               {/* Avatar */}
                               <Image
@@ -2570,17 +2603,13 @@ export default function HostContent({ gameCode }: HostContentProps) {
                                 <h3 className="font-bold text-white text-xs sm:text-sm truncate">
                                   <SmartNameDisplay
                                     name={player.name}
-                                    maxLength={6}
-                                    className="text-xs sm:text-sm font-bold text-white"
+                                    maxLength={16}
+                                    className="text-xs sm:text-sm font-bold text-white line-clamp-1"
                                     multilineClassName="text-xs leading-tight"
                                   />
                                 </h3>
-                                <motion.p
-                                  key={`${player.id}-${player.score}`}
-                                  initial={{ scale: 1.3, opacity: 0.8 }}
-                                  animate={{ scale: 1, opacity: 1 }}
-                                  transition={{ duration: 0.5, ease: "easeOut" }}
-                                  className={`text-xs font-medium ${player.rank === 1
+                                <p
+                                  className={`text-xs font-medium transition-colors duration-300 ${player.rank === 1
                                     ? "text-yellow-300"
                                     : player.rank === 2
                                       ? "text-gray-200"
@@ -2590,7 +2619,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
                                     }`}
                                 >
                                   {player.score}
-                                </motion.p>
+                                </p>
                               </div>
 
                               {/* Rank icon */}
@@ -2603,12 +2632,8 @@ export default function HostContent({ gameCode }: HostContentProps) {
                             <div className="space-y-2">
                               <div className="flex items-center justify-between text-xs text-white/70">
                                 <span>{player.currentQuestion}/{player.totalQuestions}</span>
-                                <motion.span
-                                  key={`${player.id}-progress-${player.currentQuestion}`}
-                                  initial={{ scale: 1.2, opacity: 0.7 }}
-                                  animate={{ scale: 1, opacity: 1 }}
-                                  transition={{ duration: 0.4, ease: "easeOut" }}
-                                  className={`font-bold font-mono ${player.totalQuestions > 0
+                                <span
+                                  className={`font-bold font-mono transition-colors duration-300 ${player.totalQuestions > 0
                                     ? Math.round((player.currentQuestion / player.totalQuestions) * 100) >= 80
                                       ? "text-green-400"
                                       : Math.round((player.currentQuestion / player.totalQuestions) * 100) >= 50
@@ -2620,7 +2645,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
                                   {player.totalQuestions > 0
                                     ? Math.round((player.currentQuestion / player.totalQuestions) * 100)
                                     : 0}%
-                                </motion.span>
+                                </span>
                               </div>
                               <div className="w-full">
                                 <StableProgressBar
@@ -2631,7 +2656,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
                               </div>
                             </div>
                           </div>
-                        </motion.div>
+                        </div>
                       ))}
                   </div>
 

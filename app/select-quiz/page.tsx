@@ -328,7 +328,12 @@ export default function SelectQuizPage() {
       const gameCode = generateGameCode()
       const gameId = generateXID()
 
-      // Create session in Supabase B (sessions table)
+      // Shuffle questions and limit based on questionCount
+      const allQuestions = [...selectedQuiz.questions]
+      const shuffled = allQuestions.sort(() => Math.random() - 0.5)
+      const questionsToUse = shuffled.slice(0, settings.questionCount)
+
+      // Create session in Supabase B (sessions table) with current_questions
       const session = await createGameSession({
         id: gameId,
         game_pin: gameCode,
@@ -343,7 +348,8 @@ export default function SelectQuizPage() {
         },
         timestamps: {
           created_at: new Date().toISOString()
-        }
+        },
+        current_questions: questionsToUse // Shuffled questions saved here
       })
 
       if (!session) {

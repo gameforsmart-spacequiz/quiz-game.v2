@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 import { supabaseB, GameSession, Participant, isSupabaseBAvailable } from './supabase-b'
 import { getGameSessionById } from './sessions-api'
 import { getParticipantsByGameId, deleteParticipantsByGameId } from './participants-api'
+import { generateXID } from './id-generator'
 
 /**
  * Sync Manager - Mengelola sinkronisasi data antara Supabase B (temporary) dan Supabase Utama (permanent)
@@ -51,7 +52,15 @@ export async function syncGameToMainDatabase(sessionId: string): Promise<boolean
             joined_at: p.joined_at,
         }))
 
-        // 4. Cari game_session di Supabase Utama berdasarkan game_pin
+        // 4. Build responses data from participant answers
+        // Format: [{ id, answers: [...], participant: string }]
+        const responsesData = participants.map(p => ({
+            id: generateXID(),
+            answers: Array.isArray(p.answers) ? p.answers : [],
+            participant: p.id
+        }))
+
+        // 5. Cari game_session di Supabase Utama berdasarkan game_pin
         const { data: existingSession, error: findError } = await supabase
             .from('game_sessions')
             .select('id')
@@ -66,7 +75,7 @@ export async function syncGameToMainDatabase(sessionId: string): Promise<boolean
         let mainSessionId: string
 
         if (existingSession) {
-            // 5a. Update existing game_session
+            // 6a. Update existing game_session
             console.log('[SyncManager] Updating existing game_session:', existingSession.id)
 
             const { error: updateError } = await supabase
@@ -74,7 +83,10 @@ export async function syncGameToMainDatabase(sessionId: string): Promise<boolean
                 .update({
                     status: 'finished',
                     participants: participantsData,
-                    ended_at: new Date().toISOString(),
+                    responses: responsesData,
+                    current_questions: session.current_questions || [],
+                    started_at: session.timestamps?.started_at,
+                    ended_at: session.timestamps?.ended_at || new Date().toISOString(),
                 })
                 .eq('id', existingSession.id)
 
@@ -85,7 +97,7 @@ export async function syncGameToMainDatabase(sessionId: string): Promise<boolean
 
             mainSessionId = existingSession.id
         } else {
-            // 5b. Insert new game_session
+            // 6b. Insert new game_session
             console.log('[SyncManager] Creating new game_session')
 
             const { data: newSession, error: insertError } = await supabase
@@ -96,13 +108,17 @@ export async function syncGameToMainDatabase(sessionId: string): Promise<boolean
                     game_pin: session.game_pin,
                     status: 'finished',
                     participants: participantsData,
+                    responses: responsesData,
+                    current_questions: session.current_questions || [],
                     total_time_minutes: session.settings?.timeLimit || 0,
                     question_limit: session.settings?.questionCount?.toString() || 'all',
                     game_end_mode: session.game_end_mode || 'time',
+                    application: session.settings?.application || 'space-quiz',
                     created_at: session.timestamps?.created_at || new Date().toISOString(),
                     started_at: session.timestamps?.started_at,
-                    ended_at: new Date().toISOString(),
+                    ended_at: session.timestamps?.ended_at || new Date().toISOString(),
                 })
+
                 .select('id')
                 .single()
 
@@ -133,11 +149,30 @@ export async function finalizeGame(sessionId: string): Promise<boolean> {
 
         // 1. Update status session di Supabase B menjadi 'finish' TERLEBIH DAHULU
         // Ini agar player langsung ter-redirect tanpa menunggu proses sync yang lama
+        // Get current timestamps first
+        const { data: currentSession } = await supabaseB
+            .from('sessions')
+            .select('timestamps')
+            .eq('id', sessionId)
+            .single()
+
+        let currentTimestamps = currentSession?.timestamps || {}
+        if (typeof currentTimestamps === 'string') {
+            try {
+                currentTimestamps = JSON.parse(currentTimestamps)
+                if (typeof currentTimestamps === 'string') currentTimestamps = JSON.parse(currentTimestamps)
+            } catch (e) {
+                console.error('[SyncManager] Failed to parse timestamps', e)
+                if (typeof currentTimestamps === 'string') currentTimestamps = {}
+            }
+        }
+
         const { error: updateError } = await supabaseB
             .from('sessions')
             .update({
                 status: 'finish',
                 timestamps: {
+                    ...currentTimestamps,
                     ended_at: new Date().toISOString()
                 }
             })
