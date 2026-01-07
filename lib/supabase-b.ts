@@ -65,6 +65,7 @@ export interface Participant {
     score: number           // Current score
     questions_answered: number  // Number of questions answered
     joined_at: string       // Timestamp when joined
+    answers: { id: string; correct: boolean; answer_id: string; question_id: string }[] | null  // Array of answer objects
 }
 
 export interface ParticipantInsert {
@@ -83,6 +84,7 @@ export interface ParticipantUpdate {
     avatar?: string
     score?: number
     questions_answered?: number
+    answers?: { id: string; correct: boolean; answer_id: string; question_id: string }[] | null
 }
 
 /**
@@ -99,6 +101,7 @@ export interface GameSession {
     settings: any                 // JSON game settings
     question_order: number[] | null
     game_end_mode: 'time' | 'questions' | null
+    current_questions: any[] | null  // Shuffled quiz questions for this session
     timestamps: {
         created_at: string
         started_at?: string
@@ -118,6 +121,7 @@ export interface GameSessionInsert {
     settings?: any
     question_order?: number[] | null
     game_end_mode?: 'time' | 'questions' | null
+    current_questions?: any[] | null
     timestamps?: any
     countdown_position_mode?: number
 }

@@ -47,7 +47,7 @@ async function testGameCreation() {
         responses: [],
         chat_messages: [],
         current_questions: [],
-        application: "gameforsmart.com"
+        application: "space-quiz"
       })
       .select()
       .single();

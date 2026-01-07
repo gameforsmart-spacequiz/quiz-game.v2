@@ -21,14 +21,14 @@ export const SmartNameDisplay = React.memo(({
 
     if (isBroken) {
         return (
-            <span className={`${className} ${multilineClassName} whitespace-pre-line leading-tight`}>
+            <span className={`${className} ${multilineClassName} whitespace-pre-line leading-tight`} title={name}>
                 {displayName}
             </span>
         )
     }
 
     return (
-        <span className={className}>
+        <span className={className} title={name}>
             {displayName}
         </span>
     )

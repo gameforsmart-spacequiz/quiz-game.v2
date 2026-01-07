@@ -152,7 +152,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
       }
 
       // Try Supabase B first (new sessions)
-      const sessionFromB = await getGameSessionByPin(gameCode.toUpperCase())
+      const sessionFromB = await getGameSessionByPin(gameCode)
 
       let gameDataToUse: any = null
       let isFromSupabaseB = false
@@ -163,11 +163,12 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
         gameDataToUse = {
           id: sessionFromB.id,
           quiz_id: sessionFromB.quiz_id,
+          quiz_title: sessionFromB.quiz_title,
           total_time_minutes: sessionFromB.settings?.timeLimit || 10,
           question_limit: sessionFromB.settings?.questionCount?.toString() || '10',
           status: sessionFromB.status,
           started_at: sessionFromB.timestamps?.started_at || null,
-          current_questions: null // Supabase B doesn't store current_questions in session
+          current_questions: sessionFromB.current_questions || null // Use pre-shuffled questions from session
         }
       } else {
         // Fallback to main Supabase (legacy sessions)
@@ -194,35 +195,71 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
       setTimeLeft(gameDataToUse.total_time_minutes * 60);
       setStartedAt(gameDataToUse.started_at);
 
-      const { data: quizData, error: quizErr } = await supabase
-        .from("quizzes")
-        .select("*")
-        .eq("id", gameDataToUse.quiz_id)
-        .single()
-
-      if (quizErr || !quizData) {
-        toast.error("Quiz not found!");
-        router.replace("/");
-        return;
+      // If current_questions already exist in session (from Supabase B), use them directly
+      // This avoids fetching from quizzes table for every player
+      // Note: current_questions might be stored as JSON string, so parse if needed
+      let rawQuestions = gameDataToUse.current_questions;
+      if (typeof rawQuestions === 'string') {
+        try {
+          rawQuestions = JSON.parse(rawQuestions);
+        } catch (e) {
+          console.error('[Play] Failed to parse current_questions:', e);
+          rawQuestions = null;
+        }
       }
+      let questionsToUse = rawQuestions && Array.isArray(rawQuestions) && rawQuestions.length > 0
+        ? rawQuestions
+        : null;
 
-      // Validate quiz data structure
-      if (!quizData.questions || !Array.isArray(quizData.questions) || quizData.questions.length === 0) {
-        toast.error("Quiz has no questions!");
-        router.replace("/");
-        return;
+      let quizData: any = null;
+
+      // If we have questions from session (Supabase B), use them and SKIP fetching quizzes table
+      if (questionsToUse) {
+        quizData = {
+          id: gameDataToUse.quiz_id,
+          title: gameDataToUse.quiz_title || "",
+          description: "", // Data description tidak ada di session, dikosongkan.
+          questions: questionsToUse,
+          // Field metadata di bawah ini hanya untuk memenuhi tipe data Quiz dan tidak ditampilkan ke player
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          user_id: "",
+          is_public: false,
+          plays: 0,
+          favorites: 0
+        }
+      } else {
+        // Fallback: only fetch from quizzes table if we don't have questions from session
+        const { data: fetchedQuiz, error: quizErr } = await supabase
+          .from("quizzes")
+          .select("*")
+          .eq("id", gameDataToUse.quiz_id)
+          .single()
+
+        if (quizErr || !fetchedQuiz) {
+          toast.error("Quiz not found!");
+          router.replace("/");
+          return;
+        }
+
+        // Validate quiz data structure
+        if (!fetchedQuiz.questions || !Array.isArray(fetchedQuiz.questions) || fetchedQuiz.questions.length === 0) {
+          toast.error("Quiz has no questions!");
+          router.replace("/");
+          return;
+        }
+
+        quizData = fetchedQuiz;
+        questionsToUse = fetchedQuiz.questions;
       }
 
       setQuiz(quizData as Quiz);
 
-      // Use the current_questions from game_sessions if available, otherwise use quiz questions
-      let questionsToUse = gameDataToUse.current_questions && gameDataToUse.current_questions.length > 0
-        ? gameDataToUse.current_questions
-        : quizData.questions;
-
       // Validate questionsToUse structure
       if (!questionsToUse || !Array.isArray(questionsToUse) || questionsToUse.length === 0) {
-        questionsToUse = quizData.questions;
+        toast.error("No questions available!");
+        router.replace("/");
+        return;
       }
 
       // Validate each question has required structure
@@ -555,6 +592,11 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
             .single();
           status = data?.status;
         } else {
+          // Guard: If ID format looks like XID (20 chars, no dashes), it's likely a Supabase B session.
+          // skipping legacy query prevents 406/404
+          if (typeof gameId === 'string' && gameId.length === 20 && !gameId.includes('-')) {
+            return false;
+          }
           const { data } = await supabase
             .from('game_sessions')
             .select('status')
@@ -686,10 +728,10 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
       }
 
       if (isSupabaseBSession) {
-        // Supabase B: Update participant score and questions_answered directly
+        // Supabase B: Update participant score, questions_answered, and answers
         const { data: participant, error: getError } = await supabaseB
           .from("participant")
-          .select("score, questions_answered")
+          .select("score, questions_answered, answers")
           .eq("id", playerId)
           .single()
 
@@ -703,25 +745,41 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
         const currentQuestionsAnswered = participant?.questions_answered ?? 0
         const newQuestionsAnswered = currentQuestionsAnswered + 1
 
-        // Try to update with questions_answered first, fallback to just score
+        // Build new answer object
+        const newAnswer = {
+          id: generateXID(),
+          correct: correct,
+          answer_id: String(choice.id),
+          question_id: question.id
+        }
+
+        // Append to existing answers array
+        const existingAnswers = Array.isArray(participant?.answers) ? (participant?.answers || []) : []
+        const updatedAnswers = [...existingAnswers, newAnswer]
+
+        // Update participant with score, questions_answered, and answers
         const { error: updateError } = await supabaseB
           .from("participant")
           .update({
             score: newScore,
-            questions_answered: newQuestionsAnswered
+            questions_answered: newQuestionsAnswered,
+            answers: updatedAnswers
           })
           .eq("id", playerId)
 
         if (updateError) {
-          console.warn('[Play] Update with questions_answered failed, trying score only:', updateError)
-          // Fallback: just update score if questions_answered column doesn't exist
-          const { error: scoreOnlyError } = await supabaseB
+          console.warn('[Play] Update failed, trying without answers:', updateError)
+          // Fallback: try without answers column
+          const { error: fallbackError } = await supabaseB
             .from("participant")
-            .update({ score: newScore })
+            .update({
+              score: newScore,
+              questions_answered: newQuestionsAnswered
+            })
             .eq("id", playerId)
 
-          if (scoreOnlyError) {
-            console.error('[Play] Error updating score:', scoreOnlyError)
+          if (fallbackError) {
+            console.error('[Play] Error updating participant:', fallbackError)
             // Don't throw - let the game continue
           }
         }

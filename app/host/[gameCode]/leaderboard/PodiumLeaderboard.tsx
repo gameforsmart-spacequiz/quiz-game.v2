@@ -410,7 +410,7 @@ const PodiumLeaderboardInner = ({ players, onAnimationComplete, onRestart, onHom
                                                 />
                                             </h3>
                                             <div className="bg-gradient-to-r from-gray-300 to-gray-400 text-gray-800 px-2 sm:px-4 py-1 sm:py-2 rounded-full font-bold text-xs sm:text-sm lg:text-base mt-1 sm:mt-2">
-                                                {second.score} PTS
+                                                {second.score}
                                             </div>
                                         </div>
                                     </div>
@@ -452,7 +452,7 @@ const PodiumLeaderboardInner = ({ players, onAnimationComplete, onRestart, onHom
                                                 />
                                             </h3>
                                             <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-black px-3 sm:px-6 py-2 sm:py-3 rounded-full font-bold text-sm sm:text-base lg:text-lg mt-1 sm:mt-2">
-                                                <StableScoreDisplay score={first.score} playerId={first.id} /> PTS
+                                                <StableScoreDisplay score={first.score} playerId={first.id} />
                                             </div>
                                         </div>
                                     </div>
@@ -464,8 +464,8 @@ const PodiumLeaderboardInner = ({ players, onAnimationComplete, onRestart, onHom
                         </motion.div>
                     </div>
 
-                </motion.div>
-            </div>
+                </motion.div >
+            </div >
         )
     }
 
@@ -639,7 +639,7 @@ const PodiumLeaderboardInner = ({ players, onAnimationComplete, onRestart, onHom
                                                 />
                                             </h3>
                                             <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-black px-3 sm:px-6 py-2 sm:py-3 rounded-full font-bold text-sm sm:text-lg lg:text-xl shadow-[0_0_15px_rgba(255,215,0,0.5)] sm:shadow-[0_0_20px_rgba(255,215,0,0.5)]">
-                                                {first.score} PTS
+                                                {first.score}
                                             </div>
                                         </div>
                                     </div>
@@ -681,7 +681,7 @@ const PodiumLeaderboardInner = ({ players, onAnimationComplete, onRestart, onHom
                                                 />
                                             </h3>
                                             <div className="bg-gradient-to-r from-gray-300 to-gray-400 text-gray-800 px-2 sm:px-4 py-1 sm:py-2 rounded-full font-bold text-xs sm:text-sm lg:text-base mt-1 sm:mt-2">
-                                                {second.score} PTS
+                                                {second.score}
                                             </div>
                                         </div>
                                     </div>
@@ -725,12 +725,12 @@ const PodiumLeaderboardInner = ({ players, onAnimationComplete, onRestart, onHom
                                                 <p className="font-bold text-white text-xs sm:text-sm">
                                                     <SmartNameDisplay
                                                         name={p.name}
-                                                        maxLength={8}
-                                                        className="text-xs sm:text-sm text-white"
+                                                        maxLength={14}
+                                                        className="text-xs sm:text-sm text-white line-clamp-1"
                                                         multilineClassName="text-xs leading-tight"
                                                     />
                                                 </p>
-                                                <p className="text-purple-300 text-xs sm:text-sm font-semibold">{p.score} pts</p>
+                                                <p className="text-purple-300 text-xs sm:text-sm font-semibold">{p.score}</p>
                                             </div>
                                         </div>
                                     </motion.div>
