@@ -2603,7 +2603,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
                                 <h3 className="font-bold text-white text-xs sm:text-sm truncate">
                                   <SmartNameDisplay
                                     name={player.name}
-                                    maxLength={16}
+                                    maxLength={20}
                                     className="text-xs sm:text-sm font-bold text-white line-clamp-1"
                                     multilineClassName="text-xs leading-tight"
                                   />
@@ -2620,11 +2620,6 @@ export default function HostContent({ gameCode }: HostContentProps) {
                                 >
                                   {player.score}
                                 </p>
-                              </div>
-
-                              {/* Rank icon */}
-                              <div className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/10">
-                                {getRankIcon(player.rank)}
                               </div>
                             </div>
 
