@@ -89,7 +89,7 @@ interface SessionData {
     quiz_title: string;
 }
 
-export default function StressTestPage() {
+export default function TestPage() {
     const { isAdmin, loading: authLoading } = useAdminGuard();
     const [roomCode, setRoomCode] = useState("");
     const router = useRouter();
@@ -142,7 +142,7 @@ export default function StressTestPage() {
     // Subscribe to session changes (detect game end)
     const subscribeToSession = (sessionId: string) => {
         sessionChannelRef.current = supabaseB
-            .channel(`stress-test-session-${sessionId}`)
+            .channel(`test-session-${sessionId}`)
             .on(
                 "postgres_changes",
                 { event: "UPDATE", schema: "public", table: "sessions", filter: `id=eq.${sessionId}` },
@@ -369,7 +369,7 @@ export default function StressTestPage() {
         setErrorCount(0);
         usersRef.current = [];
 
-        addLog(`🧪 Starting stress test: ${roomCode}`);
+        addLog(`🧪 Starting test: ${roomCode}`);
 
         const sess = await fetchSession(roomCode);
         if (!sess) {
