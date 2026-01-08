@@ -51,12 +51,14 @@ export function UserProfile() {
       .slice(0, 2)
   }
 
-  const displayName = profile.fullname || profile.username || user.email?.split('@')[0] || 'User'
+  const displayName = profile.nickname || profile.fullname || profile.username || user.email?.split('@')[0] || 'User'
   const rawAvatarUrl = profile.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture
   const [avatarLoadError, setAvatarLoadError] = useState(false)
 
   // Create a proxy URL for Google Photos to bypass CORS
-  const avatarUrl = rawAvatarUrl ? `https://images.weserv.nl/?url=${encodeURIComponent(rawAvatarUrl)}&w=64&h=64&fit=cover&output=png` : null
+  // Use higher resolution (256x256) for better quality when zoomed
+  // Use n=-1 to preserve all animation frames for GIFs
+  const avatarUrl = rawAvatarUrl ? `https://images.weserv.nl/?url=${encodeURIComponent(rawAvatarUrl)}&w=256&h=256&fit=cover&n=-1` : null
 
   // Debug logging for avatar URL
   useEffect(() => {
@@ -114,9 +116,9 @@ export function UserProfile() {
                   <Image
                     src={avatarUrl}
                     alt={displayName}
-                    width={40}
-                    height={40}
-                    className="object-cover rounded-full"
+                    width={128}
+                    height={128}
+                    className="object-cover rounded-full w-10 h-10"
                     unoptimized
                     onError={() => {
                       console.error('❌ UserProfile avatar failed to load:', avatarUrl)

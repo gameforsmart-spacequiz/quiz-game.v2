@@ -11,6 +11,7 @@ interface Profile {
   username: string
   email: string
   fullname?: string
+  nickname?: string
   avatar_url?: string
   language?: string
   role?: string
