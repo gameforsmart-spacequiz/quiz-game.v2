@@ -484,7 +484,6 @@ const PodiumLeaderboardInner = ({ players, onAnimationComplete, onRestart, onHom
             {/* Epic background effects */}
             <div className="absolute inset-0">
                 <div className="absolute inset-0 bg-gradient-radial from-purple-900/30 via-blue-900/20 to-black/60" />
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-gradient-to-b from-yellow-400/10 via-transparent to-transparent" />
             </div>
 
             {/* Home button - Left center */}
@@ -553,141 +552,209 @@ const PodiumLeaderboardInner = ({ players, onAnimationComplete, onRestart, onHom
                     {/* Mobile List View */}
                     <MobileListLayout />
 
-                    {/* Desktop Main Podium */}
-                    <div className="hidden md:flex items-end justify-center gap-2 sm:gap-4 md:gap-6 lg:gap-8 xl:gap-12 mb-6 sm:mb-8">
-                        {/* Third Place */}
+                    {/* Desktop Main Podium - Modern Horizontal Style */}
+                    <div className="hidden md:flex items-end justify-center gap-2 lg:gap-4 xl:gap-6 mb-6 sm:mb-8">
+                        {/* Second Place - Left */}
                         <motion.div
-                            initial={{ x: -200, y: 100, opacity: 0 }}
-                            animate={{ x: 0, y: 0, opacity: 1 }}
-                            transition={{ duration: 1, delay: 0.8, type: "spring" }}
+                            initial={{ x: -100, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            transition={{ duration: 0.8, delay: 0.8, type: "spring" }}
                             className="flex flex-col items-center"
                         >
-                            <div className="relative">
-                                <div className="bg-gradient-to-b from-amber-600 via-amber-700 to-amber-800 rounded-t-xl sm:rounded-t-2xl p-1 shadow-[0_0_15px_rgba(217,119,6,0.5)] sm:shadow-[0_0_25px_rgba(217,119,6,0.5)]">
-                                    <div className="bg-gradient-to-b from-gray-700 to-gray-800 rounded-t-xl sm:rounded-t-2xl p-2 sm:p-4 lg:p-6">
-                                        <div className="relative">
-                                            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-600 to-amber-700 blur-md opacity-50 animate-pulse" />
-                                            <Image
-                                                src={third.avatar || "/placeholder.svg"}
-                                                alt={getFirstName(third.name)}
-                                                width={100}
-                                                height={100}
-                                                className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full border-2 sm:border-3 border-amber-600 object-cover relative z-10 shadow-[0_0_10px_rgba(217,119,6,0.6)] sm:shadow-[0_0_15px_rgba(217,119,6,0.6)]"
-                                            />
-                                        </div>
-                                        <div className="text-center mt-2 sm:mt-3">
-                                            <div className="text-base sm:text-xl lg:text-2xl mb-1">🥉</div>
-                                            <h3 className="font-bold text-xs sm:text-sm lg:text-base text-amber-300 text-center">
-                                                <SmartNameDisplay
-                                                    name={third.name}
-                                                    maxLength={6}
-                                                    className="text-xs sm:text-sm lg:text-base text-amber-300"
-                                                    multilineClassName="text-xs sm:text-xs lg:text-sm"
-                                                />
-                                            </h3>
-                                            <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white px-2 sm:px-3 py-1 rounded-full font-bold text-xs mt-1">
-                                                <StableScoreDisplay score={third.score} playerId={third.id} />
-                                            </div>
-                                        </div>
+                            {/* Crown/Trophy Icon */}
+                            <motion.div
+                                animate={{ y: [0, -5, 0] }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                                className="mb-2"
+                            >
+                                <svg width="40" height="28" viewBox="0 0 40 28" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-80">
+                                    <path d="M6 24L10 8L20 16L30 8L34 24H6Z" fill="url(#silver-gradient)" stroke="#9CA3AF" strokeWidth="1.5" />
+                                    <circle cx="10" cy="6" r="4" fill="#9CA3AF" />
+                                    <circle cx="30" cy="6" r="4" fill="#9CA3AF" />
+                                    <defs>
+                                        <linearGradient id="silver-gradient" x1="6" y1="8" x2="34" y2="24">
+                                            <stop stopColor="#D1D5DB" />
+                                            <stop offset="1" stopColor="#9CA3AF" />
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                            </motion.div>
+
+                            {/* Avatar with ring */}
+                            <div className="relative mb-3">
+                                <div className="absolute -inset-2 rounded-full bg-gradient-to-r from-gray-300 to-gray-400 blur-md opacity-50 animate-pulse" />
+                                <div className="relative p-1 rounded-full bg-gradient-to-r from-gray-300 via-gray-200 to-gray-300">
+                                    <Image
+                                        src={second.avatar || "/placeholder.svg"}
+                                        alt={getFirstName(second.name)}
+                                        width={80}
+                                        height={80}
+                                        className="w-16 h-16 lg:w-20 lg:h-20 rounded-full object-cover border-2 border-gray-700"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Player Name */}
+                            <h3 className="font-bold text-sm lg:text-base text-white mb-3 text-center max-w-[120px]">
+                                <SmartNameDisplay
+                                    name={second.name}
+                                    maxLength={12}
+                                    className="text-sm lg:text-base text-white"
+                                    multilineClassName="text-xs lg:text-sm"
+                                />
+                            </h3>
+
+                            {/* Podium Step */}
+                            <div className="relative w-28 lg:w-36">
+                                {/* Step platform */}
+                                <div className="bg-gradient-to-b from-gray-400 via-gray-500 to-gray-600 rounded-t-lg pt-4 pb-6 px-4 shadow-[0_4px_20px_rgba(156,163,175,0.3)]">
+                                    {/* Rank number */}
+                                    <div className="text-2xl lg:text-3xl font-bold text-gray-800 text-center mb-2">2</div>
+                                    {/* Score pill */}
+                                    <div className="bg-gradient-to-r from-gray-600 to-gray-700 text-white px-4 py-2 rounded-full font-bold text-sm lg:text-base text-center shadow-inner">
+                                        <StableScoreDisplay score={second.score} playerId={second.id} />
                                     </div>
                                 </div>
-                                <div className="bg-gradient-to-b from-amber-800 to-amber-900 h-8 sm:h-12 lg:h-16 w-full rounded-b-lg" />
-                                <div className="bg-gradient-to-b from-amber-900 to-amber-950 h-2 sm:h-3 w-[110%] -ml-[5%] rounded-b-lg" />
+                                {/* Step base */}
+                                <div className="h-12 lg:h-16 bg-gradient-to-b from-gray-600 via-gray-700 to-gray-800 rounded-b-lg" />
                             </div>
                         </motion.div>
 
-                        {/* First Place - The Champion */}
+                        {/* First Place - Center (Tallest) */}
                         <motion.div
-                            initial={{ y: 150, opacity: 0, scale: 0.8 }}
+                            initial={{ y: 100, opacity: 0, scale: 0.8 }}
                             animate={{ y: 0, opacity: 1, scale: 1 }}
-                            transition={{ duration: 1.2, delay: 1.2, type: "spring", bounce: 0.2 }}
+                            transition={{ duration: 1, delay: 1.2, type: "spring", bounce: 0.2 }}
                             className="flex flex-col items-center relative"
                         >
+                            {/* Crown Icon */}
+                            <motion.div
+                                animate={{ y: [0, -8, 0], rotate: [0, 2, -2, 0] }}
+                                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                                className="mb-2"
+                            >
+                                <svg width="56" height="40" viewBox="0 0 56 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M8 34L14 12L28 22L42 12L48 34H8Z" fill="url(#gold-gradient)" stroke="#F59E0B" strokeWidth="2" />
+                                    <circle cx="14" cy="8" r="6" fill="#FBBF24" />
+                                    <circle cx="42" cy="8" r="6" fill="#FBBF24" />
+                                    <circle cx="28" cy="6" r="5" fill="#FCD34D" />
+                                    <defs>
+                                        <linearGradient id="gold-gradient" x1="8" y1="12" x2="48" y2="34">
+                                            <stop stopColor="#FCD34D" />
+                                            <stop offset="0.5" stopColor="#FBBF24" />
+                                            <stop offset="1" stopColor="#F59E0B" />
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                            </motion.div>
 
+                            {/* Avatar with glowing ring */}
+                            <div className="relative mb-3">
+                                <motion.div
+                                    animate={{ scale: [1, 1.1, 1], opacity: [0.5, 0.8, 0.5] }}
+                                    transition={{ duration: 2, repeat: Infinity }}
+                                    className="absolute -inset-3 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-500 blur-lg"
+                                />
+                                <div className="relative p-1.5 rounded-full bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 shadow-[0_0_30px_rgba(251,191,36,0.6)]">
+                                    <Image
+                                        src={first.avatar || "/placeholder.svg"}
+                                        alt={getFirstName(first.name)}
+                                        width={120}
+                                        height={120}
+                                        className="w-20 h-20 lg:w-28 lg:h-28 rounded-full object-cover border-3 border-gray-800"
+                                    />
+                                </div>
+                            </div>
 
-                            <div className="relative">
-                                <div className="bg-gradient-to-b from-yellow-400 via-yellow-500 to-yellow-600 rounded-t-2xl sm:rounded-t-3xl p-1 sm:p-2 shadow-[0_0_30px_rgba(255,215,0,0.8)] sm:shadow-[0_0_50px_rgba(255,215,0,0.8)]">
-                                    <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-t-2xl sm:rounded-t-3xl p-3 sm:p-6 lg:p-10">
-                                        <div className="relative">
-                                            {/* Multiple glowing rings */}
-                                            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-500 blur-xl opacity-60 animate-pulse" />
-                                            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-yellow-300 to-yellow-400 blur-lg opacity-40 animate-pulse" style={{ animationDelay: "0.5s" }} />
-                                            <div className="relative">
-                                                <Image
-                                                    src={first.avatar || "/placeholder.svg"}
-                                                    alt={getFirstName(first.name)}
-                                                    width={200}
-                                                    height={200}
-                                                    className="w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-32 lg:h-32 rounded-full border-3 sm:border-4 lg:border-6 border-yellow-400 object-cover relative z-10 shadow-[0_0_20px_rgba(255,215,0,0.9)] sm:shadow-[0_0_30px_rgba(255,215,0,0.9)]"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="text-center mt-2 sm:mt-4">
-                                            <motion.div
-                                                animate={{ scale: [1, 1.1, 1] }}
-                                                transition={{ duration: 2, repeat: Infinity }}
-                                                className="text-2xl sm:text-4xl lg:text-5xl mb-1 sm:mb-2"
-                                            >
-                                                🥇
-                                            </motion.div>
-                                            <h3 className="font-bold text-sm sm:text-xl lg:text-2xl xl:text-3xl text-yellow-300 mb-1 sm:mb-2 text-center">
-                                                <SmartNameDisplay
-                                                    name={first.name}
-                                                    maxLength={8}
-                                                    className="text-sm sm:text-xl lg:text-2xl xl:text-3xl text-yellow-300"
-                                                    multilineClassName="text-xs sm:text-lg lg:text-xl xl:text-2xl"
-                                                />
-                                            </h3>
-                                            <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-black px-3 sm:px-6 py-2 sm:py-3 rounded-full font-bold text-sm sm:text-lg lg:text-xl shadow-[0_0_15px_rgba(255,215,0,0.5)] sm:shadow-[0_0_20px_rgba(255,215,0,0.5)]">
-                                                {first.score}
-                                            </div>
-                                        </div>
+                            {/* Player Name */}
+                            <h3 className="font-bold text-base lg:text-xl text-yellow-300 mb-4 text-center max-w-[160px] drop-shadow-lg">
+                                <SmartNameDisplay
+                                    name={first.name}
+                                    maxLength={14}
+                                    className="text-base lg:text-xl text-yellow-300"
+                                    multilineClassName="text-sm lg:text-lg"
+                                />
+                            </h3>
+
+                            {/* Podium Step - Tallest */}
+                            <div className="relative w-36 lg:w-44">
+                                {/* Step platform */}
+                                <div className="bg-gradient-to-b from-yellow-400 via-yellow-500 to-yellow-600 rounded-t-xl pt-5 pb-8 px-5 shadow-[0_4px_30px_rgba(251,191,36,0.5)]">
+                                    {/* Rank number */}
+                                    <div className="text-3xl lg:text-4xl font-bold text-gray-900 text-center mb-3">1</div>
+                                    {/* Score pill */}
+                                    <div className="bg-gradient-to-r from-yellow-600 to-yellow-700 text-white px-5 py-2.5 rounded-full font-bold text-base lg:text-lg text-center shadow-lg">
+                                        <StableScoreDisplay score={first.score} playerId={first.id} />
                                     </div>
                                 </div>
-                                <div className="bg-gradient-to-b from-yellow-600 to-yellow-700 h-16 sm:h-20 lg:h-24 w-full rounded-b-lg" />
-                                <div className="bg-gradient-to-b from-yellow-700 to-yellow-800 h-4 sm:h-6 w-[110%] -ml-[5%] rounded-b-lg" />
-                                <div className="bg-gradient-to-b from-yellow-800 to-yellow-900 h-3 sm:h-4 w-[120%] -ml-[10%] rounded-b-lg" />
+                                {/* Step base - Tallest */}
+                                <div className="h-16 lg:h-20 bg-gradient-to-b from-yellow-600 via-yellow-700 to-yellow-800 rounded-b-xl" />
                             </div>
                         </motion.div>
 
-                        {/* Second Place */}
+                        {/* Third Place - Right */}
                         <motion.div
-                            initial={{ x: 200, y: 100, opacity: 0 }}
-                            animate={{ x: 0, y: 0, opacity: 1 }}
-                            transition={{ duration: 1, delay: 1.0, type: "spring" }}
+                            initial={{ x: 100, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            transition={{ duration: 0.8, delay: 1.0, type: "spring" }}
                             className="flex flex-col items-center"
                         >
-                            <div className="relative">
-                                <div className="bg-gradient-to-b from-gray-300 via-gray-400 to-gray-500 rounded-t-xl sm:rounded-t-2xl p-1 shadow-[0_0_20px_rgba(192,192,192,0.6)] sm:shadow-[0_0_30px_rgba(192,192,192,0.6)]">
-                                    <div className="bg-gradient-to-b from-gray-700 to-gray-800 rounded-t-xl sm:rounded-t-2xl p-2 sm:p-5 lg:p-7">
-                                        <div className="relative flex justify-center">
-                                            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-gray-300 to-gray-400 blur-md opacity-60 animate-pulse" />
-                                            <Image
-                                                src={second.avatar || "/placeholder.svg"}
-                                                alt={getFirstName(second.name)}
-                                                width={120}
-                                                height={120}
-                                                className="w-10 h-10 sm:w-16 sm:h-16 md:w-18 md:h-18 lg:w-22 lg:h-22 rounded-full border-2 sm:border-3 lg:border-4 border-gray-300 object-cover relative z-10 shadow-[0_0_12px_rgba(192,192,192,0.7)] sm:shadow-[0_0_20px_rgba(192,192,192,0.7)]"
-                                            />
-                                        </div>
-                                        <div className="text-center mt-2 sm:mt-3">
-                                            <div className="text-lg sm:text-2xl lg:text-3xl mb-1">🥈</div>
-                                            <h3 className="font-bold text-xs sm:text-base lg:text-lg text-gray-300 text-center">
-                                                <SmartNameDisplay
-                                                    name={second.name}
-                                                    maxLength={7}
-                                                    className="text-xs sm:text-base lg:text-lg text-gray-300"
-                                                    multilineClassName="text-xs sm:text-sm lg:text-base"
-                                                />
-                                            </h3>
-                                            <div className="bg-gradient-to-r from-gray-300 to-gray-400 text-gray-800 px-2 sm:px-4 py-1 sm:py-2 rounded-full font-bold text-xs sm:text-sm lg:text-base mt-1 sm:mt-2">
-                                                {second.score}
-                                            </div>
-                                        </div>
+                            {/* Crown/Trophy Icon */}
+                            <motion.div
+                                animate={{ y: [0, -5, 0] }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
+                                className="mb-2"
+                            >
+                                <svg width="36" height="24" viewBox="0 0 40 28" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-80">
+                                    <path d="M6 24L10 8L20 16L30 8L34 24H6Z" fill="url(#bronze-gradient)" stroke="#B45309" strokeWidth="1.5" />
+                                    <circle cx="10" cy="6" r="4" fill="#D97706" />
+                                    <circle cx="30" cy="6" r="4" fill="#D97706" />
+                                    <defs>
+                                        <linearGradient id="bronze-gradient" x1="6" y1="8" x2="34" y2="24">
+                                            <stop stopColor="#F59E0B" />
+                                            <stop offset="1" stopColor="#B45309" />
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                            </motion.div>
+
+                            {/* Avatar with ring */}
+                            <div className="relative mb-3">
+                                <div className="absolute -inset-2 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 blur-md opacity-40 animate-pulse" />
+                                <div className="relative p-1 rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500">
+                                    <Image
+                                        src={third.avatar || "/placeholder.svg"}
+                                        alt={getFirstName(third.name)}
+                                        width={72}
+                                        height={72}
+                                        className="w-14 h-14 lg:w-18 lg:h-18 rounded-full object-cover border-2 border-gray-700"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Player Name */}
+                            <h3 className="font-bold text-sm lg:text-base text-white mb-3 text-center max-w-[110px]">
+                                <SmartNameDisplay
+                                    name={third.name}
+                                    maxLength={10}
+                                    className="text-sm lg:text-base text-white"
+                                    multilineClassName="text-xs lg:text-sm"
+                                />
+                            </h3>
+
+                            {/* Podium Step */}
+                            <div className="relative w-24 lg:w-32">
+                                {/* Step platform */}
+                                <div className="bg-gradient-to-b from-amber-500 via-amber-600 to-amber-700 rounded-t-lg pt-3 pb-5 px-3 shadow-[0_4px_20px_rgba(217,119,6,0.3)]">
+                                    {/* Rank number */}
+                                    <div className="text-xl lg:text-2xl font-bold text-amber-900 text-center mb-2">3</div>
+                                    {/* Score pill */}
+                                    <div className="bg-gradient-to-r from-amber-700 to-amber-800 text-white px-3 py-1.5 rounded-full font-bold text-xs lg:text-sm text-center shadow-inner">
+                                        <StableScoreDisplay score={third.score} playerId={third.id} />
                                     </div>
                                 </div>
-                                <div className="bg-gradient-to-b from-gray-500 to-gray-600 h-10 sm:h-16 lg:h-20 w-full rounded-b-lg" />
-                                <div className="bg-gradient-to-b from-gray-600 to-gray-700 h-2 sm:h-4 w-[110%] -ml-[5%] rounded-b-lg" />
+                                {/* Step base - Shortest */}
+                                <div className="h-8 lg:h-10 bg-gradient-to-b from-amber-700 via-amber-800 to-amber-900 rounded-b-lg" />
                             </div>
                         </motion.div>
                     </div>

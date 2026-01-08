@@ -145,7 +145,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
   const [currentPlayerPage, setCurrentPlayerPage] = useState(0)
   const [currentProgressPage, setCurrentProgressPage] = useState(0)
   const [slideDirection, setSlideDirection] = useState(0) // -1 for left, 1 for right
-  const PLAYERS_PER_PAGE = 20 // 4 rows x 5 columns (2xl), 5 rows x 4 columns (xl), etc.
+  const PLAYERS_PER_PAGE = 16 // 5 rows x 4 columns
 
   // Store previous progress values to prevent unnecessary resets
   const prevProgressRef = useRef<Map<string, number>>(new Map())
@@ -212,7 +212,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
     scale: { duration: 0.2 },
   }
 
-  // Pagination component with slide direction tracking
+  // Pagination component with slide direction tracking - Space/Galaxy themed
   const PaginationControls = ({
     currentPage,
     totalPages,
@@ -224,6 +224,10 @@ export default function HostContent({ gameCode }: HostContentProps) {
     onPageChange: (page: number) => void;
     onDirectionChange: (direction: number) => void;
   }) => {
+    const [jumpToPage, setJumpToPage] = useState('');
+    const [showJumpInputStart, setShowJumpInputStart] = useState(false);
+    const [showJumpInputEnd, setShowJumpInputEnd] = useState(false);
+
     if (totalPages <= 1) return null;
 
     const handlePrevious = () => {
@@ -249,38 +253,170 @@ export default function HostContent({ gameCode }: HostContentProps) {
       }
     };
 
-    return (
-      <div className="flex items-center justify-center gap-2 sm:gap-4 mt-4">
-        <button
-          onClick={handlePrevious}
-          disabled={currentPage === 0}
-          className="p-1 sm:p-2 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-        </button>
+    const handleJumpToPage = (closeStart: boolean, closeEnd: boolean) => {
+      const pageNum = parseInt(jumpToPage);
+      if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+        const targetPage = pageNum - 1; // Convert to 0-indexed
+        if (targetPage !== currentPage) {
+          onDirectionChange(targetPage > currentPage ? 1 : -1);
+          onPageChange(targetPage);
+        }
+        setJumpToPage('');
+        if (closeStart) setShowJumpInputStart(false);
+        if (closeEnd) setShowJumpInputEnd(false);
+      }
+    };
 
-        <div className="flex items-center gap-1 sm:gap-2">
-          {Array.from({ length: totalPages }, (_, i) => (
+    const handleJumpKeyPress = (e: React.KeyboardEvent<HTMLInputElement>, isStart: boolean) => {
+      if (e.key === 'Enter') {
+        handleJumpToPage(isStart, !isStart);
+      } else if (e.key === 'Escape') {
+        setJumpToPage('');
+        if (isStart) setShowJumpInputStart(false);
+        else setShowJumpInputEnd(false);
+      }
+    };
+
+    // Smart pagination display - dynamic around current page
+    const getVisiblePages = () => {
+      const pages: (number | 'ellipsis-start' | 'ellipsis-end')[] = [];
+      const SIBLINGS = 2; // Number of pages to show on each side of current page
+
+      if (totalPages <= 7) {
+        // Show all pages if 7 or fewer
+        for (let i = 0; i < totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        // Always show first page
+        pages.push(0);
+
+        // Calculate range around current page
+        const leftSibling = Math.max(1, currentPage - SIBLINGS);
+        const rightSibling = Math.min(totalPages - 2, currentPage + SIBLINGS);
+
+        // Show left ellipsis if there's a gap
+        const showLeftEllipsis = leftSibling > 1;
+        // Show right ellipsis if there's a gap
+        const showRightEllipsis = rightSibling < totalPages - 2;
+
+        if (showLeftEllipsis) {
+          pages.push('ellipsis-start');
+        }
+
+        // Add pages around current page
+        for (let i = leftSibling; i <= rightSibling; i++) {
+          pages.push(i);
+        }
+
+        if (showRightEllipsis) {
+          pages.push('ellipsis-end');
+        }
+
+        // Always show last page
+        pages.push(totalPages - 1);
+      }
+
+      return pages;
+    };
+
+    // Render ellipsis with jump input
+    const renderEllipsis = (key: 'ellipsis-start' | 'ellipsis-end') => {
+      const isStart = key === 'ellipsis-start';
+      const showInput = isStart ? showJumpInputStart : showJumpInputEnd;
+      const setShowInput = isStart ? setShowJumpInputStart : setShowJumpInputEnd;
+
+      return (
+        <div key={key} className="flex items-center gap-1 px-0.5">
+          {showInput ? (
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={jumpToPage}
+                onChange={(e) => setJumpToPage(e.target.value)}
+                onKeyDown={(e) => handleJumpKeyPress(e, isStart)}
+                onBlur={() => {
+                  if (!jumpToPage) setShowInput(false);
+                }}
+                placeholder={`1-${totalPages}`}
+                autoFocus
+                className="w-12 sm:w-14 h-7 sm:h-8 text-center text-xs sm:text-sm bg-white/20 border border-white/30 rounded-lg text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+            </div>
+          ) : (
             <button
-              key={i}
-              onClick={() => handlePageClick(i)}
-              className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full text-xs sm:text-sm font-mono transition-colors ${i === currentPage
-                ? "bg-blue-500 text-white"
-                : "bg-white/10 border border-white/20 hover:bg-white/20"
-                }`}
+              onClick={() => {
+                setShowInput(true);
+                // Close the other input if open
+                if (isStart) setShowJumpInputEnd(false);
+                else setShowJumpInputStart(false);
+              }}
+              className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 transition-all duration-300 border border-white/20 text-white/70 text-xs sm:text-sm"
+              title={`Jump to page (1-${totalPages})`}
             >
-              {i + 1}
+              •••
             </button>
-          ))}
+          )}
         </div>
+      );
+    };
 
-        <button
-          onClick={handleNext}
-          disabled={currentPage === totalPages - 1}
-          className="p-1 sm:p-2 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-        </button>
+    return (
+      <div className="flex items-center justify-center mt-6">
+        <div className="bg-white/15 backdrop-blur-lg border border-white/25 rounded-xl p-2 sm:p-3 flex items-center gap-1 sm:gap-1.5 shadow-lg shadow-purple-500/10">
+          {/* Previous Button */}
+          <button
+            onClick={handlePrevious}
+            disabled={currentPage === 0}
+            className={`p-1.5 sm:p-2 rounded-lg transition-all duration-300 flex items-center justify-center ${currentPage === 0
+              ? "opacity-40 cursor-not-allowed text-white/50"
+              : "text-white hover:bg-white/20 active:scale-95"
+              }`}
+            aria-label="Previous page"
+          >
+            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+
+          {/* Page Numbers */}
+          <div className="flex items-center gap-0.5 sm:gap-1">
+            {getVisiblePages().map((page, index) => {
+              if (page === 'ellipsis-start' || page === 'ellipsis-end') {
+                return renderEllipsis(page);
+              }
+
+              const isActive = page === currentPage;
+              return (
+                <button
+                  key={page}
+                  onClick={() => handlePageClick(page)}
+                  className={`w-7 h-7 sm:w-9 sm:h-9 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-300 flex items-center justify-center ${isActive
+                    ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg shadow-purple-500/30 scale-105"
+                    : "text-white/80 hover:bg-white/20 hover:text-white active:scale-95"
+                    }`}
+                  aria-label={`Page ${page + 1}`}
+                  aria-current={isActive ? "page" : undefined}
+                >
+                  {page + 1}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Next Button */}
+          <button
+            onClick={handleNext}
+            disabled={currentPage === totalPages - 1}
+            className={`p-1.5 sm:p-2 rounded-lg transition-all duration-300 flex items-center justify-center ${currentPage === totalPages - 1
+              ? "opacity-40 cursor-not-allowed text-white/50"
+              : "text-white hover:bg-white/20 active:scale-95"
+              }`}
+            aria-label="Next page"
+          >
+            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+        </div>
       </div>
     );
   };
@@ -2396,7 +2532,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
                           animate="center"
                           exit="exit"
                           transition={slideTransition}
-                          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4"
+                          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-4 gap-2 sm:gap-4"
                         >
                           {getPaginatedPlayers(players, currentPlayerPage).map((player, index) => (
                             <motion.div
@@ -2525,7 +2661,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
               ) : (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
-                    {getPaginatedProgress(playerProgress, currentProgressPage).sort((a, b) => a.rank - b.rank)
+                    {playerProgress.sort((a, b) => a.rank - b.rank)
                       .map((player, index) => (
                         <div
                           key={player.id}
@@ -2654,13 +2790,6 @@ export default function HostContent({ gameCode }: HostContentProps) {
                         </div>
                       ))}
                   </div>
-
-                  <PaginationControls
-                    currentPage={currentProgressPage}
-                    totalPages={getTotalPages(playerProgress.length)}
-                    onPageChange={setCurrentProgressPage}
-                    onDirectionChange={setSlideDirection}
-                  />
                 </>
               )}
             </motion.div>

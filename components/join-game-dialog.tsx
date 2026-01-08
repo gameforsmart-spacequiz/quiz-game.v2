@@ -66,7 +66,9 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
 
   // Get Google avatar URL - prioritize profile data, then user metadata
   const rawGoogleAvatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture
-  const googleAvatarUrl = rawGoogleAvatarUrl ? `https://images.weserv.nl/?url=${encodeURIComponent(rawGoogleAvatarUrl)}&w=64&h=64&fit=cover&output=png` : null
+  // Use higher resolution (256x256) for better quality when zoomed
+  // Use n=-1 to preserve all animation frames for GIFs (no output=png to keep original format)
+  const googleAvatarUrl = rawGoogleAvatarUrl ? `https://images.weserv.nl/?url=${encodeURIComponent(rawGoogleAvatarUrl)}&w=256&h=256&fit=cover&n=-1` : null
 
   // Detect mobile device
   useEffect(() => {
