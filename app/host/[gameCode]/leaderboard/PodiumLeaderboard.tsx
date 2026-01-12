@@ -609,9 +609,9 @@ const PodiumLeaderboardInner = ({ players, onAnimationComplete, onRestart, onHom
                                 {/* Step platform */}
                                 <div className="bg-gradient-to-b from-gray-400 via-gray-500 to-gray-600 rounded-t-lg pt-4 pb-6 px-4 shadow-[0_4px_20px_rgba(156,163,175,0.3)]">
                                     {/* Rank number */}
-                                    <div className="text-2xl lg:text-3xl font-bold text-gray-800 text-center mb-2">2</div>
+                                    <div className="text-5xl lg:text-6xl font-extrabold text-gray-800 text-center mb-3 drop-shadow-lg">2</div>
                                     {/* Score pill */}
-                                    <div className="bg-gradient-to-r from-gray-600 to-gray-700 text-white px-4 py-2 rounded-full font-bold text-sm lg:text-base text-center shadow-inner">
+                                    <div className="bg-gradient-to-r from-gray-600 to-gray-700 text-white px-5 py-3 rounded-full font-bold text-xl lg:text-2xl text-center shadow-lg">
                                         <StableScoreDisplay score={second.score} playerId={second.id} />
                                     </div>
                                 </div>
@@ -681,9 +681,9 @@ const PodiumLeaderboardInner = ({ players, onAnimationComplete, onRestart, onHom
                                 {/* Step platform */}
                                 <div className="bg-gradient-to-b from-yellow-400 via-yellow-500 to-yellow-600 rounded-t-xl pt-5 pb-8 px-5 shadow-[0_4px_30px_rgba(251,191,36,0.5)]">
                                     {/* Rank number */}
-                                    <div className="text-3xl lg:text-4xl font-bold text-gray-900 text-center mb-3">1</div>
+                                    <div className="text-6xl lg:text-7xl font-extrabold text-gray-900 text-center mb-4 drop-shadow-xl">1</div>
                                     {/* Score pill */}
-                                    <div className="bg-gradient-to-r from-yellow-600 to-yellow-700 text-white px-5 py-2.5 rounded-full font-bold text-base lg:text-lg text-center shadow-lg">
+                                    <div className="bg-gradient-to-r from-yellow-600 to-yellow-700 text-white px-6 py-3.5 rounded-full font-bold text-2xl lg:text-3xl text-center shadow-xl">
                                         <StableScoreDisplay score={first.score} playerId={first.id} />
                                     </div>
                                 </div>
@@ -747,9 +747,9 @@ const PodiumLeaderboardInner = ({ players, onAnimationComplete, onRestart, onHom
                                 {/* Step platform */}
                                 <div className="bg-gradient-to-b from-amber-500 via-amber-600 to-amber-700 rounded-t-lg pt-3 pb-5 px-3 shadow-[0_4px_20px_rgba(217,119,6,0.3)]">
                                     {/* Rank number */}
-                                    <div className="text-xl lg:text-2xl font-bold text-amber-900 text-center mb-2">3</div>
+                                    <div className="text-4xl lg:text-5xl font-extrabold text-amber-900 text-center mb-3 drop-shadow-lg">3</div>
                                     {/* Score pill */}
-                                    <div className="bg-gradient-to-r from-amber-700 to-amber-800 text-white px-3 py-1.5 rounded-full font-bold text-xs lg:text-sm text-center shadow-inner">
+                                    <div className="bg-gradient-to-r from-amber-700 to-amber-800 text-white px-4 py-2.5 rounded-full font-bold text-lg lg:text-xl text-center shadow-lg">
                                         <StableScoreDisplay score={third.score} playerId={third.id} />
                                     </div>
                                 </div>
