@@ -129,20 +129,39 @@ export default function SelectQuizPage() {
 
 
   const categories = [
-    { value: "all", label: "Semua Kategori", icon: LayoutGrid },
-    { value: "general", label: "Umum", icon: LayoutGrid },
-    { value: "science", label: "Sains", icon: FlaskConical },
-    { value: "math", label: "Matematika", icon: Calculator },
-    { value: "history", label: "Sejarah", icon: History },
-    { value: "geography", label: "Geografi", icon: Globe },
-    { value: "language", label: "Bahasa", icon: Languages },
-    { value: "technology", label: "Teknologi", icon: Cpu },
-    { value: "sports", label: "Olahraga", icon: Dumbbell },
-    { value: "entertainment", label: "Hiburan", icon: Film },
-    { value: "business", label: "Bisnis", icon: Building2 },
+    { value: "all", labelKey: "categoryAll" as const, icon: LayoutGrid },
+    { value: "general", labelKey: "categoryGeneral" as const, icon: LayoutGrid },
+    { value: "science", labelKey: "categoryScience" as const, icon: FlaskConical },
+    { value: "math", labelKey: "categoryMath" as const, icon: Calculator },
+    { value: "history", labelKey: "categoryHistory" as const, icon: History },
+    { value: "geography", labelKey: "categoryGeography" as const, icon: Globe },
+    { value: "language", labelKey: "categoryLanguage" as const, icon: Languages },
+    { value: "technology", labelKey: "categoryTechnology" as const, icon: Cpu },
+    { value: "sports", labelKey: "categorySports" as const, icon: Dumbbell },
+    { value: "entertainment", labelKey: "categoryEntertainment" as const, icon: Film },
+    { value: "business", labelKey: "categoryBusiness" as const, icon: Building2 },
   ]
 
   const selectedCategory = categories.find(c => c.value === selectedLevel) || categories[0]
+
+  // Helper function to get translation key from database category value
+  const getCategoryTranslationKey = (category: string | undefined): string => {
+    if (!category) return t('categoryUnknown')
+    const categoryMap: Record<string, string> = {
+      'all': t('categoryAll'),
+      'general': t('categoryGeneral'),
+      'science': t('categoryScience'),
+      'math': t('categoryMath'),
+      'history': t('categoryHistory'),
+      'geography': t('categoryGeography'),
+      'language': t('categoryLanguage'),
+      'technology': t('categoryTechnology'),
+      'sports': t('categorySports'),
+      'entertainment': t('categoryEntertainment'),
+      'business': t('categoryBusiness'),
+    }
+    return categoryMap[category.toLowerCase()] || t('categoryUnknown')
+  }
 
   const fetchFavoriteQuizIds = useCallback(async () => {
     if (!profile?.id) {
@@ -453,7 +472,7 @@ export default function SelectQuizPage() {
               className="bg-white/10 backdrop-blur-lg border-white/20 text-white hover:bg-white/20 transition-all duration-300 text-xs sm:text-sm px-2 xs:px-3"
             >
               <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-              <span className="hidden xs:inline">Back</span>
+              <span className="hidden xs:inline">{t('back')}</span>
             </Button>
 
             <div className="w-px h-6 bg-white/20 hidden sm:block" />
@@ -466,7 +485,7 @@ export default function SelectQuizPage() {
                 : "bg-white/10 backdrop-blur-lg border-white/20 text-white hover:bg-white/20"
                 }`}
             >
-              Quizzes
+              {t('quizzes')}
             </Button>
             <Button
               onClick={() => { setActiveTab("my"); setCurrentPage(1) }}
@@ -525,7 +544,7 @@ export default function SelectQuizPage() {
                 >
                   <div className="flex items-center gap-2">
                     <selectedCategory.icon className="h-4 w-4 text-cyan-400" />
-                    <span className="truncate">{selectedCategory.label}</span>
+                    <span className="truncate">{t(selectedCategory.labelKey)}</span>
                   </div>
                   <ChevronDown className={`h-4 w-4 opacity-70 transition-transform duration-200 ${isCategoryOpen ? "rotate-180" : ""}`} />
                 </Button>
@@ -535,7 +554,7 @@ export default function SelectQuizPage() {
                 align="end"
               >
                 <DropdownMenuLabel className="text-gray-300 text-sm font-medium px-3 py-2">
-                  Pilih Kategori
+                  {t('selectCategory')}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-white/10" />
                 {categories.map((category) => {
@@ -552,7 +571,7 @@ export default function SelectQuizPage() {
                     >
                       <IconComponent className={`h-5 w-5 ${isSelected ? "text-white" : getCategoryIconColor(category.value)
                         }`} />
-                      <span className="flex-1 text-sm font-medium">{category.label}</span>
+                      <span className="flex-1 text-sm font-medium">{t(category.labelKey)}</span>
                       {isSelected && <Check className="h-4 w-4" />}
                     </DropdownMenuItem>
                   )
@@ -626,7 +645,7 @@ export default function SelectQuizPage() {
                 transition={{ delay: 0.3 }}
                 className="text-white/70 text-sm sm:text-base font-medium mb-4"
               >
-                {isSearching ? "Searching..." : "Loading quizzes..."}
+                {isSearching ? t('searching') : t('loadingQuizzes')}
               </motion.p>
             </motion.div>
           )}
@@ -653,18 +672,18 @@ export default function SelectQuizPage() {
 
               {/* Title */}
               <h3 className="text-lg sm:text-xl font-semibold text-white/90 mb-2">
-                No quizzes found
+                {t('noQuizzesFound')}
               </h3>
 
               {/* Subtitle */}
               <p className="text-gray-400 text-sm sm:text-base text-center max-w-sm px-4 mb-6">
                 {appliedSearchQuery
-                  ? "Try a different search term"
+                  ? t('tryDifferentSearch')
                   : activeTab === "my"
-                    ? "Create your first quiz to get started"
+                    ? t('createFirstQuiz')
                     : activeTab === "favorite"
-                      ? "Add quizzes to your favorites"
-                      : "Adjust your filters"}
+                      ? t('addToFavorites')
+                      : t('adjustFilters')}
               </p>
 
               {/* Clear Button */}
@@ -679,7 +698,7 @@ export default function SelectQuizPage() {
                   }}
                   className="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-lg transition-all duration-300 shadow-lg shadow-purple-500/20"
                 >
-                  Clear filters
+                  {t('clearFilters')}
                 </motion.button>
               )}
             </motion.div>
@@ -776,7 +795,7 @@ export default function SelectQuizPage() {
 
                             {/* Category Badge */}
                             <span className="inline-flex items-center bg-cyan-500/20 text-cyan-300 px-3 py-1 rounded-full text-xs font-medium capitalize border border-cyan-500/30 w-fit">
-                              {quiz.category || "Unknown"}
+                              {getCategoryTranslationKey(quiz.category)}
                             </span>
                           </div>
 

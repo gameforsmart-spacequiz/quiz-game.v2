@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Clock, Hash, Play, ArrowLeft, Gamepad2, Sparkles, Star, Settings, Loader2 } from "lucide-react"
+import { Clock, CircleHelp, Play, ArrowLeft, Gamepad2, Sparkles, Star, Settings, Loader2 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { Quiz, GameSettings } from "@/lib/types"
 
@@ -214,50 +214,53 @@ export function RulesDialog({ open, onOpenChange, quiz, onStartGame, isLoading =
                   transition={{ delay: 0.2 }}
                   className="space-y-6"
                 >
-                  {/* Time Settings */}
-                  <div className="space-y-3">
-                    <Label className="text-base font-semibold text-cyan-100 flex items-center gap-2 font-mono">
-                      <Clock className="h-4 w-4 text-cyan-400" />
-                      {t('timeLimit')}
-                    </Label>
-                    <Select
-                      value={String(timeLimitMinutes)}
-                      onValueChange={(value) => setTimeLimitMinutes(Number(value))}
-                    >
-                      <SelectTrigger className="w-full bg-black/30 border-cyan-400/30 text-white placeholder:text-cyan-200/60 backdrop-blur-sm focus:border-cyan-400 focus:ring-cyan-400/20 font-mono">
-                        <SelectValue placeholder={t('selectTimeLimit')} />
-                      </SelectTrigger>
-                      <SelectContent className="bg-black/90 border-cyan-400/30 backdrop-blur-xl">
-                        {getTimeLimitOptions().map((minutes) => (
-                          <SelectItem key={minutes} value={String(minutes)} className="text-cyan-100 hover:bg-cyan-400/30 hover:text-white focus:bg-cyan-400/30 focus:text-white font-mono transition-all duration-200 cursor-pointer">
-                            {minutes} {t('minutes')}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {/* Settings Grid - Side by Side */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Time Settings - Left */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold text-cyan-100 flex items-center gap-2 font-mono">
+                        <Clock className="h-4 w-4 text-cyan-400" />
+                        {t('timeLimit')}
+                      </Label>
+                      <Select
+                        value={String(timeLimitMinutes)}
+                        onValueChange={(value) => setTimeLimitMinutes(Number(value))}
+                      >
+                        <SelectTrigger className="w-full bg-black/30 border-cyan-400/30 text-white placeholder:text-cyan-200/60 backdrop-blur-sm focus:border-cyan-400 focus:ring-cyan-400/20 font-mono text-sm">
+                          <SelectValue placeholder={t('selectTimeLimit')} />
+                        </SelectTrigger>
+                        <SelectContent className="bg-black/90 border-cyan-400/30 backdrop-blur-xl">
+                          {getTimeLimitOptions().map((minutes) => (
+                            <SelectItem key={minutes} value={String(minutes)} className="text-cyan-100 hover:bg-cyan-400/30 hover:text-white focus:bg-cyan-400/30 focus:text-white font-mono transition-all duration-200 cursor-pointer">
+                              {minutes} {t('minutes')}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  {/* Question Count Settings */}
-                  <div className="space-y-3">
-                    <Label className="text-base font-semibold text-cyan-100 flex items-center gap-2 font-mono">
-                      <Hash className="h-4 w-4 text-cyan-400" />
-                      {t('numberOfQuestions')}
-                    </Label>
-                    <Select
-                      value={String(questionCount)}
-                      onValueChange={(value) => setQuestionCount(Number(value))}
-                    >
-                      <SelectTrigger className="w-full bg-black/30 border-cyan-400/30 text-white placeholder:text-cyan-200/60 backdrop-blur-sm focus:border-cyan-400 focus:ring-cyan-400/20 font-mono">
-                        <SelectValue placeholder={t('selectNumberOfQuestions')} />
-                      </SelectTrigger>
-                      <SelectContent className="bg-black/90 border-cyan-400/30 backdrop-blur-xl">
-                        {getQuestionOptions().map((count) => (
-                          <SelectItem key={count} value={String(count)} className="text-cyan-100 hover:bg-cyan-400/30 hover:text-white focus:bg-cyan-400/30 focus:text-white font-mono transition-all duration-200 cursor-pointer">
-                            {count} {t('questions')}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {/* Question Count Settings - Right */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold text-cyan-100 flex items-center gap-2 font-mono">
+                        <CircleHelp className="h-4 w-4 text-cyan-400" />
+                        {t('numberOfQuestions')}
+                      </Label>
+                      <Select
+                        value={String(questionCount)}
+                        onValueChange={(value) => setQuestionCount(Number(value))}
+                      >
+                        <SelectTrigger className="w-full bg-black/30 border-cyan-400/30 text-white placeholder:text-cyan-200/60 backdrop-blur-sm focus:border-cyan-400 focus:ring-cyan-400/20 font-mono text-sm">
+                          <SelectValue placeholder={t('selectNumberOfQuestions')} />
+                        </SelectTrigger>
+                        <SelectContent className="bg-black/90 border-cyan-400/30 backdrop-blur-xl">
+                          {getQuestionOptions().map((count) => (
+                            <SelectItem key={count} value={String(count)} className="text-cyan-100 hover:bg-cyan-400/30 hover:text-white focus:bg-cyan-400/30 focus:text-white font-mono transition-all duration-200 cursor-pointer">
+                              {count} {t('questions')}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
                   {/* Action Buttons */}
