@@ -14,7 +14,12 @@ export type TranslationKey =
   | 'quizNotFound' | 'goHome' | 'loadingQuiz' | 'waitingForHost' | 'progress' | 'questionOf'
   | 'questionImage'
   // Custom for select quiz page
-  | 'selectQuiz' | 'searchQuizzes' | 'allCategory' | 'starting'
+  | 'selectQuiz' | 'searchQuizzes' | 'allCategory' | 'starting' | 'quizzes' | 'searching' | 'loadingQuizzes'
+  | 'noQuizzesFound' | 'tryDifferentSearch' | 'createFirstQuiz' | 'addToFavorites' | 'adjustFilters' | 'clearFilters'
+  // Category translations
+  | 'selectCategory' | 'categoryAll' | 'categoryGeneral' | 'categoryScience' | 'categoryMath'
+  | 'categoryHistory' | 'categoryGeography' | 'categoryLanguage' | 'categoryTechnology'
+  | 'categorySports' | 'categoryEntertainment' | 'categoryBusiness' | 'categoryUnknown'
   // Rules dialog
   | 'gameRules' | 'timeLimit' | 'numberOfQuestions' | 'selectTimeLimit' | 'selectNumberOfQuestions' | 'minutes' | 'back' | 'creating'
   // Host page
@@ -148,12 +153,35 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     selectQuiz: 'Select Quiz',
     searchQuizzes: 'Search quizzes...',
     allCategory: 'All Category',
+    // Categories
+    selectCategory: 'Select Category',
+    categoryAll: 'All Categories',
+    categoryGeneral: 'General',
+    categoryScience: 'Science',
+    categoryMath: 'Math',
+    categoryHistory: 'History',
+    categoryGeography: 'Geography',
+    categoryLanguage: 'Language',
+    categoryTechnology: 'Technology',
+    categorySports: 'Sports',
+    categoryEntertainment: 'Entertainment',
+    categoryBusiness: 'Business',
+    categoryUnknown: 'Unknown',
     starting: 'Starting...',
+    quizzes: 'Quizzes',
+    searching: 'Searching...',
+    loadingQuizzes: 'Loading quizzes...',
+    noQuizzesFound: 'No quizzes found',
+    tryDifferentSearch: 'Try a different search term',
+    createFirstQuiz: 'Create your first quiz to get started',
+    addToFavorites: 'Add quizzes to your favorites',
+    adjustFilters: 'Adjust your filters',
+    clearFilters: 'Clear filters',
 
     // Rules dialog
     gameRules: 'Game Rules',
     timeLimit: 'Time Limit',
-    numberOfQuestions: 'Number of Questions',
+    numberOfQuestions: 'Questions',
     selectTimeLimit: 'Select time limit',
     selectNumberOfQuestions: 'Select number of questions',
     minutes: 'minutes',
@@ -395,8 +423,29 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     searchQuizzes: 'Cari kuis...',
     allCategory: 'Semua Kategori',
     starting: 'Memulai...',
-
-    // Rules dialog
+    // Categories
+    selectCategory: 'Pilih Kategori',
+    categoryAll: 'Semua Kategori',
+    categoryGeneral: 'Umum',
+    categoryScience: 'Sains',
+    categoryMath: 'Matematika',
+    categoryHistory: 'Sejarah',
+    categoryGeography: 'Geografi',
+    categoryLanguage: 'Bahasa',
+    categoryTechnology: 'Teknologi',
+    categorySports: 'Olahraga',
+    categoryEntertainment: 'Hiburan',
+    categoryBusiness: 'Bisnis',
+    categoryUnknown: 'Tidak Diketahui',
+    quizzes: 'Kuis',
+    searching: 'Mencari...',
+    loadingQuizzes: 'Memuat kuis...',
+    noQuizzesFound: 'Kuis tidak ditemukan',
+    tryDifferentSearch: 'Coba kata kunci pencarian lain',
+    createFirstQuiz: 'Buat kuis pertama Anda untuk memulai',
+    addToFavorites: 'Tambahkan kuis ke favorit',
+    adjustFilters: 'Sesuaikan filter Anda',
+    clearFilters: 'Hapus filter',
     gameRules: 'Aturan Permainan',
     timeLimit: 'Batas Waktu',
     numberOfQuestions: 'Jumlah Pertanyaan',
@@ -641,8 +690,29 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     searchQuizzes: '搜索测验...',
     allCategory: '全部分类',
     starting: '开始中...',
-
-    // Rules dialog
+    // Categories
+    selectCategory: '选择分类',
+    categoryAll: '全部分类',
+    categoryGeneral: '综合',
+    categoryScience: '科学',
+    categoryMath: '数学',
+    categoryHistory: '历史',
+    categoryGeography: '地理',
+    categoryLanguage: '语言',
+    categoryTechnology: '技术',
+    categorySports: '体育',
+    categoryEntertainment: '娱乐',
+    categoryBusiness: '商业',
+    categoryUnknown: '未知',
+    quizzes: '测验',
+    searching: '搜索中...',
+    loadingQuizzes: '加载测验中...',
+    noQuizzesFound: '找不到测验',
+    tryDifferentSearch: '请尝试不同的搜索关键词',
+    createFirstQuiz: '创建您的第一个测验开始',
+    addToFavorites: '将测验添加到收藏夹',
+    adjustFilters: '调整您的筛选条件',
+    clearFilters: '清除筛选',
     gameRules: '游戏规则',
     timeLimit: '时间限制',
     numberOfQuestions: '题目数量',
