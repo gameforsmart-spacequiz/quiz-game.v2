@@ -463,14 +463,19 @@ export default function HostContent({ gameCode }: HostContentProps) {
         console.log('[Host] Setting players:', playersData)
         setPlayers(playersData as any)
 
-        const quizzes = await fetchQuizzes()
-        const found = quizzes.find((q) => q.id === sessionQuizId)
-        if (!found) {
+        // Fetch quiz by ID directly (optimized - no need to fetch all quizzes)
+        const { data: quizData, error: quizError } = await supabase
+          .from("quizzes")
+          .select("*")
+          .eq("id", sessionQuizId)
+          .single()
+
+        if (quizError || !quizData) {
           toast.error("Quiz not found!")
           router.replace("/")
           return
         }
-        setQuiz(found)
+        setQuiz(quizData)
         setLoading(false)
         return
       }
@@ -503,14 +508,19 @@ export default function HostContent({ gameCode }: HostContentProps) {
       setStartedAt(gameData.started_at)
       setShowLeaderboard(gameData.status === 'finished')
 
-      const quizzes = await fetchQuizzes()
-      const found = quizzes.find((q) => q.id === gameData.quiz_id)
-      if (!found) {
+      // Fetch quiz by ID directly (optimized - no need to fetch all quizzes)
+      const { data: quizData, error: quizError } = await supabase
+        .from("quizzes")
+        .select("*")
+        .eq("id", gameData.quiz_id)
+        .single()
+
+      if (quizError || !quizData) {
         toast.error("Quiz not found!")
         router.replace("/")
         return
       }
-      setQuiz(found)
+      setQuiz(quizData)
       setLoading(false)
     }
     fetchData()
@@ -527,7 +537,12 @@ export default function HostContent({ gameCode }: HostContentProps) {
       const newGameCode = generateGameCode()
       const newGameId = generateXID()
 
-      // Create new game session in Supabase B
+      // Shuffle questions and limit based on questionCount (same as select-quiz page)
+      const allQuestions = [...(quiz.questions || [])]
+      const shuffled = allQuestions.sort(() => Math.random() - 0.5)
+      const questionsToUse = shuffled.slice(0, gameSettings.questionCount || 10)
+
+      // Create new game session in Supabase B with current_questions
       const session = await createGameSession({
         id: newGameId,
         game_pin: newGameCode,
@@ -542,7 +557,8 @@ export default function HostContent({ gameCode }: HostContentProps) {
         },
         timestamps: {
           created_at: new Date().toISOString()
-        }
+        },
+        current_questions: questionsToUse // Shuffled questions saved here
       })
 
       if (!session) {
