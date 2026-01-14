@@ -109,7 +109,7 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
   const form = useForm<JoinGameForm>({
     resolver: zodResolver(joinGameSchema),
     defaultValues: {
-      name: profile?.fullname || profile?.username || "",
+      name: profile?.nickname || profile?.fullname || profile?.username || "",
       gameCode: initialGameCode,
     },
   })
@@ -148,7 +148,7 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
   // Update name and avatar when profile changes
   useEffect(() => {
     if (profile) {
-      const displayName = profile.fullname || profile.username || ""
+      const displayName = profile.nickname || profile.fullname || profile.username || ""
       form.setValue("name", displayName)
 
       // Set Google avatar as default if available
