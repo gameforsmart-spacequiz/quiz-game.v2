@@ -333,7 +333,7 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
   id: {
     // Main page
     title: 'KUIS RUANG ANGKASA',
-    subtitle: 'Jelajahi. Pelajari. Taklukkan!',
+    subtitle: 'Jelajahi - Pelajari - Taklukkan',
     host: 'HOST',
     tryout: 'COBA',
     join: 'GABUNG',
@@ -567,7 +567,7 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     alreadyHaveAccount: 'Sudah punya akun?',
     signIn: 'Masuk',
     fullName: 'Nama Lengkap',
-    username: 'Nama Pengguna',
+    username: 'Nama',
     email: 'Email',
     password: 'Kata Sandi',
     confirmPassword: 'Konfirmasi Kata Sandi',
@@ -600,7 +600,7 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
   zh: {
     // Main page
     title: '太空问答',
-    subtitle: '探索。学习。征服！',
+    subtitle: '探索 - 学习 - 征服',
     host: '主持',
     tryout: '试玩',
     join: '加入',
