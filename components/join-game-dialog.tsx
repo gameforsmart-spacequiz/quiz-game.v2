@@ -165,12 +165,23 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
   const extractGameCodeFromUrl = (input: string): string => {
     try {
       // Check if input contains a URL
-      if (input.includes("http") || input.includes("player?code=") || input.includes("?code=")) {
+      if (input.includes("http") || input.includes("player?code=") || input.includes("?code=") || input.includes("/join/")) {
         let url: URL
         try {
           url = new URL(input)
         } catch {
           // If input is not a full URL, try to parse it as a relative URL
+          // Try new /join/[code] format first
+          if (input.includes("/join/")) {
+            const parts = input.split("/join/")
+            if (parts.length > 1) {
+              const code = parts[1].split("?")[0].split("#")[0].split("/")[0].trim()
+              if (code.length === 6 && /^[A-Z0-9]{6}$/i.test(code)) {
+                return code.toUpperCase()
+              }
+            }
+          }
+          // Fallback to old ?code= format
           if (input.includes("?code=")) {
             const parts = input.split("?code=")
             if (parts.length > 1) {
@@ -182,6 +193,14 @@ export function JoinGameDialog({ open, onOpenChange, initialGameCode = "" }: Joi
           }
           return input.toUpperCase()
         }
+
+        // Try new /join/[code] path format first
+        const pathMatch = url.pathname.match(/\/join\/([A-Z0-9]{6})/i)
+        if (pathMatch && pathMatch[1]) {
+          return pathMatch[1].toUpperCase()
+        }
+
+        // Fallback to old ?code= format
         const code = url.searchParams.get("code")
         if (code && code.length === 6 && /^[A-Z0-9]{6}$/i.test(code)) {
           return code.toUpperCase()

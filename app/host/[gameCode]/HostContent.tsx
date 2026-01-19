@@ -156,7 +156,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
   useEffect(() => {
     setMounted(true)
-    setJoinUrl(`${window.location.origin}/?code=${gameCode}`)
+    setJoinUrl(`${window.location.origin}/join/${gameCode}`)
   }, [gameCode])
 
   const calculateRanking = (players: PlayerProgress[]): PlayerProgress[] => {
