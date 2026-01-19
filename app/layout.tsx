@@ -12,8 +12,41 @@ const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' });
 const orbitron = Orbitron({ subsets: ['latin'], variable: '--font-orbitron', weight: ['400', '500', '600', '700', '800', '900'] });
 
 export const metadata: Metadata = {
-  title: 'Space-Quiz',
-  description: 'Play a quiz game with your friends!',
+  title: {
+    default: 'Space-Quiz',
+    template: '%s | Space-Quiz',
+  },
+  description: 'Space-Quiz adalah platform game kuis interaktif yang seru dan edukatif! Mainkan berbagai trivia bersama teman, tantang pengetahuanmu, dan jadilah juara di antariksa pengetahuan. Cocok untuk pembelajaran, hiburan, dan kompetisi.',
+  keywords: ['quiz', 'space', 'trivia', 'game', 'edukasi', 'kuis online', 'game edukasi', 'trivia game', 'multiplayer quiz', 'belajar seru'],
+  authors: [{ name: 'Space-Quiz Team' }],
+  creator: 'Space-Quiz',
+  publisher: 'Space-Quiz',
+  robots: {
+    index: true,
+    follow: true,
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'id_ID',
+    url: 'https://space-quiz.vercel.app',
+    siteName: 'Space-Quiz',
+    title: 'Space-Quiz',
+    description: 'Space-Quiz adalah platform game kuis interaktif yang seru dan edukatif! Mainkan berbagai trivia bersama teman, tantang pengetahuanmu, dan jadilah juara di antariksa pengetahuan.',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Space-Quiz - Game Kuis Interaktif',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Space-Quiz',
+    description: 'Space-Quiz adalah platform game kuis interaktif yang seru dan edukatif! Mainkan berbagai trivia bersama teman.',
+    images: ['/og-image.png'],
+  },
   manifest: '/site.webmanifest',
   icons: {
     icon: [
