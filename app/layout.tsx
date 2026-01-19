@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     description: 'Space-Quiz adalah platform game kuis interaktif yang seru dan edukatif! Mainkan berbagai trivia bersama teman, tantang pengetahuanmu, dan jadilah juara di antariksa pengetahuan.',
     images: [
       {
-        url: '/og-image.png',
+        url: '/public/images/logo/spacequizv2.webp',
         width: 1200,
         height: 630,
         alt: 'Space-Quiz - Game Kuis Interaktif',
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Space-Quiz',
     description: 'Space-Quiz adalah platform game kuis interaktif yang seru dan edukatif! Mainkan berbagai trivia bersama teman.',
-    images: ['/og-image.png'],
+    images: ['/public/images/logo/spacequizv2.webp'],
   },
   manifest: '/site.webmanifest',
   icons: {
