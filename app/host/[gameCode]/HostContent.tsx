@@ -35,7 +35,7 @@ import { supabase } from "@/lib/supabase"
 import { supabaseB, isSupabaseBAvailable } from "@/lib/supabase-b"
 import { finalizeGame, syncGameToMainDatabase } from "@/lib/sync-manager"
 import { getGameSessionByPin, createGameSession, updateGameSession, subscribeToGameSession } from "@/lib/sessions-api"
-import { getParticipantsByGameId, subscribeToGameParticipants } from "@/lib/participants-api"
+import { getParticipantsByGameId, subscribeToGameParticipants, deleteParticipant } from "@/lib/participants-api"
 import { generateGameCode } from "@/lib/game-utils"
 import { fetchQuizzes } from "@/lib/dummy-data"
 import { toast, Toaster } from "sonner"
@@ -988,87 +988,115 @@ export default function HostContent({ gameCode }: HostContentProps) {
     let playersSubscription: ReturnType<typeof supabase.channel> | null = null
 
     if (isSupabaseBSession) {
-      // Subscribe to Supabase B participant table
+      // Helper function to refresh participants and update state
+      const refreshParticipants = async () => {
+        console.log('[Host] 🔄 Refreshing participants list...')
+        const participants = await getParticipantsByGameId(gameId)
+        const playersData = participants.map((p) => ({
+          id: p.id,
+          name: p.nickname,
+          nickname: p.nickname,
+          avatar: p.avatar || '',
+          score: p.score || 0,
+          questions_answered: p.questions_answered || 0,
+          joined_at: p.joined_at || new Date().toISOString()
+        }))
+        setPlayers(playersData as any)
+
+        // Update player progress with new data
+        const progressMap = new Map<string, PlayerProgress>()
+        playersData.forEach((player) => {
+          const answeredQuestions = player.questions_answered || 0
+          const totalQuestions = gameSettings.questionCount || 10
+
+          progressMap.set(player.id, {
+            id: player.id,
+            name: player.name || player.nickname,
+            avatar: player.avatar || "/placeholder.svg?height=40&width=40&text=Player",
+            score: player.score || 0,
+            currentQuestion: answeredQuestions,
+            totalQuestions,
+            isActive: answeredQuestions < totalQuestions,
+            rank: 0,
+          })
+        })
+
+        const sorted = Array.from(progressMap.values()).sort((a, b) => b.score - a.score)
+        const ranked = sorted.map((p, idx) => ({ ...p, rank: idx + 1 }))
+        setPlayerProgress(ranked)
+
+        // AUTO-FINISH CHECK FOR REALTIME UPDATES
+        console.log('[Host] Checking auto-finish. Started:', quizStarted, 'ShowLeaderboard:', showLeaderboard, 'Ranked:', ranked.length)
+
+        if (quizStarted && !showLeaderboard && ranked.length > 0) {
+          const activePlayers = ranked.filter(p => p.currentQuestion > 0)
+          const allCompleted = activePlayers.length > 0 && activePlayers.every(p => p.currentQuestion >= p.totalQuestions)
+
+          console.log('[Host] Active Players:', activePlayers.length, 'All Completed:', allCompleted)
+
+          if (allCompleted) {
+            if (startedAt) {
+              const startTime = new Date(startedAt).getTime()
+              const duration = Date.now() - startTime
+              console.log('[Host] Game Duration:', duration, 'ms')
+
+              if (duration > 1000) {
+                console.log('[Host] Auto-finishing game via Realtime...')
+                await finalizeGame(gameId)
+                setQuizStarted(false)
+                setShowLeaderboard(true)
+              }
+            }
+          }
+        }
+      }
+
+      // Subscribe to Supabase B participant table - separate listeners for better reliability
       playersSubscription = supabaseB
         .channel(`host-participants-${gameId}`)
         .on(
           "postgres_changes",
-          { event: "*", schema: "public", table: "participant", filter: `game_id=eq.${gameId}` },
-          async () => {
-            // Refresh participants list from Supabase B and update progress
-            const participants = await getParticipantsByGameId(gameId)
-            const playersData = participants.map((p) => ({
-              id: p.id,
-              name: p.nickname,
-              nickname: p.nickname,
-              avatar: p.avatar || '',
-              score: p.score || 0,
-              questions_answered: p.questions_answered || 0,
-              joined_at: p.joined_at || new Date().toISOString()
-            }))
-            setPlayers(playersData as any)
-
-            // Update player progress with new data
-            const progressMap = new Map<string, PlayerProgress>()
-            playersData.forEach((player) => {
-              const answeredQuestions = player.questions_answered || 0
-              const totalQuestions = gameSettings.questionCount || 10
-
-              progressMap.set(player.id, {
-                id: player.id,
-                name: player.name || player.nickname,
-                avatar: player.avatar || "/placeholder.svg?height=40&width=40&text=Player",
-                score: player.score || 0,
-                currentQuestion: answeredQuestions,
-                totalQuestions,
-                isActive: answeredQuestions < totalQuestions,
-                rank: 0,
-              })
-            })
-
-            const sorted = Array.from(progressMap.values()).sort((a, b) => b.score - a.score)
-            const ranked = sorted.map((p, idx) => ({ ...p, rank: idx + 1 }))
-            setPlayerProgress(ranked)
-
-            // AUTO-FINISH CHECK FOR REALTIME UPDATES
-            console.log('[Host] Checking auto-finish. Started:', quizStarted, 'ShowLeaderboard:', showLeaderboard, 'Ranked:', ranked.length)
-
-            if (quizStarted && !showLeaderboard && ranked.length > 0) {
-              const activePlayers = ranked.filter(p => p.currentQuestion > 0)
-              const allCompleted = activePlayers.length > 0 && activePlayers.every(p => p.currentQuestion >= p.totalQuestions)
-
-              console.log('[Host] Active Players:', activePlayers.length, 'All Completed:', allCompleted)
-
-              if (allCompleted) {
-                // Double check duration to prevent premature finish on fast clicks (min 10s safety)
-                if (startedAt) {
-                  const startTime = new Date(startedAt).getTime()
-                  const duration = Date.now() - startTime
-                  console.log('[Host] Game Duration:', duration, 'ms')
-
-                  if (duration > 1000) { // Reduced to 1 second to avoid delay
-                    console.log('[Host] Auto-finishing game via Realtime...')
-
-                    // Use Sync Manager to sync to main DB and update status
-                    await finalizeGame(gameId)
-
-                    setQuizStarted(false)
-                    setShowLeaderboard(true)
-                  } else {
-                    console.log('[Host] Game too short to auto-finish')
-                  }
-                } else {
-                  console.log('[Host] startedAt is missing, cannot check duration')
-                }
-              }
-            }
+          { event: "INSERT", schema: "public", table: "participant", filter: `game_id=eq.${gameId}` },
+          async (payload) => {
+            console.log('[Host] 📥 Participant INSERT event:', payload)
+            await refreshParticipants()
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "participant", filter: `game_id=eq.${gameId}` },
+          async (payload) => {
+            console.log('[Host] 🔄 Participant UPDATE event:', payload)
+            await refreshParticipants()
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "DELETE", schema: "public", table: "participant", filter: `game_id=eq.${gameId}` },
+          async (payload) => {
+            console.log('[Host] 🗑️ Participant DELETE event:', payload)
+            // Player left or was kicked - refresh the list
+            await refreshParticipants()
           }
         )
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
-            console.log('[Host] Subscribed to Supabase B participants')
+            console.log('[Host] ✅ Subscribed to Supabase B participants (INSERT, UPDATE, DELETE)')
           }
         })
+
+      // Polling fallback: Check every 5 seconds for player updates
+      // This ensures UI stays in sync even if real-time fails
+      const playerPollInterval = setInterval(async () => {
+        await refreshParticipants()
+      }, 5000)
+
+      // Store cleanup for polling
+      const originalUnsubscribe = playersSubscription.unsubscribe.bind(playersSubscription)
+      playersSubscription.unsubscribe = () => {
+        clearInterval(playerPollInterval)
+        return originalUnsubscribe()
+      }
     } else {
       // Legacy: Subscribe to main Supabase game_sessions for participant updates
       playersSubscription = supabase
@@ -1482,42 +1510,76 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
   // Execute kick after confirmation
   const executeKickPlayer = async () => {
-    if (!playerToKick) return
+    if (!playerToKick || !gameId) return
+
+    const playerIdToKick = playerToKick.id
+    const playerNameToKick = playerToKick.name
+
+    // Close modal immediately for better UX
+    setShowKickModal(false)
+    setPlayerToKick(null)
+
+    // Update local state IMMEDIATELY for instant UI feedback
+    setPlayers(prev => prev.filter(p => p.id !== playerIdToKick))
+    setPlayerProgress(prev => prev.filter(p => p.id !== playerIdToKick))
 
     try {
-      // Remove player from participants array
-      const { data: gameSession, error: gameError } = await supabase
-        .from("game_sessions")
-        .select("participants")
-        .eq("id", gameId)
-        .single()
+      if (isSupabaseBSession) {
+        // Supabase B: Delete from participant table for real-time sync to player
+        console.log("[HOST] 🔄 Kicking player from Supabase B:", playerIdToKick)
 
-      if (gameError) {
-        console.error("Error fetching game session:", gameError)
-        return
+        const success = await deleteParticipant(playerIdToKick)
+
+        if (!success) {
+          console.error("[HOST] ❌ Failed to delete participant from Supabase B")
+          // Re-fetch players to restore state if delete failed
+          const participants = await getParticipantsByGameId(gameId)
+          const playersData = participants.map((p) => ({
+            id: p.id,
+            name: p.nickname,
+            nickname: p.nickname,
+            avatar: p.avatar || '',
+            score: p.score || 0,
+            joined_at: p.joined_at || new Date().toISOString()
+          }))
+          setPlayers(playersData as any)
+          toast.error("Failed to kick player")
+          return
+        }
+
+        console.log("[HOST] ✅ Player kicked successfully from Supabase B")
+      } else {
+        // Legacy: Update game_sessions participants array
+        console.log("[HOST] 🔄 Kicking player from legacy session:", playerIdToKick)
+
+        const { data: gameSession, error: gameError } = await supabase
+          .from("game_sessions")
+          .select("participants")
+          .eq("id", gameId)
+          .single()
+
+        if (gameError) {
+          console.error("[HOST] ❌ Error fetching game session:", gameError)
+          return
+        }
+
+        const updatedParticipants = (gameSession.participants || []).filter((p: any) => p.id !== playerIdToKick)
+
+        const { error } = await supabase
+          .from("game_sessions")
+          .update({ participants: updatedParticipants })
+          .eq("id", gameId)
+
+        if (error) {
+          console.error("[HOST] ❌ Error updating game session:", error)
+          return
+        }
+
+        console.log("[HOST] ✅ Player kicked successfully from legacy session")
       }
-
-      const updatedParticipants = gameSession.participants.filter((p: any) => p.id !== playerToKick.id)
-
-      const { data, error } = await supabase
-        .from("game_sessions")
-        .update({ participants: updatedParticipants })
-        .eq("id", gameId)
-        .select()
-
-      if (error) {
-        console.error("[HOST] ❌ Error kicking player:", error)
-        return
-      }
-
-      // The real-time listener will automatically handle removing the player from state
-      // and the player's page will automatically detect the deletion and redirect
-
     } catch (error) {
       console.error("[HOST] ❌ Error in kickPlayer:", error)
-    } finally {
-      setShowKickModal(false)
-      setPlayerToKick(null)
+      toast.error("Error kicking player")
     }
   }
 

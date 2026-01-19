@@ -622,6 +622,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
 
     let sessionSubscription: ReturnType<typeof supabase.channel> | null = null
     let participantSubscription: ReturnType<typeof supabaseB.channel> | null = null
+    let kickCheckInterval: NodeJS.Timeout | null = null
 
     if (isSupabaseBSession) {
       // Subscribe to Supabase B sessions table
@@ -664,27 +665,16 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
         })
 
       // Subscribe to Supabase B participant table for player updates
+      // Handle INSERT, UPDATE separately from DELETE for better detection
       participantSubscription = supabaseB
         .channel(`participants-${gameId}`)
         .on(
           "postgres_changes",
-          { event: "*", schema: "public", table: "participant", filter: `game_id=eq.${gameId}` },
+          { event: "INSERT", schema: "public", table: "participant", filter: `game_id=eq.${gameId}` },
           async (payload) => {
-            // Refresh participants list
+            console.log("[WAIT] 📥 Participant INSERT event:", payload)
+            // Refresh participants list for new player
             const participants = await getParticipantsByGameId(gameId)
-
-            // Check if current player was kicked
-            const playerStillExists = participants.some((p) => p.nickname === playerName)
-            if (!playerStillExists && !isExiting) {
-              toast.error("You have been kicked from the game by the host")
-              await cleanupPresence()
-              clearGame?.()
-              localStorage.removeItem("player")
-              router.replace("/")
-              return
-            }
-
-            // Update players list
             const playersData = participants.map((participant, index) => ({
               id: participant.id || `player-${index}`,
               name: participant.nickname,
@@ -694,7 +684,77 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
             setAllPlayers(playersData)
           }
         )
-        .subscribe()
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "participant", filter: `game_id=eq.${gameId}` },
+          async (payload) => {
+            console.log("[WAIT] 🔄 Participant UPDATE event:", payload)
+            // Refresh participants list
+            const participants = await getParticipantsByGameId(gameId)
+            const playersData = participants.map((participant, index) => ({
+              id: participant.id || `player-${index}`,
+              name: participant.nickname,
+              avatar: participant.avatar || '',
+              created_at: participant.joined_at || new Date().toISOString()
+            }))
+            setAllPlayers(playersData)
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "DELETE", schema: "public", table: "participant", filter: `game_id=eq.${gameId}` },
+          async (payload) => {
+            console.log("[WAIT] 🗑️ Participant DELETE event:", payload)
+            // Check if the deleted participant is the current player
+            const deletedParticipant = payload.old as any
+
+            if (deletedParticipant && deletedParticipant.nickname === playerName && !isExiting) {
+              console.log("[WAIT] ⚠️ Current player was kicked!")
+              toast.error("You have been kicked from the game by the host")
+              await cleanupPresence()
+              clearGame?.()
+              localStorage.removeItem("player")
+              router.replace("/")
+              return
+            }
+
+            // Refresh participants list for other players
+            const participants = await getParticipantsByGameId(gameId)
+            const playersData = participants.map((participant, index) => ({
+              id: participant.id || `player-${index}`,
+              name: participant.nickname,
+              avatar: participant.avatar || '',
+              created_at: participant.joined_at || new Date().toISOString()
+            }))
+            setAllPlayers(playersData)
+          }
+        )
+        .subscribe((status) => {
+          console.log("[WAIT] Participant subscription status:", status)
+        })
+
+      // Polling fallback: Check every 3 seconds if player still exists
+      // This ensures kick detection even if real-time fails
+      kickCheckInterval = setInterval(async () => {
+        if (isExiting || isRedirecting) return
+
+        try {
+          const participants = await getParticipantsByGameId(gameId)
+          const playerStillExists = participants.some((p) => p.nickname === playerName)
+
+          if (!playerStillExists && !isExiting) {
+            console.log("[WAIT] 🔍 Polling detected: Player was kicked!")
+            clearInterval(kickCheckInterval!)
+            toast.error("You have been kicked from the game by the host")
+            await cleanupPresence()
+            clearGame?.()
+            localStorage.removeItem("player")
+            router.replace("/")
+          }
+        } catch (error) {
+          console.error("[WAIT] Error in kick check polling:", error)
+        }
+      }, 3000)
 
     } else {
       // Legacy: Subscribe to main Supabase game_sessions table
@@ -784,6 +844,7 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
       sessionSubscription?.unsubscribe()
       participantSubscription?.unsubscribe()
       if (countdownInterval) clearInterval(countdownInterval)
+      if (kickCheckInterval) clearInterval(kickCheckInterval)
     }
   }, [loading, gameId, gameCode, router, isRedirecting, playerName, clearGame, isExiting, isSupabaseBSession])
 
