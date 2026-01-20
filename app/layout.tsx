@@ -12,7 +12,7 @@ const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' });
 const orbitron = Orbitron({ subsets: ['latin'], variable: '--font-orbitron', weight: ['400', '500', '600', '700', '800', '900'] });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://space-quiz.vercel.app'),
+  metadataBase: new URL('https://spacequizv1.vercel.app'),
   title: {
     default: 'Space-Quiz',
     template: '%s | Space-Quiz',
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     'game multiplayer',
     'quiz indonesia'
   ],
-  authors: [{ name: 'Space-Quiz Team', url: 'https://space-quiz.vercel.app' }],
+  authors: [{ name: 'Space-Quiz Team', url: 'https://spacequizv1.vercel.app' }],
   creator: 'Space-Quiz Team',
   publisher: 'Space-Quiz',
   applicationName: 'Space-Quiz',
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'id_ID',
     alternateLocale: ['en_US'],
-    url: 'https://space-quiz.vercel.app',
+    url: 'https://spacequizv1.vercel.app',
     siteName: 'Space-Quiz',
     title: 'Space-Quiz',
     description: 'Space-Quiz adalah platform game kuis interaktif yang seru dan edukatif! Mainkan berbagai trivia bersama teman, tantang pengetahuanmu, dan jadilah juara di antariksa pengetahuan.',
