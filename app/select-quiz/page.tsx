@@ -740,7 +740,7 @@ export default function SelectQuizPage() {
                               }}
                             />
                             {/* Gradient Overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/50 z-10" />
                           </>
                         ) : (
                           <div className="absolute inset-0 bg-gradient-to-br from-purple-900/50 to-blue-900/50" />
