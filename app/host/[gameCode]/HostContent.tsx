@@ -2979,7 +2979,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
                       {/* Warning Message */}
                       <div className="text-center px-2">
                         <p className="text-white text-lg sm:text-xl font-medium leading-relaxed">
-                          Are you sure? The game session will end.
+                          {t('exitGameConfirmMessage')}
                         </p>
                       </div>
 

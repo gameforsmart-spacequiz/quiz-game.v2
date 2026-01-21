@@ -24,7 +24,7 @@ export type TranslationKey =
   | 'gameRules' | 'timeLimit' | 'numberOfQuestions' | 'selectTimeLimit' | 'selectNumberOfQuestions' | 'minutes' | 'back' | 'creating'
   // Host page
   | 'spaceQuiz' | 'startQuiz' | 'exitGame' | 'waitingForPlayersToJoin'
-  | 'playersLabel' | 'exitGameQuestion' | 'exitGameWarning' | 'endSession'
+  | 'playersLabel' | 'exitGameQuestion' | 'exitGameWarning' | 'exitGameConfirmMessage' | 'endSession'
   // Tryout play
   | 'currentQuestion' | 'answered' | 'unanswered' | 'complete' | 'totalQuestions' | 'alreadyAnswered' | 'notAnsweredYet' | 'stillUnanswered'
   | 'questionNumber' | 'notAnswered' | 'questionsRandomized' | 'unansweredQuestions'
@@ -196,6 +196,7 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     playersLabel: 'Players',
     exitGameQuestion: 'Exit Game?',
     exitGameWarning: 'Are you sure you want to exit? The game session will end immediately and all players will be disconnected.',
+    exitGameConfirmMessage: 'Are you sure? The game session will end.',
     endSession: 'Exit',
     // Tryout play
     currentQuestion: 'Current',
@@ -463,6 +464,7 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     playersLabel: 'Pemain',
     exitGameQuestion: 'Keluar dari Permainan?',
     exitGameWarning: 'Apakah Anda yakin ingin keluar? Sesi permainan akan segera berakhir dan semua pemain akan terputus.',
+    exitGameConfirmMessage: 'Apakah Anda yakin? Sesi permainan akan berakhir.',
     endSession: 'Keluar',
     // Tryout play
     currentQuestion: 'Saat ini',
@@ -730,6 +732,7 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     playersLabel: '玩家',
     exitGameQuestion: '退出游戏？',
     exitGameWarning: '确定要退出吗？当前游戏会立即结束，所有玩家将断开连接。',
+    exitGameConfirmMessage: '确定要退出吗？游戏将结束。',
     endSession: '退出',
     // Tryout play
     currentQuestion: '当前',
