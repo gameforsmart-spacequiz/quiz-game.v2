@@ -7,27 +7,33 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { PWAInstallPrompt } from '@/components/pwa-install-prompt';
 
-// Optimized font loading with display: swap and preload
+// Optimized font loading with display: swap, fallback fonts, and selective preload
 const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
   preload: true,
   variable: '--font-inter',
+  fallback: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+  adjustFontFallback: true,
 });
 
 const outfit = Outfit({
   subsets: ['latin'],
   variable: '--font-outfit',
   display: 'swap',
-  preload: true,
+  preload: false, // Don't preload secondary fonts
+  fallback: ['system-ui', 'sans-serif'],
+  adjustFontFallback: true,
 });
 
 const orbitron = Orbitron({
   subsets: ['latin'],
   variable: '--font-orbitron',
-  weight: ['400', '500', '600', '700', '800', '900'],
+  weight: ['400', '700', '900'], // Only load essential weights
   display: 'swap',
-  preload: true,
+  preload: false, // Don't preload decorative fonts
+  fallback: ['monospace'],
+  adjustFontFallback: true,
 });
 
 export const metadata: Metadata = {
