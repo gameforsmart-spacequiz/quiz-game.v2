@@ -1,11 +1,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
-body {
-  font-family: 'Press Start 2P', cursive;
-}
+/* Font loaded via preconnect in layout.tsx for better performance */
 
 :root {
   --foreground-rgb: 0, 0, 0;
@@ -479,15 +476,34 @@ body {
     }
   }
 
-  /* Optimize backdrop blur for mobile */
+  /* CRITICAL: Reduce backdrop-blur intensity on mobile for better performance */
+  .backdrop-blur-sm {
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+  }
+
   .backdrop-blur-md {
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(6px) !important;
+    -webkit-backdrop-filter: blur(6px) !important;
+  }
+
+  .backdrop-blur-lg {
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
   }
 
   /* Reduce shadow complexity on mobile */
   .shadow-lg {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .shadow-xl {
+    box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Optimize transition durations on mobile */
+  .transition-all {
+    transition-duration: 150ms !important;
   }
 }
 

@@ -7,9 +7,28 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { PWAInstallPrompt } from '@/components/pwa-install-prompt';
 
-const inter = Inter({ subsets: ['latin'] });
-const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' });
-const orbitron = Orbitron({ subsets: ['latin'], variable: '--font-orbitron', weight: ['400', '500', '600', '700', '800', '900'] });
+// Optimized font loading with display: swap and preload
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  preload: true,
+  variable: '--font-inter',
+});
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  variable: '--font-outfit',
+  display: 'swap',
+  preload: true,
+});
+
+const orbitron = Orbitron({
+  subsets: ['latin'],
+  variable: '--font-orbitron',
+  weight: ['400', '500', '600', '700', '800', '900'],
+  display: 'swap',
+  preload: true,
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://spacequizv1.vercel.app'),
@@ -125,6 +144,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        {/* Preconnect to external domains for faster loading */}
+        <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://images.unsplash.com" />
+        <link rel="preconnect" href="https://plus.unsplash.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://plus.unsplash.com" />
+        {/* Preconnect to Supabase */}
+        <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL || ''} crossOrigin="anonymous" />
+      </head>
       <body className={`${inter.className} ${outfit.variable} ${orbitron.variable}`}>
         <ErrorBoundary>
           <LanguageProvider>

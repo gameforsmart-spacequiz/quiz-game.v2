@@ -1657,58 +1657,31 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
     if (gameId) {
       try {
-        const endedAt = new Date().toISOString()
-
         if (isSupabaseBSession) {
-          const { data: currentSession } = await supabaseB
-            .from("sessions")
-            .select("timestamps")
-            .eq("id", gameId)
-            .single()
+          // Delete all participants first (foreign key constraint)
+          await supabaseB
+            .from("participants")
+            .delete()
+            .eq("session_id", gameId)
 
-          const currentTimestamps = currentSession?.timestamps || {}
-          let parsedTimestamps = currentTimestamps;
-          if (typeof parsedTimestamps === 'string') {
-            try {
-              parsedTimestamps = JSON.parse(parsedTimestamps);
-              if (typeof parsedTimestamps === 'string') parsedTimestamps = JSON.parse(parsedTimestamps);
-            } catch (e) {
-              console.error("Failed to parse timestamps in exit-cleanup", e);
-              if (typeof parsedTimestamps === 'string') parsedTimestamps = {};
-            }
-          }
-
+          // Delete the session completely
           await supabaseB
             .from("sessions")
-            .update({
-              status: 'finish',
-              timestamps: {
-                ...parsedTimestamps,
-                ended_at: endedAt,
-              }
-            })
+            .delete()
             .eq("id", gameId)
 
-          // Sync to main database before exit
-          if (gameId) await syncGameToMainDatabase(gameId).catch(err =>
-            console.error("[Host] Exit sync failed:", err)
-          )
+          console.log("[Host] Session and participants deleted from Supabase B")
         } else {
+          // Delete the game session completely from main Supabase
           await supabase
             .from("game_sessions")
-            .update({
-              status: 'finished',
-              ended_at: endedAt,
-            })
+            .delete()
             .eq("id", gameId)
 
-          // Clear participants array
-          await supabase
-            .from("game_sessions")
-            .update({ participants: [] })
-            .eq("id", gameId)
+          console.log("[Host] Session deleted from main Supabase")
         }
-      } catch {
+      } catch (err) {
+        console.error("[Host] Failed to delete session:", err)
         // Silent fail - we're already navigating away
       }
     }
