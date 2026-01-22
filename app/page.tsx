@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { Play, Users, Gamepad2, Sparkles, Star } from "lucide-react"
+import { Play, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { JoinGameDialog } from "@/components/join-game-dialog"
 import { TutorialModal } from "@/components/tutorial-modal"

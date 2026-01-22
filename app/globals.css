@@ -505,6 +505,19 @@
   .transition-all {
     transition-duration: 150ms !important;
   }
+
+  /* Disable heavy animations on mobile by default for better performance */
+  .animate-blob,
+  .galaxy-rotate,
+  .floating-star,
+  .cosmic-ring,
+  .cosmic-ring-slow,
+  .orbit-inner,
+  .orbit-middle,
+  .orbit-outer,
+  .orbit-far {
+    animation: none !important;
+  }
 }
 
 /* Low-end device optimizations */
