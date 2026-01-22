@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { motion, type Transition } from "framer-motion"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
+import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useGameStore } from "@/lib/store"
@@ -40,7 +41,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { RulesDialog } from "@/components/rules-dialog"
+// Lazy load RulesDialog for better initial page performance
+const RulesDialog = dynamic(() => import("@/components/rules-dialog").then(mod => ({ default: mod.RulesDialog })), {
+  ssr: false,
+  loading: () => null,
+})
 import {
   Tooltip,
   TooltipTrigger,
@@ -429,18 +434,23 @@ export default function SelectQuizPage() {
 
   useEffect(() => setCurrentPage(1), [appliedSearchQuery])
 
-  const cardSpringTransition: Transition = { type: "spring", stiffness: 100, damping: 10 }
+  // Optimized animation settings for better performance
+  const cardSpringTransition: Transition = {
+    type: "tween",
+    duration: 0.2,
+    ease: "easeOut"
+  }
 
   const cardVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 10 },
     visible: { opacity: 1, y: 0, transition: cardSpringTransition },
-    hover: { scale: 1.03, boxShadow: "0px 8px 16px rgba(0, 0, 0, 0.1)" },
-    tap: { scale: 0.98 },
+    hover: { scale: 1.02 },
+    tap: { scale: 0.99 },
   }
 
   const buttonVariants = {
-    hover: { scale: 1.05 },
-    tap: { scale: 0.95 },
+    hover: { scale: 1.03 },
+    tap: { scale: 0.97 },
   }
 
   return (
@@ -584,70 +594,26 @@ export default function SelectQuizPage() {
         <div className="flex-grow">
 
           {(isSearching || isTyping || isFetchingQuizzes) && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center py-16 sm:py-20 md:py-24"
-            >
-              {/* Cosmic Loader - Same as AuthLoadingScreen */}
-              <div className="relative w-28 h-28 sm:w-36 sm:h-36 mx-auto mb-6">
-                {/* Outer ring */}
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                  className="absolute inset-0 rounded-full border-2 border-indigo-500/30"
-                >
-                  <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-indigo-400 rounded-full shadow-lg shadow-indigo-400/50" />
-                </motion.div>
-
-                {/* Middle ring */}
-                <motion.div
-                  animate={{ rotate: -360 }}
-                  transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-                  className="absolute inset-4 sm:inset-5 rounded-full border-2 border-cyan-500/40"
-                >
-                  <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-cyan-400 rounded-full shadow-lg shadow-cyan-400/50" />
-                </motion.div>
-
-                {/* Inner ring */}
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                  className="absolute inset-8 sm:inset-10 rounded-full border-2 border-purple-500/50"
-                >
-                  <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-purple-400 rounded-full shadow-lg shadow-purple-400/50" />
-                </motion.div>
-
-                {/* Center glow */}
-                <motion.div
-                  animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="absolute inset-10 sm:inset-12 rounded-full bg-gradient-to-br from-cyan-400 to-indigo-500 shadow-xl shadow-cyan-400/40"
+            <div className="flex flex-col items-center justify-center py-16 sm:py-20 md:py-24">
+              {/* Simplified Loader - CSS-based for better performance */}
+              <div className="relative w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-6">
+                {/* Single rotating ring with CSS animation */}
+                <div className="absolute inset-0 rounded-full border-4 border-indigo-500/20" />
+                <div
+                  className="absolute inset-0 rounded-full border-4 border-transparent border-t-cyan-400 border-r-indigo-500 animate-spin"
+                  style={{ animationDuration: '1s' }}
                 />
-
-                {/* Rocket in center */}
-                <motion.div
-                  animate={{
-                    y: [-3, 3, -3],
-                    rotate: [0, 5, -5, 0]
-                  }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="absolute inset-0 flex items-center justify-center"
-                >
-                  <Rocket className="w-8 h-8 sm:w-10 sm:h-10 text-white drop-shadow-lg" />
-                </motion.div>
+                {/* Center icon */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Rocket className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+                </div>
               </div>
 
-              {/* Loading text */}
-              <motion.p
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="text-white/70 text-sm sm:text-base font-medium mb-4"
-              >
+              {/* Loading text - no delay animation */}
+              <p className="text-white/70 text-sm sm:text-base font-medium mb-4">
                 {isSearching ? t('searching') : t('loadingQuizzes')}
-              </motion.p>
-            </motion.div>
+              </p>
+            </div>
           )}
 
           {/* NO QUIZZES FOUND */}
@@ -723,7 +689,7 @@ export default function SelectQuizPage() {
                     variants={cardVariants}
                     transition={{ delay: index * 0.05 }}
                   >
-                    <Card className="cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/20 relative bg-transparent backdrop-blur-sm border-white/10 text-white overflow-hidden h-full flex flex-col rounded-2xl group">
+                    <Card className="cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/20 relative bg-slate-900/80 border-white/10 text-white overflow-hidden h-full flex flex-col rounded-2xl group">
                       {/* Image Section - More Prominent */}
                       <div className="relative h-36 sm:h-40 md:h-44 w-full overflow-hidden flex-shrink-0 rounded-t-2xl">
                         {(quiz.cover_image || quiz.image_url || getCategoryDefaultImage(quiz.category)) ? (
@@ -732,8 +698,11 @@ export default function SelectQuizPage() {
                               src={quiz.cover_image || quiz.image_url || getCategoryDefaultImage(quiz.category) || ''}
                               alt={quiz.title}
                               fill
-                              className="object-cover transition-transform duration-500 group-hover:scale-110"
-                              sizes="(max-width: 480px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
+                              className="object-cover transition-transform duration-300 group-hover:scale-105"
+                              sizes="(max-width: 480px) 50vw, (max-width: 768px) 33vw, 25vw"
+                              loading={index < 4 ? 'eager' : 'lazy'}
+                              priority={index < 2}
+                              placeholder="empty"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement
                                 target.style.display = 'none'
@@ -750,7 +719,7 @@ export default function SelectQuizPage() {
                         {profile?.id && (
                           <button
                             onClick={(e) => toggleFavorite(quiz.id, e)}
-                            className="absolute top-3 right-3 z-30 p-2 rounded-full bg-black/30 backdrop-blur-md hover:bg-black/50 transition-all duration-200 border border-white/10"
+                            className="absolute top-3 right-3 z-30 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors duration-200 border border-white/10"
                             aria-label={favoriteQuizIds.includes(quiz.id) ? "Remove from favorites" : "Add to favorites"}
                           >
                             <Heart
@@ -763,8 +732,8 @@ export default function SelectQuizPage() {
                         )}
                       </div>
 
-                      {/* Content Section - Transparent Background */}
-                      <div className="flex flex-col flex-1 p-4 bg-white/5 backdrop-blur-md">
+                      {/* Content Section - Optimized Background */}
+                      <div className="flex flex-col flex-1 p-4 bg-slate-800/90">
                         {/* Title with Tooltip */}
                         <Tooltip>
                           <TooltipTrigger asChild>

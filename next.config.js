@@ -12,7 +12,36 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  images: { unoptimized: true },
+  // Enable image optimization for better performance
+  images: {
+    // Enable optimization for better LCP and performance scores
+    unoptimized: false,
+    // Allow external images from Unsplash and other sources
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'plus.unsplash.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/**',
+      },
+    ],
+    // Enable modern image formats for smaller file sizes
+    formats: ['image/avif', 'image/webp'],
+    // Optimize device sizes for responsive images
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256],
+    // Minimize layout shift with placeholder
+    minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days cache
+  },
   // Ensure environment variables are available at build time
   env: {
     // Main Supabase (quizzes, profiles, auth)
@@ -24,6 +53,11 @@ const nextConfig = {
   },
   // Add server external packages for better production support
   serverExternalPackages: ['@supabase/supabase-js'],
+  // Compiler optimizations
+  compiler: {
+    // Remove console.log in production for smaller bundle
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
+  },
 };
 
 module.exports = withPWA(nextConfig);
