@@ -151,6 +151,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* Preload critical images for faster LCP */}
+        <link rel="preload" href="/images/galaxy.webp" as="image" type="image/webp" fetchPriority="high" />
+        <link rel="preload" href="/images/logo/spacequizv2.webp" as="image" type="image/webp" fetchPriority="high" />
+
         {/* Preconnect to external domains for faster loading */}
         <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
