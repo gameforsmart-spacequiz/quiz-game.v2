@@ -57,6 +57,17 @@ function HomePageContent() {
   const [showTutorial, setShowTutorial] = useState(false)
   const [hasUserClickedJoin, setHasUserClickedJoin] = useState(false)
   const [hasShownTutorial, setHasShownTutorial] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Detect mobile device for performance optimization
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Reset game state when user returns to landing page
   useEffect(() => {
@@ -190,14 +201,23 @@ function HomePageContent() {
       <UserProfile />
 
       <div className="fixed inset-0 z-0 overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{
-            backgroundImage: "url('/images/galaxy.webp')",
-          }}
-        />
+        {/* Optimized background image with Next.js Image - Priority loading for LCP */}
+        <div className="absolute inset-0">
+          <img
+            src="/images/galaxy.webp"
+            alt=""
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
+            className="w-full h-full object-cover"
+            style={{
+              willChange: 'auto'
+            }}
+          />
+        </div>
 
-        <div className="absolute inset-0 flex items-center justify-center">
+        {/* Disable heavy animations on mobile devices for better performance */}
+        <div className="absolute inset-0 hidden md:flex items-center justify-center">
           {/* Inner orbit planets - responsive sizing */}
           <div className="absolute orbit-inner">
             <div className="w-[1vw] h-[1vw] min-w-[12px] min-h-[12px] max-w-[16px] max-h-[16px] bg-gradient-to-br from-orange-400 to-red-500 rounded-full shadow-lg shadow-orange-400/60 border border-orange-300/30">
@@ -273,18 +293,21 @@ function HomePageContent() {
 
       <div className="relative z-10 container mx-auto px-4 py-8 min-h-screen flex flex-col justify-center items-center overflow-hidden">
         <motion.div
-          initial={{ opacity: 0, y: -50 }}
+          initial={{ opacity: 0, y: isMobile ? -20 : -50 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
+          transition={{ duration: isMobile ? 0.3 : 0.8 }}
           className="text-center mb-8 sm:mb-12"
         >
 
 
-          {/* Logo Image */}
+          {/* Logo Image - Optimized for LCP */}
           <div className="relative mb-3 sm:mb-4">
             <img
               src="/images/logo/spacequizv2.webp"
               alt="Space Quiz"
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
               className="h-auto w-[130px] sm:w-[320px] md:w-[380px] lg:w-[390px] mx-auto object-contain drop-shadow-2xl"
               style={{
                 filter: "drop-shadow(0 0 20px rgba(147, 197, 253, 0.5)) drop-shadow(0 0 40px rgba(168, 85, 247, 0.3))",
@@ -304,14 +327,14 @@ function HomePageContent() {
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 50 }}
+          initial={{ opacity: 0, y: isMobile ? 20 : 50 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.8 }}
+          transition={{ delay: isMobile ? 0.2 : 0.4, duration: isMobile ? 0.3 : 0.8 }}
           className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:gap-8 w-full max-w-3xl px-4"
         >
           {/* HOST Button - Transparent Glassmorphism */}
           <motion.div
-            whileHover={{ scale: 1.03, y: -5 }}
+            whileHover={isMobile ? {} : { scale: 1.03, y: -5 }}
             whileTap={{ scale: 0.97 }}
             className="group relative"
           >
@@ -333,8 +356,8 @@ function HomePageContent() {
               {/* Icon container - Left side */}
               <motion.div
                 className="relative z-10 flex-shrink-0"
-                animate={{ y: [0, -4, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                animate={isMobile ? {} : { y: [0, -4, 0] }}
+                transition={isMobile ? {} : { duration: 3, repeat: Infinity, ease: "easeInOut" }}
               >
                 <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-pink-500 via-rose-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-pink-500/40 border border-pink-400/50 group-hover:shadow-pink-500/60 group-hover:shadow-xl transition-shadow duration-300">
                   <Play className="w-6 h-6 sm:w-7 sm:h-7 text-white drop-shadow-md" />
@@ -351,7 +374,7 @@ function HomePageContent() {
 
           {/* JOIN Button - Transparent Glassmorphism */}
           <motion.div
-            whileHover={{ scale: 1.03, y: -5 }}
+            whileHover={isMobile ? {} : { scale: 1.03, y: -5 }}
             whileTap={{ scale: 0.97 }}
             className="group relative"
           >
@@ -376,8 +399,8 @@ function HomePageContent() {
               {/* Icon container - Left side */}
               <motion.div
                 className="relative z-10 flex-shrink-0"
-                animate={{ y: [0, -4, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                animate={isMobile ? {} : { y: [0, -4, 0] }}
+                transition={isMobile ? {} : { duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
               >
                 <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-cyan-500 via-blue-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/40 border border-cyan-400/50 group-hover:shadow-cyan-500/60 group-hover:shadow-xl transition-shadow duration-300">
                   <Users className="w-6 h-6 sm:w-7 sm:h-7 text-white drop-shadow-md" />
