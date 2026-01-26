@@ -79,6 +79,16 @@ export function PWAInstallPrompt() {
       window.location.port !== ''
     setIsDevelopment(isDev)
 
+    // Unregister service worker in development to prevent caching issues
+    if (isDev && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        for (const registration of registrations) {
+          console.log('Unregistering Service Worker in development:', registration.scope)
+          registration.unregister()
+        }
+      })
+    }
+
     // Check if app is already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true)
@@ -278,7 +288,7 @@ export function PWAInstallPrompt() {
                   <h3 className="text-white font-bold text-sm  leading-tight drop-shadow-lg">
                     {t('installSpaceQuiz', 'Install Space-Quiz now!')}
                   </h3>
-                  
+
                 </div>
               </div>
 
