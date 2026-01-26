@@ -33,7 +33,7 @@ const withPWA = require('next-pwa')({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // output: 'export',
-  output: 'standalone',
+  // output: 'standalone', // Commented out to fix "next start" compatibility
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -121,9 +121,6 @@ const nextConfig = {
     NEXT_PUBLIC_SUPABASE_B_URL: process.env.NEXT_PUBLIC_SUPABASE_B_URL,
     NEXT_PUBLIC_SUPABASE_B_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_B_ANON_KEY,
   },
-
-  // Add server external packages for better production support
-  serverExternalPackages: ['@supabase/supabase-js'],
 
   // Compiler optimizations
   compiler: {

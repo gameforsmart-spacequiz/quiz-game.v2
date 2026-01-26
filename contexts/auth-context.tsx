@@ -302,7 +302,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Don't auto-redirect from login page to prevent animation restart
         // User should manually navigate or complete login process
       }
-    }, 5000) // Reduced to 5 seconds timeout
+    }, 3000) // Reduced to 3 seconds timeout for faster fallback in dev
 
     initializeAuth()
 
