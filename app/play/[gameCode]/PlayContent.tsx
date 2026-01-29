@@ -553,6 +553,15 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
           { event: "UPDATE", schema: "public", table: "sessions", filter: `id=eq.${gameId}` },
           handlePayload
         )
+        .on(
+          "postgres_changes",
+          { event: "DELETE", schema: "public", table: "sessions", filter: `id=eq.${gameId}` },
+          () => {
+            console.log('[Player] Session deleted by host during game')
+            toast.error("Host has ended the game session")
+            router.replace("/")
+          }
+        )
         .subscribe((status) => {
           console.log('[Player] Supabase B Subscription Status:', status)
         });
@@ -564,6 +573,15 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
           "postgres_changes",
           { event: "UPDATE", schema: "public", table: "game_sessions", filter: `game_pin=eq.${gameCode.toUpperCase()}` },
           handlePayload
+        )
+        .on(
+          "postgres_changes",
+          { event: "DELETE", schema: "public", table: "game_sessions", filter: `game_pin=eq.${gameCode.toUpperCase()}` },
+          () => {
+            console.log('[Player] Session deleted by host during game (legacy)')
+            toast.error("Host has ended the game session")
+            router.replace("/")
+          }
         )
         .subscribe();
     }

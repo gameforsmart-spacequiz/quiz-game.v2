@@ -55,7 +55,7 @@ export type TranslationKey =
   | 'authInitError' | 'profileError' | 'loggedInAs' | 'usingProfile' | 'googleAvatar'
   | 'errorDescription' | 'errorDetails' | 'retry' | 'backToHome' | 'or' | 'alreadyHaveAccount' | 'signIn'
   | 'fullName' | 'username' | 'email' | 'password' | 'confirmPassword' | 'enterFullName' | 'enterUsername' | 'enterEmail' | 'enterPassword' | 'enterPasswordLogin' | 'confirmPasswordPlaceholder'
-  | 'usernameRequired' | 'usernameMinLength' | 'emailRequired' | 'emailInvalid' | 'passwordRequired' | 'passwordMinLength' | 'passwordMismatch' | 'fullnameRequired'
+  | 'usernameRequired' | 'usernameMinLength' | 'usernameNotFound' | 'emailRequired' | 'emailInvalid' | 'passwordRequired' | 'passwordMinLength' | 'passwordMismatch' | 'fullnameRequired'
   | 'forgotPassword' | 'noAccount' | 'createOne'
   | 'checkingAuth'
   | 'enterFullscreen' | 'exitFullscreen' | 'installApp' | 'install' | 'later' | 'installSpaceQuiz' | 'installDescription'
@@ -306,13 +306,14 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     password: 'Password',
     confirmPassword: 'Confirm Password',
     enterFullName: 'Enter your full name',
-    enterUsername: 'Choose a username',
+    enterUsername: 'Enter your email or username',
     enterEmail: 'Enter your email',
     enterPassword: 'Create a password',
     enterPasswordLogin: 'Enter your password',
     confirmPasswordPlaceholder: 'Confirm your password',
-    usernameRequired: 'Username is required',
+    usernameRequired: 'Email or Username is required',
     usernameMinLength: 'Username must be at least 3 characters',
+    usernameNotFound: 'Username not found',
     emailRequired: 'Email is required',
     emailInvalid: 'Please enter a valid email',
     passwordRequired: 'Password is required',
@@ -574,13 +575,14 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     password: 'Kata Sandi',
     confirmPassword: 'Konfirmasi Kata Sandi',
     enterFullName: 'Masukkan nama lengkap Anda',
-    enterUsername: 'Pilih nama pengguna',
+    enterUsername: 'Masukkan email atau nama pengguna Anda',
     enterEmail: 'Masukkan email Anda',
     enterPassword: 'Buat kata sandi',
     enterPasswordLogin: 'Masukkan kata sandi Anda',
     confirmPasswordPlaceholder: 'Konfirmasi kata sandi Anda',
-    usernameRequired: 'Nama pengguna wajib diisi',
+    usernameRequired: 'Email atau Nama pengguna wajib diisi',
     usernameMinLength: 'Nama pengguna minimal 3 karakter',
+    usernameNotFound: 'Nama pengguna tidak ditemukan',
     emailRequired: 'Email wajib diisi',
     emailInvalid: 'Masukkan email yang valid',
     passwordRequired: 'Kata sandi wajib diisi',
@@ -842,13 +844,14 @@ export const translations: Record<string, Record<TranslationKey, string>> = {
     password: '密码',
     confirmPassword: '确认密码',
     enterFullName: '输入您的全名',
-    enterUsername: '选择用户名',
+    enterUsername: '输入您的邮箱或用户名',
     enterEmail: '输入您的邮箱',
     enterPassword: '创建密码',
     enterPasswordLogin: '输入您的密码',
     confirmPasswordPlaceholder: '确认您的密码',
-    usernameRequired: '用户名是必需的',
+    usernameRequired: '邮箱或用户名必填',
     usernameMinLength: '用户名至少3个字符',
+    usernameNotFound: '用户名未找到',
     emailRequired: '邮箱是必需的',
     emailInvalid: '请输入有效的邮箱',
     passwordRequired: '密码是必需的',

@@ -656,6 +656,19 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
             }
           }
         )
+        .on(
+          "postgres_changes",
+          { event: "DELETE", schema: "public", table: "sessions", filter: `id=eq.${gameId}` },
+          async () => {
+            // Session was deleted by host
+            console.log("[WAIT] Session deleted by host")
+            toast.error("Host has ended the game session")
+            await cleanupPresence()
+            clearGame?.()
+            localStorage.removeItem("player")
+            router.replace("/")
+          }
+        )
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
             setConnectionStatus('connected')
@@ -809,6 +822,19 @@ export default function WaitContent({ gameCode }: WaitContentProps) {
               // Start countdown when countdown_started_at is set or changed
               startCountdown(newGameData.countdown_started_at)
             }
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "DELETE", schema: "public", table: "game_sessions", filter: `id=eq.${gameId}` },
+          async () => {
+            // Session was deleted by host
+            console.log("[WAIT] Session deleted by host (legacy)")
+            toast.error("Host has ended the game session")
+            await cleanupPresence()
+            clearGame?.()
+            localStorage.removeItem("player")
+            router.replace("/")
           }
         )
         .subscribe((status) => {

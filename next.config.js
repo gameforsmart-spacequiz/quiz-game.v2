@@ -74,6 +74,16 @@ const nextConfig = {
         hostname: '*.supabase.co',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'images.weserv.nl',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'api.dicebear.com',
+        pathname: '/**',
+      },
     ],
     // Enable modern image formats for smaller file sizes
     formats: ['image/avif', 'image/webp'],
