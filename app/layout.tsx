@@ -164,15 +164,15 @@ export default function RootLayout({
         <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL || ''} crossOrigin="anonymous" />
       </head>
       <body className={`${inter.className} ${outfit.variable} ${orbitron.variable}`}>
-        <ErrorBoundary>
-          <LanguageProvider>
+        <LanguageProvider>
+          <ErrorBoundary>
             <AuthProvider>
               {children}
               <Toaster />
               <PWAInstallPrompt />
             </AuthProvider>
-          </LanguageProvider>
-        </ErrorBoundary>
+          </ErrorBoundary>
+        </LanguageProvider>
       </body>
     </html>
   );

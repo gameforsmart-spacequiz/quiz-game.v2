@@ -16,7 +16,7 @@ function LoginPageContent() {
   const [isSigningIn, setIsSigningIn] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
-    email: "",
+    username: "",
     password: ""
   })
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
@@ -86,10 +86,8 @@ function LoginPageContent() {
   const validateForm = () => {
     const errors: Record<string, string> = {}
 
-    if (!formData.email.trim()) {
-      errors.email = t('emailRequired', 'Email is required')
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      errors.email = t('emailInvalid', 'Please enter a valid email')
+    if (!formData.username.trim()) {
+      errors.username = t('usernameRequired', 'Username or Email is required')
     }
 
     if (!formData.password) {
@@ -111,7 +109,34 @@ function LoginPageContent() {
       setIsSigningIn(true)
       clearError()
 
-      await signInWithEmail(formData.email, formData.password)
+      let emailToUse = formData.username
+
+      // Check if input is an email (contains @) or username
+      const isEmail = /\S+@\S+\.\S+/.test(formData.username)
+
+      if (!isEmail) {
+        // Input is username, fetch email from database
+        const { createSupabaseClient } = await import('@/lib/supabase')
+        const supabase = createSupabaseClient()
+
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('username', formData.username)
+          .single()
+
+        if (profileError || !profile) {
+          setFormErrors({ username: t('usernameNotFound', 'Username not found') })
+          setIsSigningIn(false)
+          return
+        }
+
+        // Use the email associated with the username
+        emailToUse = profile.email
+      }
+
+      // Sign in with email (either directly provided or fetched from username)
+      await signInWithEmail(emailToUse, formData.password)
 
       // AuthGuard will handle redirect automatically
     } catch (error) {
@@ -192,7 +217,7 @@ function LoginPageContent() {
 
 
       {/* Main Content */}
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-4 sm:p-6 py-8 sm:py-4">
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4 sm:p-6 pt-8 pb-8 sm:pt-4 sm:pb-4 md:pt-0 md:pb-2 lg:pt-0 lg:pb-1 xl:pt-0 xl:pb-1">
         <motion.div
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
@@ -206,9 +231,9 @@ function LoginPageContent() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: "spring", stiffness: 150 }}
-              className="text-center mb-4 sm:mb-6 md:mb-8"
+              className="text-center mb-4 sm:mb-6 md:mb-0 lg:mb-0 xl:mb-0"
             >
-              <div className="w-30 h-24 sm:w-36 sm:h-32 md:w-48 md:h-40 lg:w-80 lg:h-64 xl:w-96 xl:h-80 mx-auto mb-10 sm:mb-2 md:mb-4 lg:mb-4 xl:mb-6 relative">
+              <div className="w-30 h-24 sm:w-36 sm:h-32 md:w-48 md:h-40 lg:w-64 lg:h-48 xl:w-72 xl:h-56 mx-auto mb-10 sm:mb-2 md:mb-0 lg:mb-0 xl:mb-0 relative">
                 <img
                   draggable={false}
                   src="/images/logo/spacequizv2.webp"
@@ -313,15 +338,16 @@ function LoginPageContent() {
               onSubmit={handleEmailPasswordLogin}
               className="space-y-4 sm:space-y-5"
             >
-              {/* Email */}
+              {/* Email or Username */}
               <div className="space-y-2">
                 <div className="relative">
                   <Mail className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                   <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
+                    id="username"
+                    name="username"
+                    type="text"
+                    autoComplete="username"
+                    value={formData.username}
                     onChange={handleInputChange}
                     onFocus={(e) => {
                       // Scroll form ke view saat keyboard muncul di mobile
@@ -330,11 +356,11 @@ function LoginPageContent() {
                       }, 300)
                     }}
                     className="bg-white/90 border-transparent text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-indigo-500 focus:ring-indigo-500 h-11 sm:h-12 rounded-2xl text-sm sm:text-base pl-11 sm:pl-12 pr-4 transition-all"
-                    placeholder={t('enterEmail', 'Enter your email')}
+                    placeholder={t('enterUsername', 'Enter your email or username')}
                   />
                 </div>
-                {formErrors.email && (
-                  <p className="text-red-400 text-xs ml-1">{formErrors.email}</p>
+                {formErrors.username && (
+                  <p className="text-red-400 text-xs ml-1">{formErrors.username}</p>
                 )}
               </div>
 
@@ -430,8 +456,8 @@ function LoginPageContent() {
             <div className="mt-6 sm:mt-8 mb-4 sm:mb-0 text-center">
               <p className="text-gray-500 text-xs sm:text-sm">
                 {t('noAccount', "Don't have an account?")}{" "}
-                <a href="/auth/register" className="text-[#7052ff] hover:text-[#00c6ff] active:text-[#00b6ef] font-semibold transition-colors">
-                  {t('createOne', 'Create one now')}
+                <a href="https://gameforsmart2026.vercel.app/auth/register" target="_blank" rel="noopener noreferrer" className="text-[#7052ff] hover:text-[#00c6ff] active:text-[#00b6ef] font-semibold transition-colors">
+                  Register
                 </a>
               </p>
             </div>

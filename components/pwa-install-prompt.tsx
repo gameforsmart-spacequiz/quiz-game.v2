@@ -95,6 +95,12 @@ export function PWAInstallPrompt() {
       return
     }
 
+    // Check if prompt was dismissed in this session
+    const wasDismissed = sessionStorage.getItem('pwa-prompt-dismissed') === 'true'
+    if (wasDismissed) {
+      return
+    }
+
     // Listen for beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault()
@@ -172,7 +178,8 @@ export function PWAInstallPrompt() {
 
   const handleDismiss = () => {
     setShowPrompt(false)
-    // Just close the prompt, it can appear again if browser triggers beforeinstallprompt
+    // Store in sessionStorage so it won't appear again until new tab or refresh
+    sessionStorage.setItem('pwa-prompt-dismissed', 'true')
   }
 
   // Don't show if already installed, no prompt available, on login page, not on homepage, or if dialog is open

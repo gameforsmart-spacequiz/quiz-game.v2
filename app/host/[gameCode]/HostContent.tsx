@@ -648,7 +648,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
         progressMap.set(player.id, {
           id: player.id,
           name: player.nickname ?? player.name,
-          avatar: player.avatar || "/placeholder.svg?height=40&width=40&text=Player",
+          avatar: player.avatar || "/placeholder.svg",
           score,
           currentQuestion: answeredQuestions,
           totalQuestions,
@@ -1162,6 +1162,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
 
 
     return () => {
+      // Cleanup subscriptions
       if (isSupabaseBSession) {
         supabaseB.removeChannel(gameSubscription)
       } else {
@@ -1179,6 +1180,20 @@ export default function HostContent({ gameCode }: HostContentProps) {
       // Cleanup debounced update
       if (debouncedUpdateProgress.current) {
         clearTimeout(debouncedUpdateProgress.current)
+      }
+
+      // Delete session when host exits (navigate away/close page)
+      // Only delete if game hasn't finished yet
+      if (gameId && !showLeaderboard) {
+        if (isSupabaseBSession) {
+          // Delete from Supabase B
+          void supabaseB.from('sessions').delete().eq('id', gameId)
+          console.log('[Host] Session deletion initiated on exit:', gameId)
+        } else {
+          // Delete from main Supabase
+          void supabase.from('game_sessions').delete().eq('id', gameId)
+          console.log('[Host] Session deletion initiated on exit:', gameId)
+        }
       }
     }
   }, [gameId, fetchPlayers, updatePlayerProgress, isSupabaseBSession, quizStarted, showLeaderboard, startedAt, gameSettings])
@@ -2386,6 +2401,19 @@ export default function HostContent({ gameCode }: HostContentProps) {
                     alt="Space Quiz"
                     className="h-8 sm:h-10 md:h-12 w-auto object-contain"
                   />
+
+                  {/* Indicators in the center */}
+                  <div className="flex flex-wrap gap-2 sm:gap-4 justify-center">
+                    <div className="flex items-center gap-1.5 sm:gap-2 bg-cyan-500/10 border border-cyan-400/30 text-cyan-200 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm">
+                      <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span className="font-medium">{formatTimeMinutes(gameSettings.timeLimit)}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 sm:gap-2 bg-green-500/10 border border-green-400/30 text-green-200 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm">
+                      <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span className="font-medium">{gameSettings.questionCount} {t('questions')}</span>
+                    </div>
+                  </div>
+
                   <Image
                     src="/images/gameforsmartlogo.png"
                     alt="GameForSmart"
@@ -2394,17 +2422,6 @@ export default function HostContent({ gameCode }: HostContentProps) {
                     className="w-24 h-auto sm:w-28 md:w-32 lg:w-36 xl:w-40 opacity-90 hover:opacity-100 transition-opacity duration-300"
                     priority
                   />
-                </div>
-
-                <div className="relative z-10 flex flex-wrap gap-2 sm:gap-4 justify-center mb-4">
-                  <div className="flex items-center gap-1.5 sm:gap-2 bg-cyan-500/10 border border-cyan-400/30 text-cyan-200 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm">
-                    <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    <span className="font-medium">{formatTimeMinutes(gameSettings.timeLimit)}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 sm:gap-2 bg-green-500/10 border border-green-400/30 text-green-200 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm">
-                    <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    <span className="font-medium">{gameSettings.questionCount} {t('questions')}</span>
-                  </div>
                 </div>
 
                 <div className="relative z-10 text-center">
@@ -2610,10 +2627,11 @@ export default function HostContent({ gameCode }: HostContentProps) {
                                 <div className="relative">
                                   <div className="absolute -inset-1 bg-gradient-to-br from-cyan-500/30 to-purple-500/30 rounded-full blur-sm"></div>
                                   <Image
-                                    src={player.avatar || "/placeholder.svg?height=48&width=48&text=Player"}
+                                    src={player.avatar || "/placeholder.svg"}
                                     alt={getFirstName(player.name)}
                                     width={48}
                                     height={48}
+                                    unoptimized
                                     className="relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full border-2 border-white/30 object-cover"
                                   />
                                 </div>
