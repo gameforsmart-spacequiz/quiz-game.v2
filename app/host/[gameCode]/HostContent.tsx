@@ -2432,7 +2432,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ delay: 0.2 }}
                   >
-                    <div className="relative bg-white rounded-xl py-4 sm:py-6 lg:py-8 px-6 sm:px-8 lg:px-12 w-full">
+                    <div className="relative bg-white rounded-xl py-4 sm:py-6 lg:py-8 px-4 sm:px-8 w-full flex items-center justify-center gap-3 sm:gap-6">
                       <span className="text-3xl sm:text-4xl lg:text-7xl font-mono font-bold tracking-widest text-slate-800">
                         {gameCode}
                       </span>
@@ -2440,13 +2440,13 @@ export default function HostContent({ gameCode }: HostContentProps) {
                         onClick={handleCopyCode}
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
-                        className="absolute top-2 right-2 p-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                        className="p-2.5 sm:p-3 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center justify-center flex-shrink-0"
                         title="Copy game code"
                       >
                         {copied ? (
-                          <Check className="w-5 h-5 text-green-600" />
+                          <Check className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
                         ) : (
-                          <Copy className="w-5 h-5 text-slate-600" />
+                          <Copy className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600" />
                         )}
                       </motion.button>
                     </div>
@@ -2464,7 +2464,7 @@ export default function HostContent({ gameCode }: HostContentProps) {
                         onClick={() => setShowQRModal(true)}
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
-                        className="absolute top-2 right-2 p-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors z-10"
+                        className="absolute top-2 right-2 p-2 bg-slate-100/50 hover:bg-slate-200/80 rounded-lg transition-colors z-10 backdrop-blur-sm flex items-center justify-center"
                         title="Click to enlarge QR code"
                       >
                         <Maximize2 className="w-5 h-5 text-slate-600" />
@@ -2480,13 +2480,13 @@ export default function HostContent({ gameCode }: HostContentProps) {
                             onClick={handleCopyLink}
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
-                            className="p-2 bg-slate-200 hover:bg-slate-300 rounded-lg transition-colors flex-shrink-0"
+                            className="p-2 sm:p-2.5 bg-slate-200 hover:bg-slate-300 rounded-lg transition-colors flex-shrink-0 flex items-center justify-center h-10 w-10 sm:h-auto sm:w-auto"
                             title="Copy join link"
                           >
                             {linkCopied ? (
-                              <Check className="w-4 h-4 text-green-600" />
+                              <Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
                             ) : (
-                              <Copy className="w-4 h-4 text-slate-600" />
+                              <Copy className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600" />
                             )}
                           </motion.button>
                         </div>
