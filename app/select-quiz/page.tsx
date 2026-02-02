@@ -527,22 +527,22 @@ export default function SelectQuizPage() {
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 xs:gap-3 sm:gap-4">
             <div className="flex items-center flex-1 sm:flex-initial sm:min-w-[180px] md:min-w-[200px] lg:min-w-[280px]">
               <div className="relative flex-1">
-                <Search className="absolute left-2 xs:left-3 top-1/2 -translate-y-1/2 h-3 w-3 xs:h-4 xs:w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 xs:h-5 xs:w-5 text-gray-400" />
                 <Input
                   type="text"
                   placeholder={t('searchQuizzes')}
                   value={searchQuery}
                   onChange={handleSearchInputChange}
                   onKeyPress={handleKeyPress}
-                  className="pl-8 xs:pl-10 pr-3 rounded-l-lg rounded-r-none bg-white/10 backdrop-blur-lg border-white/20 border-r-0 text-white placeholder:text-gray-300 focus:bg-white/20 focus:border-purple-400 transition-all duration-300 text-xs xs:text-sm sm:text-base w-full h-9 xs:h-10"
+                  className="pl-10 xs:pl-12 pr-3 rounded-l-xl rounded-r-none bg-white/10 backdrop-blur-lg border-white/20 border-r-0 text-white placeholder:text-gray-300 focus:bg-white/20 focus:border-purple-400 transition-all duration-300 text-sm xs:text-base w-full h-11 xs:h-12 shadow-sm"
                 />
               </div>
               <button
                 onClick={handleSearch}
-                className="h-9 xs:h-10 px-3 xs:px-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-r-lg transition-all duration-300 flex items-center justify-center shadow-lg shadow-purple-500/20"
+                className="h-11 xs:h-12 px-4 xs:px-5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-r-xl transition-all duration-300 flex items-center justify-center shadow-lg shadow-purple-500/20 active:scale-95 border-y border-r border-transparent bg-origin-border"
                 title={t('searchQuizzes')}
               >
-                <Search className="h-4 w-4 xs:h-5 xs:w-5" />
+                <Search className="h-5 w-5 xs:h-6 xs:w-6" />
               </button>
             </div>
 
@@ -550,7 +550,7 @@ export default function SelectQuizPage() {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
-                  className="px-3 xs:px-4 sm:px-5 py-2 rounded-lg bg-white/10 backdrop-blur-lg border border-white/20 text-white hover:bg-white/20 focus:bg-white/20 focus:border-purple-400 transition-all duration-300 cursor-pointer text-xs xs:text-sm sm:text-base w-full sm:w-auto h-9 xs:h-10 flex items-center gap-2 justify-between min-w-[140px] sm:min-w-[180px]"
+                  className="px-3 xs:px-4 sm:px-5 py-2 rounded-xl bg-white/10 backdrop-blur-lg border border-white/20 text-white hover:bg-white/20 focus:bg-white/20 focus:border-purple-400 transition-all duration-300 cursor-pointer text-sm xs:text-base w-full sm:w-auto h-11 xs:h-12 flex items-center gap-2 justify-between min-w-[140px] sm:min-w-[180px]"
                 >
                   <div className="flex items-center gap-2">
                     <selectedCategory.icon className="h-4 w-4 text-cyan-400" />
@@ -719,7 +719,7 @@ export default function SelectQuizPage() {
                         {profile?.id && (
                           <button
                             onClick={(e) => toggleFavorite(quiz.id, e)}
-                            className="absolute top-3 right-3 z-30 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors duration-200 border border-white/10"
+                            className="absolute top-3 right-3 z-30 p-2 transition-transform duration-200 hover:scale-110 active:scale-95 drop-shadow-md"
                             aria-label={favoriteQuizIds.includes(quiz.id) ? "Remove from favorites" : "Add to favorites"}
                           >
                             <Heart
