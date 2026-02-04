@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
-import { Clock } from "lucide-react"
+import { Clock, X, ZoomIn } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 import SpaceDodge from "@/components/space-dodge"
 import { useGameStore } from "@/lib/store"
@@ -72,6 +72,7 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
   const [sessionSeed, setSessionSeed] = useState<number | null>(null)
   const [startedAt, setStartedAt] = useState<string | null>(null)
   const [isSupabaseBSession, setIsSupabaseBSession] = useState(false)
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null)
 
   // Seeded RNG (mulberry32) and Fisher-Yates shuffle for stable per-session randomness
   const createRng = useCallback((seed: number) => {
@@ -1080,10 +1081,54 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
       <div className="relative z-10 min-h-screen flex items-center justify-center font-mono text-white">
         <AnimatePresence>{showMiniGame && <SpaceDodge onComplete={handleMiniGameComplete} />}</AnimatePresence>
 
+        <AnimatePresence>
+          {zoomedImage && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm cursor-zoom-out"
+              onClick={() => setZoomedImage(null)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="relative max-w-full max-h-[90vh] w-auto h-auto flex items-center justify-center"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => setZoomedImage(null)}
+                  className="absolute -top-12 right-0 sm:-right-12 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-colors z-[60]"
+                >
+                  <X className="w-8 h-8" />
+                </button>
+                <Image
+                  src={zoomedImage}
+                  alt="Zoomed Question Image"
+                  width={1200}
+                  height={800}
+                  className="max-w-full max-h-[85vh] object-contain rounded-lg border-2 border-white/20 shadow-2xl"
+                  style={{ imageRendering: "pixelated" }}
+                  priority
+                />
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="w-full max-w-4xl mx-auto p-4">
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
-              <h1 className="text-lg sm:text-xl font-bold text-white">{t('spaceQuiz')}</h1>
+              <div className="relative w-32 h-10 sm:w-40 sm:h-12">
+                <Image
+                  src="/images/logo/spacequizv2.webp"
+                  alt="Space Quiz"
+                  fill
+                  className="object-contain object-left"
+                  priority
+                />
+              </div>
               <Image
                 src="/images/gameforsmartlogo.png"
                 alt="GameForSmart"
@@ -1121,7 +1166,13 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
               {t('questionOf', 'Question {current} of {total}').replace('{current}', String(currentQuestion + 1)).replace('{total}', String(gameSettings.questionCount))}
             </h2>
             {question.image && (
-              <div className="mb-6 flex justify-center">
+              <div
+                className="mb-6 flex justify-center relative group cursor-zoom-in"
+                onClick={() => setZoomedImage(question.image || null)}
+              >
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 rounded-lg pointer-events-none z-10">
+                  <ZoomIn className="w-8 h-8 text-white drop-shadow-md" />
+                </div>
                 <Image
                   src={question.image || "/images/placeholder.svg"}
                   alt={t('questionImage', 'Question image')}
@@ -1129,12 +1180,17 @@ export default function PlayContent({ gameCode }: PlayContentProps) {
                   height={200}
                   sizes="(max-width: 768px) 100vw, 300px"
                   priority
-                  className="max-w-full max-h-64 object-contain rounded-lg border-2 border-white/20"
+                  className="max-w-full max-h-64 object-contain rounded-lg border-2 border-white/20 transition-transform duration-200 group-hover:scale-[1.02]"
                   style={{ imageRendering: "pixelated" }}
                 />
               </div>
             )}
-            <p className="text-lg mb-6">{question.question}</p>
+            <div
+              className="max-h-[40vh] overflow-y-auto mb-6 pr-2"
+              style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.3) transparent' }}
+            >
+              <p className="text-lg whitespace-pre-wrap">{question.question}</p>
+            </div>
 
             <div
               className={`grid ${question.answers.length === 3 ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"} gap-4`}
