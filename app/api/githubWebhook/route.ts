@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   const payload = JSON.parse(rawBody.toString())
 
   if (payload.ref !== "refs/heads/main") {
-    return NextResponse.json({ message: "Not master branch" })
+    return NextResponse.json({ message: "Not main branch" })
   }
 
   const commit = payload.head_commit || payload.commits?.[0]
