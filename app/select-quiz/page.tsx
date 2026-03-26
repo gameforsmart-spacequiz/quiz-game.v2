@@ -106,7 +106,7 @@ const getCategoryIconColor = (category: string): string => {
 type QuizTab = "public" | "my" | "favorite"
 
 export default function SelectQuizPage() {
-  const { t } = useLanguage()
+  const { t, currentLanguage } = useLanguage()
   const { profile } = useAuth()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState<number | null>(null)
@@ -527,19 +527,26 @@ export default function SelectQuizPage() {
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 xs:gap-3 sm:gap-4">
             <div className="flex items-center flex-1 sm:flex-initial sm:min-w-[180px] md:min-w-[200px] lg:min-w-[280px]">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 xs:h-5 xs:w-5 text-gray-400" />
+                <Search className={`absolute top-1/2 -translate-y-1/2 h-4 w-4 xs:h-5 xs:w-5 text-gray-400 ${currentLanguage === 'ar' ? 'right-3' : 'left-3'
+                  }`} />
                 <Input
                   type="text"
                   placeholder={t('searchQuizzes')}
                   value={searchQuery}
                   onChange={handleSearchInputChange}
                   onKeyPress={handleKeyPress}
-                  className="pl-10 xs:pl-12 pr-3 rounded-l-xl rounded-r-none bg-white/10 backdrop-blur-lg border-white/20 border-r-0 text-white placeholder:text-gray-300 focus:bg-white/20 focus:border-purple-400 transition-all duration-300 text-sm xs:text-base w-full h-11 xs:h-12 shadow-sm"
+                  className={`pl-10 xs:pl-12 pr-3 rounded-l-xl rounded-r-none bg-white/10 backdrop-blur-lg border-white/20 border-r-0 text-white placeholder:text-gray-300 focus:bg-white/20 focus:border-purple-400 transition-all duration-300 text-sm xs:text-base w-full h-11 xs:h-12 shadow-sm ${currentLanguage === 'ar'
+                    ? 'pr-10 xs:pr-12 pl-3 rounded-r-xl rounded-l-none border-l-0 border-r'
+                    : 'pl-10 xs:pl-12 pr-3 rounded-l-xl rounded-r-none border-r-0'
+                    }`}
                 />
               </div>
               <button
                 onClick={handleSearch}
-                className="h-11 xs:h-12 px-4 xs:px-5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-r-xl transition-all duration-300 flex items-center justify-center shadow-lg shadow-purple-500/20 active:scale-95 border-y border-r border-transparent bg-origin-border"
+                className={`h-11 xs:h-12 px-4 xs:px-5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white transition-all duration-300 flex items-center justify-center shadow-lg shadow-purple-500/20 active:scale-95 border-y border-transparent bg-origin-border ${currentLanguage === 'ar'
+                  ? 'rounded-l-xl rounded-r-none border-l border-r-0'
+                  : 'rounded-r-xl rounded-l-none border-r border-l-0'
+                  }`}
                 title={t('searchQuizzes')}
               >
                 <Search className="h-5 w-5 xs:h-6 xs:w-6" />

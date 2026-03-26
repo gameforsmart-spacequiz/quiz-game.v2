@@ -22,8 +22,18 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     const savedLanguage = localStorage.getItem('i18nextLng') || 'en'
     if (translations[savedLanguage]) {
       setCurrentLanguage(savedLanguage)
+      // Set direction immediately on mount
+      document.documentElement.lang = savedLanguage
+      document.documentElement.dir = savedLanguage === 'ar' ? 'rtl' : 'ltr'
     }
   }, [])
+
+  useEffect(() => {
+    if (isClient) {
+      document.documentElement.lang = currentLanguage
+      document.documentElement.dir = currentLanguage === 'ar' ? 'rtl' : 'ltr'
+    }
+  }, [currentLanguage, isClient])
 
   const changeLanguage = (language: string) => {
     if (translations[language]) {
@@ -51,9 +61,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   )
 }
 
-export function 
+export function
 
-useLanguage() {
+  useLanguage() {
   const context = useContext(LanguageContext)
   if (context === undefined) {
     throw new Error('useLanguage must be used within a LanguageProvider')

@@ -82,6 +82,13 @@ export function AppMenu() {
       flagFallback: 'CN',
       nativeName: '中文'
     },
+    {
+      code: 'ar',
+      name: t('arabic', 'Arabic'),
+      flagImage: '/images/flags/ar.webp',
+      flagFallback: 'AR',
+      nativeName: 'العربية'
+    },
   ]
 
   const currentLanguageData = languages.find(lang => lang.code === currentLanguage) || languages[0]
