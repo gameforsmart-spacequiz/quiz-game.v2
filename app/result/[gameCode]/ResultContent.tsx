@@ -11,7 +11,7 @@ import { supabaseB } from "@/lib/supabase-b";
 import { getGameSessionByPin } from "@/lib/sessions-api";
 import { getParticipantsByGameId } from "@/lib/participants-api";
 import { toast } from "sonner";
-import { Trophy, Medal, Crown, Star } from "lucide-react";
+import { Trophy, Medal, Crown, Star, Home, BarChart2 } from "lucide-react";
 import { getFirstName, formatDisplayName } from "@/lib/utils";
 import React from "react";
 import Image, { type StaticImageData } from "next/image";
@@ -125,6 +125,7 @@ export default function ResultContent({ gameCode }: { gameCode: string }) {
   const [playerResults, setPlayerResults] = useState<PlayerResult[]>([]);
   const [userPosition, setUserPosition] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [gameSessionId, setGameSessionId] = useState<string>("");
   const { playerName, playerAvatar, score, isHost, resetGame } = useGameStore();
   const { t } = useLanguage();
 
@@ -159,6 +160,17 @@ export default function ResultContent({ gameCode }: { gameCode: string }) {
               score: p.score || 0,
             }))
             .sort((a, b) => b.score - a.score)
+
+          // Fetch the game session ID from Supabase Utama (for gameforsmart detail results)
+          const { data: mainSession } = await supabase
+            .from("game_sessions")
+            .select("id")
+            .eq("game_pin", gameCode.toUpperCase())
+            .single();
+
+          if (mainSession?.id) {
+            setGameSessionId(mainSession.id); // Use ID from Supabase Utama for detail results
+          }
         } else {
           // Fallback to main Supabase (legacy sessions)
           const { data: gameData, error: gameErr } = await supabase
@@ -174,6 +186,7 @@ export default function ResultContent({ gameCode }: { gameCode: string }) {
           }
 
           gameId = gameData.id;
+          if (gameId) setGameSessionId(gameId); // Save game session ID for detail results link
 
           // Update player score in participants array if needed
           if (playerId && score) {
@@ -341,6 +354,41 @@ export default function ResultContent({ gameCode }: { gameCode: string }) {
   ) : (
     <>
       <Background />
+
+      {/* Home button - Left center (like leaderboard page) */}
+      <motion.button
+        initial={{ opacity: 0, x: -50 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.8, delay: 0.5 }}
+        onClick={() => {
+          resetGame();
+          router.push("/");
+        }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        className="fixed left-4 sm:left-6 lg:left-8 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-[0_0_20px_rgba(59,130,246,0.5)] transition-all duration-300"
+        aria-label="Home"
+      >
+        <Home className="w-6 h-6 sm:w-7 sm:h-7" />
+      </motion.button>
+
+      {/* Detail Results button - Right center (like leaderboard page) */}
+      <motion.button
+        initial={{ opacity: 0, x: 50 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.8, delay: 0.5 }}
+        onClick={() => {
+          const detailUrl = `https://gameforsmart2026.vercel.app/results/${gameSessionId}/answer-details?participant=${playerId}`;
+          window.open(detailUrl, "_blank");
+        }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        className="fixed right-4 sm:right-6 lg:right-8 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-[0_0_20px_rgba(34,197,94,0.5)] transition-all duration-300"
+        aria-label="Detail Results"
+      >
+        <BarChart2 className="w-6 h-6 sm:w-7 sm:h-7" />
+      </motion.button>
+
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
         {/* Floating stars overlay */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
@@ -512,24 +560,7 @@ export default function ResultContent({ gameCode }: { gameCode: string }) {
                   </div>
                 </div>
 
-                {/* Play Again Button */}
-                <motion.button
-                  onClick={() => {
-                    resetGame();
-                    router.push("/");
-                  }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full relative bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:from-purple-500 hover:via-purple-400 hover:to-indigo-500 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 transition-all duration-300 overflow-hidden group"
-                >
-                  {/* Shimmer effect */}
-                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
-                  <span className="relative z-10 flex items-center justify-center gap-2">
-                    <Star className="w-5 h-5" />
-                    <span>{t('playAgain') || 'Play Again'}</span>
-                  </span>
-                </motion.button>
               </motion.div>
             </div>
           </div>

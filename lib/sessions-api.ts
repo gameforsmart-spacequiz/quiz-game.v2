@@ -17,11 +17,6 @@ const TABLE_NAME = 'sessions'
  * Membuat session game baru
  */
 export async function createGameSession(data: GameSessionInsert): Promise<GameSession | null> {
-    if (!isSupabaseBAvailable()) {
-        console.warn('[Sessions] Supabase B client not available')
-        return null
-    }
-
     const sessionId = data.id || generateXID()
     const gamePin = data.game_pin || generateGameCode()
 
@@ -37,19 +32,29 @@ export async function createGameSession(data: GameSessionInsert): Promise<GameSe
         settings: data.settings ?? {},
     }
 
-    const { data: session, error } = await supabaseB
-        .from(TABLE_NAME)
-        .insert(sessionData)
-        .select()
-        .single()
-
-    if (error) {
-        console.error('[Sessions] Error creating session:', error)
-        return null
+    if (!isSupabaseBAvailable()) {
+        console.warn('[Sessions] Supabase B client not available, using Main DB fallback')
+        return await createFallbackSessionInMainDb(sessionData)
     }
 
-    console.log('[Sessions] Session created:', session.id, 'Game PIN:', session.game_pin)
-    return session as GameSession
+    try {
+        const { data: session, error } = await supabaseB
+            .from(TABLE_NAME)
+            .insert(sessionData)
+            .select()
+            .single()
+
+        if (error) {
+            console.warn('[Sessions] Error creating session in Supabase B, falling back to Main DB:', error.message)
+            return await createFallbackSessionInMainDb(sessionData)
+        }
+
+        console.log('[Sessions] Session created:', session.id, 'Game PIN:', session.game_pin)
+        return session as GameSession
+    } catch (err) {
+        console.warn('[Sessions] Network error creating session in Supabase B, falling back to Main DB...', err)
+        return await createFallbackSessionInMainDb(sessionData)
+    }
 }
 
 // ============================================
@@ -62,18 +67,24 @@ export async function createGameSession(data: GameSessionInsert): Promise<GameSe
 export async function getGameSessionById(sessionId: string): Promise<GameSession | null> {
     if (!isSupabaseBAvailable()) return null
 
-    const { data, error } = await supabaseB
-        .from(TABLE_NAME)
-        .select('*')
-        .eq('id', sessionId)
-        .single()
+    try {
+        const { data, error } = await supabaseB
+            .from(TABLE_NAME)
+            .select('*')
+            .eq('id', sessionId)
+            .single()
 
-    if (error) {
-        console.error('[Sessions] Error fetching session:', error)
-        return null
+        if (error) {
+            // Jika tidak ditemukan atau error lainnya, coba cari di Supabase Utama sebagai fallback
+            console.warn('[Sessions] Session not found or error in Supabase B, falling back to Main DB...', error.message)
+            return await getFallbackSessionFromMainDb('id', sessionId)
+        }
+
+        return data as GameSession
+    } catch (err) {
+        console.warn('[Sessions] Network error or timeout in Supabase B, falling back to Main DB...', err)
+        return await getFallbackSessionFromMainDb('id', sessionId)
     }
-
-    return data as GameSession
 }
 
 /**
@@ -82,22 +93,201 @@ export async function getGameSessionById(sessionId: string): Promise<GameSession
 export async function getGameSessionByPin(gamePin: string): Promise<GameSession | null> {
     if (!isSupabaseBAvailable()) return null
 
-    const { data, error } = await supabaseB
-        .from(TABLE_NAME)
-        .select('*')
-        .eq('game_pin', gamePin.toUpperCase())
+    try {
+        const { data, error } = await supabaseB
+            .from(TABLE_NAME)
+            .select('*')
+            .eq('game_pin', gamePin.toUpperCase())
+            .single()
+
+        if (error) {
+            if (error.code === 'PGRST116') {
+                // No rows found - not an error, just no session with that PIN
+                // Coba cari di Supabase Utama sebagai fallback (misal session sudah finish dan disync)
+                console.log('[Sessions] PIN not found in Supabase B, checking Main DB fallback...')
+                return await getFallbackSessionFromMainDb('game_pin', gamePin.toUpperCase())
+            }
+            console.warn('[Sessions] Error fetching session by PIN, checking Main DB fallback...', error.message)
+            return await getFallbackSessionFromMainDb('game_pin', gamePin.toUpperCase())
+        }
+
+        return data as GameSession
+    } catch (err) {
+        console.warn('[Sessions] Network error or timeout in Supabase B, falling back to Main DB...', err)
+        return await getFallbackSessionFromMainDb('game_pin', gamePin.toUpperCase())
+    }
+}
+
+/**
+ * Helper function: Fallback untuk mencari session di Supabase Utama
+ * dan mengubah formatnya menjadi format Supabase B (GameSession)
+ */
+async function getFallbackSessionFromMainDb(field: 'id' | 'game_pin', value: string): Promise<GameSession | null> {
+    const { supabase } = await import('./supabase')
+    
+    const { data: mainData, error: mainError } = await supabase
+        .from('game_sessions')
+        .select(`
+            *,
+            quizzes ( title )
+        `)
+        .eq(field, value)
         .single()
 
-    if (error) {
-        if (error.code === 'PGRST116') {
-            // No rows found - not an error, just no session with that PIN
-            return null
+    if (mainError || !mainData) {
+        if (mainError && mainError.code !== 'PGRST116') {
+            console.error('[Sessions] Fallback error fetching from Main DB:', mainError)
         }
-        console.error('[Sessions] Error fetching session by PIN:', error)
         return null
     }
 
-    return data as GameSession
+    console.log(`[Sessions] Fallback SUCCESS: Found session in Main DB for ${field}=${value}`)
+    
+    // Konversi struktur game_sessions (Main DB) ke struktur GameSession (Supabase B)
+    // agar aplikasi tetap bisa membaca data ini dengan format yang ia harapkan.
+    return {
+        id: mainData.id,
+        game_pin: mainData.game_pin,
+        host_id: mainData.host_id,
+        quiz_id: mainData.quiz_id,
+        quiz_title: mainData.quizzes && !Array.isArray(mainData.quizzes) ? mainData.quizzes.title : 'Quiz Title',
+        status: mainData.status === 'finished' ? 'finish' : mainData.status as any,
+        time_limit_title_status: '',
+        settings: {
+            timeLimit: mainData.total_time_minutes,
+            questionCount: mainData.question_limit,
+            application: mainData.application
+        },
+        question_order: null,
+        game_end_mode: mainData.game_end_mode as any,
+        current_questions: mainData.current_questions || null,
+        timestamps: {
+            created_at: mainData.created_at,
+            started_at: mainData.started_at,
+            ended_at: mainData.ended_at
+        },
+        countdown_position_mode: 0
+    }
+}
+
+/**
+ * Helper function: Fallback untuk membuat session di Supabase Utama
+ */
+async function createFallbackSessionInMainDb(data: GameSessionInsert): Promise<GameSession | null> {
+    const { supabase } = await import('./supabase')
+    
+    console.warn('[Sessions] Falling back to creating session in Main DB...', data.game_pin)
+
+    const insertData = {
+        id: data.id || generateXID(),
+        quiz_id: data.quiz_id,
+        host_id: data.host_id,
+        game_pin: data.game_pin || generateGameCode(),
+        status: data.status === 'finish' ? 'finished' : (data.status || 'waiting'),
+        total_time_minutes: data.settings?.timeLimit || 0,
+        question_limit: data.settings?.questionCount?.toString() || 'all',
+        game_end_mode: data.game_end_mode || 'time',
+        application: data.settings?.application || 'space-quiz',
+        created_at: data.timestamps?.created_at || new Date().toISOString(),
+        current_questions: data.current_questions || [],
+        participants: [],
+        responses: [],
+    }
+
+    const { data: newSession, error } = await supabase
+        .from('game_sessions')
+        .insert(insertData)
+        .select(`*, quizzes(title)`)
+        .single()
+
+    if (error || !newSession) {
+        console.error('[Sessions] Fallback error creating session in Main DB:', error)
+        return null
+    }
+
+    console.log('[Sessions] Fallback SUCCESS: Created session in Main DB', newSession.id)
+
+    return {
+        id: newSession.id,
+        game_pin: newSession.game_pin,
+        host_id: newSession.host_id,
+        quiz_id: newSession.quiz_id,
+        quiz_title: Array.isArray(newSession.quizzes) ? 'Quiz Title' : (newSession.quizzes?.title || data.quiz_title || 'Quiz Title'),
+        status: newSession.status === 'finished' ? 'finish' : newSession.status as any,
+        time_limit_title_status: '',
+        settings: {
+            timeLimit: newSession.total_time_minutes,
+            questionCount: newSession.question_limit,
+            application: newSession.application
+        },
+        question_order: null,
+        game_end_mode: newSession.game_end_mode as any,
+        current_questions: newSession.current_questions,
+        timestamps: {
+            created_at: newSession.created_at,
+            started_at: newSession.started_at,
+            ended_at: newSession.ended_at
+        },
+        countdown_position_mode: data.countdown_position_mode || 0
+    }
+}
+
+/**
+ * Helper function: Fallback untuk mengupdate session di Supabase Utama
+ */
+async function updateFallbackSessionInMainDb(sessionId: string, updates: GameSessionUpdate): Promise<GameSession | null> {
+    const { supabase } = await import('./supabase')
+    
+    console.warn('[Sessions] Falling back to updating session in Main DB...', sessionId)
+
+    const updateData: any = {}
+    if (updates.status) updateData.status = updates.status === 'finish' ? 'finished' : updates.status
+    if (updates.settings) {
+        if (updates.settings.timeLimit !== undefined) updateData.total_time_minutes = updates.settings.timeLimit
+        if (updates.settings.questionCount !== undefined) updateData.question_limit = updates.settings.questionCount.toString()
+        if (updates.settings.application) updateData.application = updates.settings.application
+    }
+    if (updates.game_end_mode) updateData.game_end_mode = updates.game_end_mode
+    if (updates.timestamps) {
+        if (updates.timestamps.started_at) updateData.started_at = updates.timestamps.started_at
+        if (updates.timestamps.ended_at) updateData.ended_at = updates.timestamps.ended_at
+    }
+
+    const { data: updatedSession, error } = await supabase
+        .from('game_sessions')
+        .update(updateData)
+        .eq('id', sessionId)
+        .select(`*, quizzes(title)`)
+        .single()
+
+    if (error || !updatedSession) {
+        console.error('[Sessions] Fallback error updating session in Main DB:', error)
+        return null
+    }
+
+    return {
+        id: updatedSession.id,
+        game_pin: updatedSession.game_pin,
+        host_id: updatedSession.host_id,
+        quiz_id: updatedSession.quiz_id,
+        quiz_title: Array.isArray(updatedSession.quizzes) ? 'Quiz Title' : (updatedSession.quizzes?.title || 'Quiz Title'),
+        status: updatedSession.status === 'finished' ? 'finish' : updatedSession.status as any,
+        time_limit_title_status: '',
+        settings: {
+            timeLimit: updatedSession.total_time_minutes,
+            questionCount: updatedSession.question_limit,
+            application: updatedSession.application
+        },
+        question_order: null,
+        game_end_mode: updatedSession.game_end_mode as any,
+        current_questions: updatedSession.current_questions,
+        timestamps: {
+            created_at: updatedSession.created_at,
+            started_at: updatedSession.started_at,
+            ended_at: updatedSession.ended_at
+        },
+        countdown_position_mode: updates.countdown_position_mode || 0
+    }
 }
 
 /**
@@ -158,19 +348,24 @@ export async function isGamePinTaken(gamePin: string): Promise<boolean> {
 export async function updateGameSession(sessionId: string, updates: GameSessionUpdate): Promise<GameSession | null> {
     if (!isSupabaseBAvailable()) return null
 
-    const { data, error } = await supabaseB
-        .from(TABLE_NAME)
-        .update(updates)
-        .eq('id', sessionId)
-        .select()
-        .single()
+    try {
+        const { data: sessionData, error: sessionError } = await supabaseB
+            .from(TABLE_NAME)
+            .update(updates)
+            .eq('id', sessionId)
+            .select()
+            .single()
 
-    if (error) {
-        console.error('[Sessions] Error updating session:', error)
-        return null
+        if (sessionError) {
+            console.warn('[Sessions] Error updating session in Supabase B, falling back to Main DB:', sessionError.message)
+            return await updateFallbackSessionInMainDb(sessionId, updates)
+        }
+
+        return sessionData as GameSession
+    } catch (err) {
+        console.warn('[Sessions] Network error updating session in Supabase B, falling back to Main DB...', err)
+        return await updateFallbackSessionInMainDb(sessionId, updates)
     }
-
-    return data as GameSession
 }
 
 /**
