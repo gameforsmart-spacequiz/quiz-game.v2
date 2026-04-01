@@ -75,15 +75,15 @@ export async function getGameSessionById(sessionId: string): Promise<GameSession
             .single()
 
         if (error) {
-            // Jika tidak ditemukan atau error lainnya, coba cari di Supabase Utama sebagai fallback
-            console.warn('[Sessions] Session not found or error in Supabase B, falling back to Main DB...', error.message)
-            return await getFallbackSessionFromMainDb('id', sessionId)
+            // Jika tidak ditemukan atau error lainnya, biarkan pemanggil menangani fallback
+            console.log('[Sessions] Session not found or error in Supabase B:', error.message)
+            return null
         }
 
         return data as GameSession
     } catch (err) {
-        console.warn('[Sessions] Network error or timeout in Supabase B, falling back to Main DB...', err)
-        return await getFallbackSessionFromMainDb('id', sessionId)
+        console.error('[Sessions] Network error or timeout in Supabase B:', err)
+        return null
     }
 }
 
@@ -103,18 +103,16 @@ export async function getGameSessionByPin(gamePin: string): Promise<GameSession 
         if (error) {
             if (error.code === 'PGRST116') {
                 // No rows found - not an error, just no session with that PIN
-                // Coba cari di Supabase Utama sebagai fallback (misal session sudah finish dan disync)
-                console.log('[Sessions] PIN not found in Supabase B, checking Main DB fallback...')
-                return await getFallbackSessionFromMainDb('game_pin', gamePin.toUpperCase())
+                return null
             }
-            console.warn('[Sessions] Error fetching session by PIN, checking Main DB fallback...', error.message)
-            return await getFallbackSessionFromMainDb('game_pin', gamePin.toUpperCase())
+            console.warn('[Sessions] Error fetching session by PIN:', error.message)
+            return null
         }
 
         return data as GameSession
     } catch (err) {
-        console.warn('[Sessions] Network error or timeout in Supabase B, falling back to Main DB...', err)
-        return await getFallbackSessionFromMainDb('game_pin', gamePin.toUpperCase())
+        console.error('[Sessions] Network error or timeout in Supabase B:', err)
+        return null
     }
 }
 
