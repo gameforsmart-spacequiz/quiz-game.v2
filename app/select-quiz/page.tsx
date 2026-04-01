@@ -377,7 +377,12 @@ export default function SelectQuizPage() {
       })
 
       if (!session) {
-        throw new Error("Failed to create game session in Supabase B")
+        // Cek apakah Supabase B tersedia (kemungkinan besar masalahnya di sini)
+        const { isSupabaseBAvailable } = await import("@/lib/supabase-b")
+        if (!isSupabaseBAvailable()) {
+            throw new Error("Supabase B environment variables (URL/Key) are missing. Check your VPS configuration.")
+        }
+        throw new Error("Failed to create game session after multiple attempts. There might be a schema mismatch or RLS restriction.")
       }
 
       setQuizId(selectedQuiz.id)
@@ -388,8 +393,9 @@ export default function SelectQuizPage() {
       router.push(`/host/${session.game_pin}`)
       setShowRulesDialog(false)
     } catch (error) {
+      console.error("Game Creation Error:", error)
       const msg = error instanceof Error ? error.message : "Unknown error"
-      alert(`Failed to create game: ${msg}`)
+      alert(`Failed to create game: ${msg}\n\nPlease check if your environment variables are correctly set on the VPS (Coolify).`)
     } finally {
       setIsCreatingGame(false)
       setIsLoading(null)

@@ -4,10 +4,16 @@
 
 Untuk deployment di Coolify, Anda perlu mengatur environment variables berikut:
 
-### Supabase Configuration
+### Supabase Utama (Database 1)
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+### Supabase B (Database 2 - Game Sessions)
+```
+NEXT_PUBLIC_SUPABASE_B_URL=https://other-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_B_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 ### Cara Mendapatkan Supabase Credentials:
@@ -21,8 +27,12 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 1. **Buka project di Coolify**
 2. **Pergi ke Environment Variables**
 3. **Tambahkan variables berikut:**
-   - `NEXT_PUBLIC_SUPABASE_URL` = URL Supabase Anda
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = Anon key Supabase Anda
+   - `NEXT_PUBLIC_SUPABASE_URL` = URL Supabase Utama
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = Anon key Supabase Utama
+   - `NEXT_PUBLIC_SUPABASE_B_URL` = URL Supabase B
+   - `NEXT_PUBLIC_SUPABASE_B_ANON_KEY` = Anon key Supabase B
+
+> **PENTING**: Supabase B diperlukan untuk menyimpan data sesi game yang bersifat temporary. Tanpa ini, sistem akan fallback ke Database Utama yang memiliki aturan RLS lebih ketat (khusus untuk user yang login).
 
 ## Build Configuration
 
