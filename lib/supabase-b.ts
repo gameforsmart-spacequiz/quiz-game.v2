@@ -39,14 +39,11 @@ const finalBKey = supabaseBAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.plac
 
 // Create Supabase B client
 export const supabaseB: SupabaseClient = createClient(finalBUrl, finalBKey, {
-    realtime: {
-        params: {
-            eventsPerSecond: 100,
-        },
-    },
     auth: {
-        persistSession: false, // This database doesn't need auth persistence
-    },
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false
+    }
 })
 
 // ============================================

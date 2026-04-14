@@ -15,7 +15,7 @@ interface LoginModalProps {
 
 export function LoginModal({ open, onOpenChange }: LoginModalProps) {
   const { t } = useLanguage()
-  const { signInWithGoogle, loading, error, clearError } = useAuth()
+  const { loading } = useAuth()
   const [isSigningIn, setIsSigningIn] = useState(false)
   const [isRedirecting, setIsRedirecting] = useState(false)
 
@@ -50,7 +50,6 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
   }, [open])
 
   const handleClose = () => {
-    clearError()
     setIsRedirecting(false)
     setIsSigningIn(false)
     onOpenChange(false)
@@ -60,7 +59,6 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
     try {
       setIsRedirecting(true)
       setIsSigningIn(true)
-      clearError()
       
       // Double requestAnimationFrame untuk memastikan overlay ter-render sebelum redirect
       // RAF pertama: React commit state ke DOM
@@ -73,8 +71,6 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
           })
         })
       })
-      
-      await signInWithGoogle()
       // Modal will close automatically when auth state changes
     } catch (error) {
       console.error('Sign in error:', error)
@@ -169,16 +165,6 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Error message */}
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-red-500/20 border border-red-400/30 rounded-lg p-3 text-red-200 text-sm font-mono"
-              >
-                {error}
-              </motion.div>
-            )}
 
             {/* Google Sign In Button */}
             <motion.div
