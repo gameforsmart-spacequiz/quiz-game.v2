@@ -14,13 +14,49 @@ import Image, { type StaticImageData } from "next/image"
 import { useAuth } from "@/contexts/auth-context"
 import { useLanguage } from "@/contexts/language-context"
 import { LogoutConfirmationModal } from "./logout-confirmation-modal"
+import { supabase } from "@/lib/supabase"
 
 export function UserProfile() {
   const { t } = useLanguage()
-  const { user, profile, signOut, loading } = useAuth()
+  const { user, profile, loading } = useAuth()
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
+  const [avatarLoadError, setAvatarLoadError] = useState(false)
+
+  // Hooks must be called before conditional returns
+  const displayName = profile?.nickname || profile?.fullname || profile?.username || user?.email?.split('@')[0] || 'User'
+  const rawAvatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture
+
+  // Create a proxy URL for Google Photos to bypass CORS
+  const avatarUrl = rawAvatarUrl ? `https://images.weserv.nl/?url=${encodeURIComponent(rawAvatarUrl)}&w=256&h=256&fit=cover&n=-1` : null
+
+  // Debug logging for avatar URL
+  useEffect(() => {
+    if (user && profile && avatarUrl) {
+      // Test if the avatar URL is valid
+      const testImg = document.createElement('img')
+      testImg.crossOrigin = 'anonymous'
+      testImg.referrerPolicy = 'no-referrer'
+      testImg.onload = () => {}
+      testImg.onerror = () => {
+        console.error('❌ UserProfile proxy test image failed to load')
+      }
+      testImg.src = avatarUrl
+
+      // Also test raw URL for comparison
+      if (rawAvatarUrl) {
+        const rawTestImg = document.createElement('img')
+        rawTestImg.crossOrigin = 'anonymous'
+        rawTestImg.referrerPolicy = 'no-referrer'
+        rawTestImg.onload = () => {}
+        rawTestImg.onerror = () => {
+          console.error('❌ Raw Google avatar failed to load (expected due to CORS)')
+        }
+        rawTestImg.src = rawAvatarUrl
+      }
+    }
+  }, [user, profile, avatarUrl, rawAvatarUrl])
 
   if (!user || !profile) {
     return null
@@ -29,12 +65,10 @@ export function UserProfile() {
   const handleSignOut = async () => {
     try {
       setIsSigningOut(true)
-      await signOut()
+      await supabase.auth.signOut()
       setShowLogoutModal(false)
     } catch (error) {
       console.error('Sign out error:', error)
-    } finally {
-      setIsSigningOut(false)
     }
   }
 
@@ -51,50 +85,6 @@ export function UserProfile() {
       .slice(0, 2)
   }
 
-  const displayName = profile.nickname || profile.fullname || profile.username || user.email?.split('@')[0] || 'User'
-  const rawAvatarUrl = profile.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture
-  const [avatarLoadError, setAvatarLoadError] = useState(false)
-
-  // Create a proxy URL for Google Photos to bypass CORS
-  // Use higher resolution (256x256) for better quality when zoomed
-  // Use n=-1 to preserve all animation frames for GIFs
-  const avatarUrl = rawAvatarUrl ? `https://images.weserv.nl/?url=${encodeURIComponent(rawAvatarUrl)}&w=256&h=256&fit=cover&n=-1` : null
-
-  // Debug logging for avatar URL
-  useEffect(() => {
-    if (user && profile) {
-
-      // Test if the avatar URL is valid
-      if (avatarUrl) {
-
-        const testImg = document.createElement('img')
-        testImg.crossOrigin = 'anonymous'
-        testImg.referrerPolicy = 'no-referrer'
-        testImg.onload = () => {
-
-        }
-        testImg.onerror = () => {
-          console.error('❌ UserProfile proxy test image failed to load')
-        }
-        testImg.src = avatarUrl
-      }
-
-      // Also test raw URL for comparison
-      if (rawAvatarUrl) {
-
-        const rawTestImg = document.createElement('img')
-        rawTestImg.crossOrigin = 'anonymous'
-        rawTestImg.referrerPolicy = 'no-referrer'
-        rawTestImg.onload = () => {
-
-        }
-        rawTestImg.onerror = () => {
-          console.error('❌ Raw Google avatar failed to load (expected due to CORS)')
-        }
-        rawTestImg.src = rawAvatarUrl
-      }
-    }
-  }, [user, profile, avatarUrl, displayName])
 
   return (
     <div className="fixed top-4 left-4 z-50">

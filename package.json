@@ -87,6 +87,7 @@
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",
+    "@types/minimatch": "^5.1.2",
     "@types/qrcode.react": "^1.0.5"
   }
 }

@@ -9,17 +9,18 @@ import { Chrome, Sparkles, Eye, EyeOff, Mail, Lock, Loader2, Rocket } from "luci
 import { useAuth } from "@/contexts/auth-context"
 import { useLanguage } from "@/contexts/language-context"
 import { AuthGuard } from "@/components/auth/auth-guard"
+import { supabase } from "@/lib/supabase"
+import { useRouter } from "next/navigation"
 
 function LoginPageContent() {
   const { t } = useLanguage()
-  const { signInWithGoogle, signInWithEmail, loading, error, clearError } = useAuth()
-  const [isSigningIn, setIsSigningIn] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [formData, setFormData] = useState({
-    username: "",
-    password: ""
-  })
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const router = useRouter();
+  const { user, loading } = useAuth();
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   // Save game code from URL when user lands on login page
   useEffect(() => {
@@ -34,117 +35,68 @@ function LoginPageContent() {
     }
   }, [])
 
-  // Reset signing in state when component mount or user returns to page
   useEffect(() => {
-    setIsSigningIn(false)
-
-    // Reset when page visibility changes (user returns to tab)
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        setIsSigningIn(false)
+    if (user && !loading) {
+      const pendingCode = localStorage.getItem('pendingRoomCode');
+      if (pendingCode) {
+        router.replace(`/join/${pendingCode}`);
+      } else {
+        router.replace('/');
       }
     }
+  }, [user, loading, router]);
 
-    // Reset when user presses back button
-    const handlePopState = () => {
-      setIsSigningIn(false)
-    }
+  const resolveEmail = async (input: string) => {
+    if (input.includes('@')) return input.toLowerCase();
 
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    window.addEventListener('popstate', handlePopState)
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('username', input)
+      .maybeSingle();
 
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-      window.removeEventListener('popstate', handlePopState)
-    }
-  }, [])
+    if (error) throw error;
+    if (!data) throw new Error('Username not found!');
 
-  const handleGoogleSignIn = async () => {
-    try {
-      setIsSigningIn(true)
-      clearError()
-      await signInWithGoogle()
-      // AuthGuard will handle redirect automatically after successful login
-    } catch (error) {
-      console.error('Sign in error:', error)
-    } finally {
-      setIsSigningIn(false)
-    }
-  }
+    return data.email.toLowerCase();
+  };
 
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
-
-    // Clear error when user starts typing
-    if (formErrors[name]) {
-      setFormErrors(prev => ({ ...prev, [name]: "" }))
-    }
-  }
-
-  const validateForm = () => {
-    const errors: Record<string, string> = {}
-
-    if (!formData.username.trim()) {
-      errors.username = t('usernameRequired', 'Username or Email is required')
-    }
-
-    if (!formData.password) {
-      errors.password = t('passwordRequired', 'Password is required')
-    }
-
-    setFormErrors(errors)
-    return Object.keys(errors).length === 0
-  }
-
-  const handleEmailPasswordLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!validateForm()) {
-      return
-    }
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
 
     try {
-      setIsSigningIn(true)
-      clearError()
-
-      let emailToUse = formData.username
-
-      // Check if input is an email (contains @) or username
-      const isEmail = /\S+@\S+\.\S+/.test(formData.username)
-
-      if (!isEmail) {
-        // Input is username, fetch email from database
-        const { createSupabaseClient } = await import('@/lib/supabase')
-        const supabase = createSupabaseClient()
-
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('email')
-          .eq('username', formData.username)
-          .single()
-
-        if (profileError || !profile) {
-          setFormErrors({ username: t('usernameNotFound', 'Username not found') })
-          setIsSigningIn(false)
-          return
-        }
-
-        // Use the email associated with the username
-        emailToUse = profile.email
-      }
-
-      // Sign in with email (either directly provided or fetched from username)
-      await signInWithEmail(emailToUse, formData.password)
-
-      // AuthGuard will handle redirect automatically
-    } catch (error) {
-      console.error('Login error:', error)
+      const email = await resolveEmail(identifier.trim());
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+      // router.push('/'); // Handled by useEffect
+    } catch (err: any) {
+      setError(err.message || 'An error occurred. Please try again.');
     } finally {
-      setIsSigningIn(false)
+      setIsLoading(false);
     }
-  }
+  };
+
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}`,
+        },
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      setError(err.message || 'Google login failed.');
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen relative overflow-hidden overflow-y-auto">
@@ -263,15 +215,15 @@ function LoginPageContent() {
               whileTap={{ scale: 0.98 }}
             >
               <Button
-                onClick={handleGoogleSignIn}
-                disabled={loading || isSigningIn}
+                onClick={handleGoogleLogin}
+                disabled={loading || isLoading}
                 className="w-full bg-[#4285F4] hover:bg-[#3367d6] active:scale-[0.98] text-white font-semibold py-5 sm:py-6 rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 border-none relative overflow-hidden mb-5 sm:mb-8 group transition-all duration-300"
               >
                 {/* Shimmer effect on hover */}
                 <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
                 <div className="flex items-center justify-center space-x-3 relative z-10">
-                  {loading || isSigningIn ? (
+                  {loading || isLoading ? (
                     <motion.div
                       animate={{ rotate: 360 }}
                       transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -335,7 +287,7 @@ function LoginPageContent() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
-              onSubmit={handleEmailPasswordLogin}
+              onSubmit={handleAuth}
               className="space-y-4 sm:space-y-5"
             >
               {/* Email or Username */}
@@ -347,8 +299,8 @@ function LoginPageContent() {
                     name="username"
                     type="text"
                     autoComplete="username"
-                    value={formData.username}
-                    onChange={handleInputChange}
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
                     onFocus={(e) => {
                       // Scroll form ke view saat keyboard muncul di mobile
                       setTimeout(() => {
@@ -359,9 +311,6 @@ function LoginPageContent() {
                     placeholder={t('enterUsername', 'Enter your email or username')}
                   />
                 </div>
-                {formErrors.username && (
-                  <p className="text-red-400 text-xs ml-1">{formErrors.username}</p>
-                )}
               </div>
 
               {/* Password */}
@@ -372,8 +321,8 @@ function LoginPageContent() {
                     id="password"
                     name="password"
                     type={showPassword ? "text" : "password"}
-                    value={formData.password}
-                    onChange={handleInputChange}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     onFocus={(e) => {
                       // Scroll form ke view saat keyboard muncul di mobile
                       setTimeout(() => {
@@ -391,10 +340,6 @@ function LoginPageContent() {
                     {showPassword ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
                   </button>
                 </div>
-                {formErrors.password && (
-                  <p className="text-red-400 text-xs ml-1">{formErrors.password}</p>
-                )}
-
               </div>
 
               {/* Login Button - Enhanced */}
@@ -405,14 +350,14 @@ function LoginPageContent() {
               >
                 <Button
                   type="submit"
-                  disabled={loading || isSigningIn}
+                  disabled={loading || isLoading}
                   className="w-full bg-gradient-to-r from-[#7052ff] via-[#9052ff] to-[#00c6ff] hover:from-[#6042ef] hover:via-[#8042ef] hover:to-[#00b6ef] text-white font-bold h-11 sm:h-12 rounded-2xl shadow-lg shadow-indigo-500/40 hover:shadow-indigo-500/60 border-none relative overflow-hidden transition-all duration-300 group"
                 >
                   {/* Animated gradient overlay */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
 
                   <div className="relative z-10 flex items-center justify-center gap-2">
-                    {loading || isSigningIn ? (
+                    {loading || isLoading ? (
                       <>
                         <motion.div
                           animate={{ rotate: 360 }}

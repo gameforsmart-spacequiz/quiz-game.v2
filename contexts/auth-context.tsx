@@ -1,415 +1,268 @@
 "use client"
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { User, Session, AuthError } from '@supabase/supabase-js'
-import { createSupabaseClient } from '@/lib/supabase'
-import { useLanguage } from './language-context'
-import { getOAuthRedirectUrl, getHomepageUrl, logAuthContext, isFromMainDomain, isQuizProduction } from '@/lib/cross-domain-auth'
+import { createContext, useContext, useEffect, useState } from "react"
+import { supabase, syncSessionCookie, getSessionFromCookie } from "@/lib/supabase"
 
 interface Profile {
-  id: string
-  username: string
-  email: string
-  fullname?: string
-  nickname?: string
-  avatar_url?: string
-  language?: string
-  role?: string
-  auth_user_id: string
+    id: string
+    username: string
+    email: string
+    nickname?: string
+    fullname?: string
+    avatar_url?: string
+    auth_user_id: string
+    role?: string
 }
 
 interface AuthContextType {
-  user: User | null
-  profile: Profile | null
-  session: Session | null
-  loading: boolean
-  error: string | null
-  signInWithGoogle: () => Promise<void>
-  signInWithEmail: (email: string, password: string) => Promise<void>
-  signOut: () => Promise<void>
-  refreshProfile: () => Promise<void>
-  clearError: () => void
+    user: any | null
+    profile: Profile | null
+    loading: boolean
+    isRestoringSession: boolean
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | null>(null)
 
-interface AuthProviderProps {
-  children: ReactNode
-}
+// Retry helper dengan exponential backoff
+async function ensureProfileWithRetry(
+    currentUser: any,
+    onSuccess: (profile: Profile) => void,
+    onFallback: (profile: Profile) => void,
+    maxRetries = 3
+) {
+    let retryCount = 0
+    const baseDelay = 500 // 500ms
 
-export function AuthProvider({ children }: AuthProviderProps) {
-  const { t } = useLanguage()
-  const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const supabase = createSupabaseClient()
+    const attempt = async (): Promise<void> => {
+        try {
+            // First, check if exists (quick select)
+            const { data: existing, error: selectError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('auth_user_id', currentUser.id)
+                .single()
 
-  // Clear error function
-  const clearError = () => setError(null)
+            if (selectError && selectError.code !== 'PGRST116') {
+                // PGRST116 = not found, yang normal. Error lain = retry
+                throw selectError
+            }
 
-  // Create or update profile
-  const createOrUpdateProfile = async (user: User) => {
-    try {
-      const profileData = {
-        auth_user_id: user.id,
-        username: user.user_metadata?.username || user.email?.split('@')[0] || 'user',
-        email: user.email || '',
-        fullname: user.user_metadata?.full_name || user.user_metadata?.name || '',
-        avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
-        language: 'id', // Default language
-        role: 'student', // Default role
-        updated_at: new Date().toISOString()
-      }
+            if (existing) {
+                onSuccess(existing)
+                return // Done
+            }
 
-      // Check if profile exists
-      const { data: existingProfile, error: fetchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('auth_user_id', user.id)
-        .single()
+            // Create new if not exists
+            const profileData = {
+                auth_user_id: currentUser.id,
+                username: currentUser.user_metadata?.username || currentUser.email?.split('@')[0] || 'user',
+                email: currentUser.email || '',
+                fullname: currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '',
+                avatar_url: currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture || '',
+                updated_at: new Date().toISOString()
+            }
 
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        throw fetchError
-      }
+            const { data, error: insertError } = await supabase
+                .from('profiles')
+                .insert(profileData)
+                .select()
+                .single()
 
-      if (existingProfile) {
-        // Update existing profile
-        const { data, error: updateError } = await supabase
-          .from('profiles')
-          .update(profileData)
-          .eq('auth_user_id', user.id)
-          .select()
-          .single()
+            if (insertError) throw insertError
 
-        if (updateError) throw updateError
-        setProfile(data)
-      } else {
-        // Create new profile
-        const { data, error: insertError } = await supabase
-          .from('profiles')
-          .insert(profileData)
-          .select()
-          .single()
+            onSuccess(data)
+        } catch (error: any) {
+            retryCount++
 
-        if (insertError) throw insertError
-        setProfile(data)
-      }
-    } catch (error) {
-      console.error('Error creating/updating profile:', error)
-      setError(t('profileError', 'Failed to create user profile. Please try again.'))
-    }
-  }
+            // Jika masih ada retry tersisa, tunggu dan coba lagi
+            if (retryCount < maxRetries) {
+                const delay = baseDelay * Math.pow(2, retryCount - 1) // 500ms, 1s, 2s
+                console.warn(
+                    `⚠️ Profile fetch attempt ${retryCount} failed, retrying in ${delay}ms...`,
+                    error.message
+                )
+                await new Promise(resolve => setTimeout(resolve, delay))
+                return attempt() // Recursive retry
+            }
 
-  // Fetch profile data
-  const fetchProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('auth_user_id', userId)
-        .single()
-
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // Profile not found, will be created by createOrUpdateProfile
-          return null
+            // Semua retry gagal, gunakan fallback
+            console.error('❌ Profile fetch failed after retries, using fallback:', error)
+            onFallback({
+                id: 'fallback-' + currentUser.id,
+                username: currentUser.email?.split('@')[0] || 'user',
+                email: currentUser.email || '',
+                nickname: '',
+                fullname: '',
+                avatar_url: '',
+                auth_user_id: currentUser.id
+            })
         }
-        throw error
-      }
-
-      return data
-    } catch (error) {
-      console.error('Error fetching profile:', error)
-      return null
     }
-  }
 
-  // Refresh profile data
-  const refreshProfile = async () => {
-    if (user) {
-      const profileData = await fetchProfile(user.id)
-      setProfile(profileData)
-    }
-  }
+    return attempt()
+}
 
-  // Sign in with Google
-  const signInWithGoogle = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      // Get the correct redirect URL using utility
-      const redirectUrl = getOAuthRedirectUrl()
-
-      // Log authentication context for debugging
-      logAuthContext()
-
-      // Additional logging for localhost debugging
-      if (window.location.hostname === 'localhost') {
-      }
-
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: redirectUrl,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
+// Helper: fetch profile lalu set state
+async function loadProfile(
+    currentUser: any,
+    setProfile: (p: Profile | null) => void,
+    setIsProfileFetching: (v: boolean) => void,
+    setLoading?: (v: boolean) => void
+) {
+    setIsProfileFetching(true)
+    await ensureProfileWithRetry(
+        currentUser,
+        (profile) => {
+            setProfile(profile)
+            setIsProfileFetching(false)
+            if (setLoading) setLoading(false)
         },
-      })
-
-      if (error) {
-        throw error
-      }
-    } catch (error) {
-      console.error('Google sign in error:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-      setError(t('signInError', `Failed to sign in: ${errorMessage}`))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-
-  // Sign in with email and password
-  const signInWithEmail = async (email: string, password: string) => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      })
-
-      if (error) {
-        throw error
-      }
-
-      if (data.user) {
-        // Profile will be created/updated automatically via auth state change listener
-        // Loading state will be handled by onAuthStateChange listener
-
-
-        // Immediate redirect attempt
-        setTimeout(() => {
-          if (typeof window !== 'undefined' && window.location.pathname.includes('/auth/login')) {
-
-            const homepageUrl = getHomepageUrl()
-            window.location.href = homepageUrl
-          }
-        }, 500) // Immediate redirect after 500ms
-
-        // Fallback redirect if onAuthStateChange doesn't trigger
-        setTimeout(() => {
-          if (typeof window !== 'undefined' && window.location.pathname.includes('/auth/login')) {
-
-            const homepageUrl = getHomepageUrl()
-            window.location.href = homepageUrl
-          }
-        }, 2000) // 2 second fallback
-      }
-    } catch (error) {
-      console.error('Email sign in error:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-      setError(t('signInError', `Failed to sign in: ${errorMessage}`))
-      setLoading(false) // Only set loading false on error
-    }
-    // Don't set loading false here - let onAuthStateChange handle it
-  }
-
-  // Sign out
-  const signOut = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
-
-      setUser(null)
-      setProfile(null)
-      setSession(null)
-    } catch (error) {
-      console.error('Sign out error:', error)
-      setError(t('signOutError', 'Failed to sign out. Please try again.'))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Initialize auth state
-  useEffect(() => {
-    let mounted = true
-
-    const initializeAuth = async () => {
-      try {
-        setLoading(true)
-
-        // Log authentication context for debugging
-        logAuthContext()
-
-        // Check if user is coming from main domain (cross-domain auth)
-        const fromMainDomain = isFromMainDomain()
-
-        // Get initial session
-        const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession()
-
-        if (sessionError) {
-          console.error('Session error:', sessionError)
-          return
+        (fallbackProfile) => {
+            setProfile(fallbackProfile)
+            setIsProfileFetching(false)
+            if (setLoading) setLoading(false)
         }
-
-        if (initialSession?.user && mounted) {
-          setSession(initialSession)
-          setUser(initialSession.user)
-
-          try {
-            // Fetch or create profile
-            const profileData = await fetchProfile(initialSession.user.id)
-            if (profileData) {
-              setProfile(profileData)
-            } else {
-              // Create profile if not exists
-              await createOrUpdateProfile(initialSession.user)
-            }
-          } catch (profileError) {
-            console.error('Profile handling error:', profileError)
-          }
-        } else if (isQuizProduction() && !initialSession?.user) {
-          // If in production and no session, check if user might be logged in on main domain
-
-        }
-      } catch (error) {
-        console.error('Auth initialization error:', error)
-        setError(t('authInitError', 'Failed to initialize authentication'))
-      } finally {
-        if (mounted) {
-          setLoading(false)
-        }
-      }
-    }
-
-    // Add timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      if (mounted) {
-
-        setLoading(false)
-
-        // Don't auto-redirect from login page to prevent animation restart
-        // User should manually navigate or complete login process
-      }
-    }, 3000) // Reduced to 3 seconds timeout for faster fallback in dev
-
-    initializeAuth()
-
-    return () => {
-      mounted = false
-      clearTimeout(timeoutId)
-    }
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!mounted) return
-
-
-
-        if (event === 'SIGNED_IN' && session?.user) {
-
-          setSession(session)
-          setUser(session.user)
-
-          try {
-            // Create or update profile
-            await createOrUpdateProfile(session.user)
-          } catch (error) {
-            console.error('Profile creation error:', error)
-          } finally {
-            // Always set loading to false, even if profile creation fails
-            setLoading(false)
-
-            // Redirect to homepage after successful login (both OAuth and manual)
-            if (typeof window !== 'undefined') {
-
-
-              const homepageUrl = getHomepageUrl()
-              // Check if there's a pending game code to preserve
-              const pendingCode = localStorage.getItem('pending-game-code')
-              let finalUrl = homepageUrl
-
-              if (pendingCode) {
-                // Add game code to URL so it gets detected by GameCodeHandler
-                const url = new URL(homepageUrl)
-                url.searchParams.set('code', pendingCode)
-                finalUrl = url.toString()
-
-              }
-
-              // Use setTimeout to ensure redirect happens after state updates
-              setTimeout(() => {
-                window.location.href = finalUrl
-              }, 100)
-            }
-          }
-        } else if (event === 'SIGNED_OUT') {
-
-          setSession(null)
-          setUser(null)
-          setProfile(null)
-          setLoading(false)
-        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-
-          setSession(session)
-          setUser(session.user)
-          setLoading(false)
-        } else if (event === 'USER_UPDATED' && session?.user) {
-
-          setSession(session)
-          setUser(session.user)
-          setLoading(false)
-        } else {
-          // Handle any other events
-
-          setLoading(false)
-        }
-      }
     )
+}
 
-    return () => {
-      mounted = false
-      subscription.unsubscribe()
-    }
-  }, [t])
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+    const [user, setUser] = useState<any>(null)
+    const [profile, setProfile] = useState<Profile | null>(null)
+    const [loading, setLoading] = useState(true)
+    const [isProfileFetching, setIsProfileFetching] = useState(false) // Track fetch state
+    const [isRestoringSession, setIsRestoringSession] = useState(true)
 
-  const value: AuthContextType = {
-    user,
-    profile,
-    session,
-    loading,
-    error,
-    signInWithGoogle,
-    signInWithEmail,
-    signOut,
-    refreshProfile,
-    clearError,
-  }
+    useEffect(() => {
+        const getUser = async () => {
+            try {
+                // 1. Coba ambil sesi dari localStorage (cara normal)
+                let { data: { session } } = await supabase.auth.getSession()
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  )
+                // 2. Deteksi Zombie Session: Sesi lokal ada, tapi SSO cookie GA ADA (berarti sudah logout di app lain)
+                const cookieSession = getSessionFromCookie()
+                if (session && !cookieSession) {
+                    console.log('[SSO] Terdeteksi sisa sesi lokal padahal SSO cookie kosong. Menghapus sesi...')
+                    await supabase.auth.signOut()
+                    session = null
+                }
+
+                // 3. Jika tidak ada sesi di localStorage, coba pulihkan dari shared cookie
+                if (!session && cookieSession) {
+                    console.log('[SSO] Mencoba pulihkan sesi dari shared cookie (setSession)...')
+                    const { data, error } = await supabase.auth.setSession(cookieSession)
+                    if (!error && data.session) {
+                        session = data.session
+                        console.log('[SSO] Sesi berhasil dipulihkan!')
+                    } else {
+                        console.warn('[SSO] Token expired, menghapus cookie')
+                        syncSessionCookie(null)
+                    }
+                }
+
+                const currentUser = session?.user ?? null
+                setUser(currentUser)
+
+                if (currentUser && session) {
+                    // Sync tokens ke shared cookie
+                    syncSessionCookie({
+                        access_token: session.access_token,
+                        refresh_token: session.refresh_token
+                    })
+                    await loadProfile(currentUser, setProfile, setIsProfileFetching, setLoading)
+                } else {
+                    setProfile(null)
+                    setLoading(false)
+                }
+            } catch (error) {
+                console.error('Session error:', error)
+                setUser(null)
+                setProfile(null)
+                setLoading(false)
+            }
+            setIsRestoringSession(false)
+        }
+        getUser()
+
+        const { data: listener } = supabase.auth.onAuthStateChange(
+            async (event, session) => {
+                const currentUser = session?.user ?? null
+                setUser(currentUser)
+
+                if (event === 'SIGNED_IN' && currentUser && session) {
+                    // Sync tokens ke shared cookie saat login berhasil
+                    syncSessionCookie({
+                        access_token: session.access_token,
+                        refresh_token: session.refresh_token
+                    })
+                    loadProfile(currentUser, setProfile, setIsProfileFetching).catch(console.error)
+                } else if (event === 'TOKEN_REFRESHED' && session) {
+                    // Update cookie saat token di-refresh (token baru untuk semua app)
+                    syncSessionCookie({
+                        access_token: session.access_token,
+                        refresh_token: session.refresh_token
+                    })
+                } else if (event === 'SIGNED_OUT' || !currentUser) {
+                    // Hapus shared cookie saat logout → semua app ikut logout
+                    syncSessionCookie(null)
+                    setProfile(null)
+                    setIsProfileFetching(false)
+                }
+            }
+        )
+
+        // SINKRONISASI ANTAR-TAB: Cek cookie saat user kembali ke tab ini
+        const syncFromCookie = async () => {
+            const cookieSession = getSessionFromCookie()
+
+            // Logout sync: cookie kosong tapi kita masih login
+            if (!cookieSession) {
+                const { data: { session: localSession } } = await supabase.auth.getSession()
+                if (localSession) {
+                    console.log('[SSO] Logout terdeteksi di app lain, sinkronisasi...')
+                    await supabase.auth.signOut()
+                    window.location.reload()
+                }
+                return
+            }
+
+            // Token sync: cookie ada dan berbeda dari lokal kita
+            const { data: { session: localSession } } = await supabase.auth.getSession()
+            if (!localSession) {
+                // Kita belum login tapi cookie ada → login sync
+                console.log('[SSO] Login terdeteksi di app lain, sinkronisasi...')
+                await supabase.auth.setSession(cookieSession)
+            } else if (localSession.access_token !== cookieSession.access_token) {
+                // Token berbeda → update tanpa reload
+                console.log('[SSO] Token baru terdeteksi, mengupdate session lokal...')
+                await supabase.auth.setSession(cookieSession)
+            }
+        }
+
+        // Event-based: langsung sinkron saat user kembali ke tab
+        window.addEventListener('focus', syncFromCookie)
+        const onVisibilityChange = () => {
+            if (document.visibilityState === 'visible') syncFromCookie()
+        }
+        window.addEventListener('visibilitychange', onVisibilityChange)
+
+        return () => {
+            listener.subscription.unsubscribe()
+            window.removeEventListener('focus', syncFromCookie)
+            window.removeEventListener('visibilitychange', onVisibilityChange)
+        }
+    }, [])
+
+    return (
+        <AuthContext.Provider value={{ user, profile, loading, isRestoringSession }}>
+            {children}
+        </AuthContext.Provider>
+    )
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-  return context
+    const context = useContext(AuthContext)
+    if (context === null) {
+        throw new Error('useAuth must be used within an AuthProvider')
+    }
+    return context
 }
-
